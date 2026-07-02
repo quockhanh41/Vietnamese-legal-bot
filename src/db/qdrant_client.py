@@ -43,7 +43,6 @@ class SearchResult:
 class LegalVectorStore:
     """Qdrant vector store specialized for Vietnamese legal documents."""
 
-    COLLECTION_NAME = "vietnamese_laws"
     DENSE_VECTOR_NAME = "dense"
     SPARSE_VECTOR_NAME = "sparse"
     VECTOR_DIM = 1024  # BGE-M3
@@ -52,9 +51,11 @@ class LegalVectorStore:
         self,
         url: Optional[str] = None,
         api_key: Optional[str] = None,
+        collection_name: str = "vietnamese_laws",
     ):
         self.url = url or os.getenv("QDRANT_URL", "http://localhost:6333")
         self.api_key = api_key or os.getenv("QDRANT_API_KEY")
+        self.collection_name = collection_name
         # Suppress warning for local dev (no auth on localhost)
         if self.url.startswith("http://") and not self.api_key:
             with warnings.catch_warnings():
@@ -66,15 +67,15 @@ class LegalVectorStore:
     def create_collection(self, recreate: bool = False):
         """Create the collection with dense + sparse vector support."""
         if recreate:
-            self.client.delete_collection(self.COLLECTION_NAME)
+            self.client.delete_collection(self.collection_name)
 
         existing = self.client.get_collections()
-        if self.COLLECTION_NAME in [c.name for c in existing.collections]:
-            print(f"Collection '{self.COLLECTION_NAME}' already exists.")
+        if self.collection_name in [c.name for c in existing.collections]:
+            print(f"Collection '{self.collection_name}' already exists.")
             return
 
         self.client.create_collection(
-            collection_name=self.COLLECTION_NAME,
+            collection_name=self.collection_name,
             vectors_config={
                 self.DENSE_VECTOR_NAME: VectorParams(
                     size=self.VECTOR_DIM,
@@ -85,7 +86,7 @@ class LegalVectorStore:
                 self.SPARSE_VECTOR_NAME: SparseVectorParams(),
             },
         )
-        print(f"Created collection '{self.COLLECTION_NAME}'")
+        print(f"Created collection '{self.collection_name}'")
 
     def upsert_chunks(
         self,
@@ -133,7 +134,7 @@ class LegalVectorStore:
             # Batch upsert
             if len(points) >= batch_size:
                 self.client.upsert(
-                    collection_name=self.COLLECTION_NAME,
+                    collection_name=self.collection_name,
                     points=points,
                     wait=True,
                 )
@@ -142,7 +143,7 @@ class LegalVectorStore:
         # Final batch
         if points:
             self.client.upsert(
-                collection_name=self.COLLECTION_NAME,
+                collection_name=self.collection_name,
                 points=points,
                 wait=True,
             )
@@ -159,7 +160,7 @@ class LegalVectorStore:
         query_filter = self._build_filter(filter_conditions) if filter_conditions else None
 
         response = self.client.query_points(
-            collection_name=self.COLLECTION_NAME,
+            collection_name=self.collection_name,
             query=query_vector,
             using=self.DENSE_VECTOR_NAME,
             limit=top_k,
@@ -182,7 +183,7 @@ class LegalVectorStore:
         values = list(sparse_vector.values())
 
         response = self.client.query_points(
-            collection_name=self.COLLECTION_NAME,
+            collection_name=self.collection_name,
             query=SparseVector(indices=indices, values=values),
             using=self.SPARSE_VECTOR_NAME,
             limit=top_k,
@@ -222,7 +223,7 @@ class LegalVectorStore:
         values = list(sparse_vector.values())
 
         response = self.client.query_points(
-            collection_name=self.COLLECTION_NAME,
+            collection_name=self.collection_name,
             prefetch=[
                 models.Prefetch(
                     query=models.NearestQuery(nearest=dense_vector),
@@ -304,7 +305,7 @@ class LegalVectorStore:
 
         while len(documents) < target:
             points, offset = self.client.scroll(
-                collection_name=self.COLLECTION_NAME,
+                collection_name=self.collection_name,
                 scroll_filter=query_filter,
                 limit=min(500, target),
                 offset=offset,
@@ -351,9 +352,9 @@ class LegalVectorStore:
 
     def get_collection_info(self) -> Dict:
         """Get collection statistics."""
-        info = self.client.get_collection(self.COLLECTION_NAME)
+        info = self.client.get_collection(self.collection_name)
         return {
-            "name": self.COLLECTION_NAME,
+            "name": self.collection_name,
             "points_count": info.points_count,
             "indexed_vectors_count": info.indexed_vectors_count,
         }

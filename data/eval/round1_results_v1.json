@@ -1,0 +1,254 @@
+{
+  "round": 1,
+  "num_docs": 5,
+  "num_queries": 33,
+  "metrics_type": "retrieval-only",
+  "results": [
+    {
+      "strategy": "fixed_size",
+      "params": {
+        "chunk_size": 512,
+        "overlap": 50
+      },
+      "num_chunks": 1579,
+      "avg_chunk_size": 384.0,
+      "embedding_time_s": 26.35,
+      "avg_search_latency_ms": 54.7,
+      "recall@3": 0.3636,
+      "hit@3": 0.3636,
+      "recall@5": 0.6061,
+      "hit@5": 0.6061,
+      "recall@10": 0.9697,
+      "hit@10": 0.9697,
+      "mrr": 0.2732,
+      "label": "S1: Fixed-size ({'chunk_size': 512, 'overlap': 50})"
+    },
+    {
+      "strategy": "fixed_size",
+      "params": {
+        "chunk_size": 512,
+        "overlap": 100
+      },
+      "num_chunks": 1629,
+      "avg_chunk_size": 388.0,
+      "embedding_time_s": 25.35,
+      "avg_search_latency_ms": 36.1,
+      "recall@3": 0.3333,
+      "hit@3": 0.3333,
+      "recall@5": 0.4545,
+      "hit@5": 0.4545,
+      "recall@10": 0.9697,
+      "hit@10": 0.9697,
+      "mrr": 0.2715,
+      "label": "S1: Fixed-size ({'chunk_size': 512, 'overlap': 100})"
+    },
+    {
+      "strategy": "fixed_size",
+      "params": {
+        "chunk_size": 1024,
+        "overlap": 50
+      },
+      "num_chunks": 697,
+      "avg_chunk_size": 863.0,
+      "embedding_time_s": 26.14,
+      "avg_search_latency_ms": 35.7,
+      "recall@3": 0.3939,
+      "hit@3": 0.3939,
+      "recall@5": 0.6364,
+      "hit@5": 0.6364,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3609,
+      "label": "S1: Fixed-size ({'chunk_size': 1024, 'overlap': 50})"
+    },
+    {
+      "strategy": "fixed_size",
+      "params": {
+        "chunk_size": 1024,
+        "overlap": 100
+      },
+      "num_chunks": 707,
+      "avg_chunk_size": 866.0,
+      "embedding_time_s": 26.35,
+      "avg_search_latency_ms": 36.0,
+      "recall@3": 0.4242,
+      "hit@3": 0.4242,
+      "recall@5": 0.6061,
+      "hit@5": 0.6061,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3745,
+      "label": "S1: Fixed-size ({'chunk_size': 1024, 'overlap': 100})"
+    },
+    {
+      "strategy": "fixed_size",
+      "params": {
+        "chunk_size": 2048,
+        "overlap": 50
+      },
+      "num_chunks": 335,
+      "avg_chunk_size": 1791.0,
+      "embedding_time_s": 32.13,
+      "avg_search_latency_ms": 37.2,
+      "recall@3": 0.303,
+      "hit@3": 0.303,
+      "recall@5": 0.5455,
+      "hit@5": 0.5455,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3683,
+      "label": "S1: Fixed-size ({'chunk_size': 2048, 'overlap': 50})"
+    },
+    {
+      "strategy": "fixed_size",
+      "params": {
+        "chunk_size": 2048,
+        "overlap": 100
+      },
+      "num_chunks": 338,
+      "avg_chunk_size": 1789.0,
+      "embedding_time_s": 32.81,
+      "avg_search_latency_ms": 37.2,
+      "recall@3": 0.3939,
+      "hit@3": 0.3939,
+      "recall@5": 0.5758,
+      "hit@5": 0.5758,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3388,
+      "label": "S1: Fixed-size ({'chunk_size': 2048, 'overlap': 100})"
+    },
+    {
+      "strategy": "hierarchical",
+      "params": {
+        "max_chunk_size": 1000,
+        "min_chunk_size": 200
+      },
+      "num_chunks": 801,
+      "avg_chunk_size": 725.0,
+      "embedding_time_s": 25.75,
+      "avg_search_latency_ms": 53.2,
+      "recall@3": 0.5152,
+      "hit@3": 0.5152,
+      "recall@5": 0.6364,
+      "hit@5": 0.6364,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3851,
+      "label": "S3: Hierarchical ({'max_chunk_size': 1000, 'min_chunk_size': 200})"
+    },
+    {
+      "strategy": "hierarchical",
+      "params": {
+        "max_chunk_size": 1500,
+        "min_chunk_size": 200
+      },
+      "num_chunks": 545,
+      "avg_chunk_size": 1065.0,
+      "embedding_time_s": 27.44,
+      "avg_search_latency_ms": 39.0,
+      "recall@3": 0.3939,
+      "hit@3": 0.3939,
+      "recall@5": 0.5758,
+      "hit@5": 0.5758,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3897,
+      "label": "S3: Hierarchical ({'max_chunk_size': 1500, 'min_chunk_size': 200})"
+    },
+    {
+      "strategy": "hierarchical",
+      "params": {
+        "max_chunk_size": 2000,
+        "min_chunk_size": 200
+      },
+      "num_chunks": 405,
+      "avg_chunk_size": 1433.0,
+      "embedding_time_s": 29.87,
+      "avg_search_latency_ms": 38.3,
+      "recall@3": 0.1818,
+      "hit@3": 0.1818,
+      "recall@5": 0.4545,
+      "hit@5": 0.4545,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.2704,
+      "label": "S3: Hierarchical ({'max_chunk_size': 2000, 'min_chunk_size': 200})"
+    },
+    {
+      "strategy": "article_level",
+      "params": {
+        "min_article_length": 100
+      },
+      "num_chunks": 239,
+      "avg_chunk_size": 1619.0,
+      "embedding_time_s": 30.29,
+      "avg_search_latency_ms": 64.3,
+      "recall@3": 0.5758,
+      "hit@3": 0.5758,
+      "recall@5": 0.7273,
+      "hit@5": 0.7273,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.4622,
+      "label": "S5: Article-level ({'min_article_length': 100})"
+    },
+    {
+      "strategy": "sentence",
+      "params": {
+        "max_chars": 1000,
+        "min_sentences": 2
+      },
+      "num_chunks": 41,
+      "avg_chunk_size": 857.0,
+      "embedding_time_s": 9.38,
+      "avg_search_latency_ms": 160.9,
+      "recall@3": 0.4242,
+      "hit@3": 0.4242,
+      "recall@5": 0.6364,
+      "hit@5": 0.6364,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.42,
+      "label": "S2: Sentence-based ({'max_chars': 1000, 'min_sentences': 2})"
+    },
+    {
+      "strategy": "sentence",
+      "params": {
+        "max_chars": 1500,
+        "min_sentences": 3
+      },
+      "num_chunks": 28,
+      "avg_chunk_size": 1255.0,
+      "embedding_time_s": 10.62,
+      "avg_search_latency_ms": 155.3,
+      "recall@3": 0.3636,
+      "hit@3": 0.3636,
+      "recall@5": 0.5758,
+      "hit@5": 0.5758,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3783,
+      "label": "S2: Sentence-based ({'max_chars': 1500, 'min_sentences': 3})"
+    },
+    {
+      "strategy": "sentence",
+      "params": {
+        "max_chars": 2000,
+        "min_sentences": 2
+      },
+      "num_chunks": 20,
+      "avg_chunk_size": 1758.0,
+      "embedding_time_s": 12.33,
+      "avg_search_latency_ms": 156.2,
+      "recall@3": 0.4242,
+      "hit@3": 0.4242,
+      "recall@5": 0.7879,
+      "hit@5": 0.7879,
+      "recall@10": 1.0,
+      "hit@10": 1.0,
+      "mrr": 0.3918,
+      "label": "S2: Sentence-based ({'max_chars': 2000, 'min_sentences': 2})"
+    }
+  ]
+}

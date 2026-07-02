@@ -18,6 +18,9 @@ import re
 import click
 import pyarrow.dataset as ds
 from tqdm import tqdm
+from dotenv import load_dotenv
+
+load_dotenv()  # Load .env for Qdrant Cloud credentials
 
 from src.data.chunker import LegalDocumentChunker
 from src.data.embedder import BGEEmbedder
@@ -78,7 +81,8 @@ def ingest(
     print(f"Dataset: ~{dataset.count_rows():,} rows")
 
     # Init components
-    chunker = LegalDocumentChunker()
+    # S3 Hierarchical: best from Round 1 eval (R@5=97.3%, MRR=0.889)
+    chunker = LegalDocumentChunker(min_chunk_size=200, max_chunk_size=1000)
     embedder = None  # Lazy load (BGE-M3 is heavy — ~2GB)
     store = LegalVectorStore()
     store.create_collection(recreate=recreate)
@@ -169,7 +173,7 @@ def ingest(
     print(f"✅ Ingestion complete!")
     print(f"   Documents: {total_docs:,}")
     print(f"   Chunks:    {total_chunks:,}")
-    print(f"   Qdrant:    {info['vectors_count']:,} vectors in '{info['name']}'")
+    print(f"   Qdrant:    {info['points_count']:,} vectors in '{info['name']}'")
 
 
 @click.command()

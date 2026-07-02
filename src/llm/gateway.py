@@ -58,34 +58,36 @@ class LLMGateway:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        model_to_use = model or self.MODEL_CHAIN[0]
-
-        kwargs = {
-            "model": model_to_use,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
-
-        if "groq" in model_to_use:
-            kwargs["api_key"] = self.groq_key
-        elif "openai" in model_to_use or "gpt" in model_to_use:
-            kwargs["api_key"] = self.openai_key
+        # Build fallback chain: user-specified model first, then MODEL_CHAIN
+        if model:
+            models_to_try = [model] + [m for m in self.MODEL_CHAIN if m != model]
+        else:
+            models_to_try = list(self.MODEL_CHAIN)
 
         if json_mode:
-            kwargs["response_format"] = {"type": "json_object"}
+            extra_kwargs = {"response_format": {"type": "json_object"}}
+        else:
+            extra_kwargs = {}
 
-        # Try each model in the chain
+        # Try each model in chain
         last_error = None
-        for attempt_model in self.MODEL_CHAIN:
+        for attempt_model in models_to_try:
             try:
-                kwargs["model"] = attempt_model
                 if "groq" in attempt_model:
-                    kwargs["api_key"] = self.groq_key
+                    api_key = self.groq_key
+                elif "openai" in attempt_model or "gpt" in attempt_model:
+                    api_key = self.openai_key
                 else:
-                    kwargs["api_key"] = self.openai_key
+                    api_key = self.groq_key  # default to groq
 
-                response = litellm.completion(**kwargs)
+                response = litellm.completion(
+                    model=attempt_model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    api_key=api_key,
+                    **extra_kwargs,
+                )
                 return self._clean_thinking(response.choices[0].message.content)
             except Exception as e:
                 last_error = e
@@ -123,31 +125,30 @@ class LLMGateway:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
 
-        model_to_use = model or self.MODEL_CHAIN[0]
-
-        kwargs = {
-            "model": model_to_use,
-            "messages": messages,
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-            "stream": True,
-        }
-
-        if "groq" in model_to_use:
-            kwargs["api_key"] = self.groq_key
+        # Build fallback chain: user-specified model first, then MODEL_CHAIN
+        if model:
+            models_to_try = [model] + [m for m in self.MODEL_CHAIN if m != model]
         else:
-            kwargs["api_key"] = self.openai_key
+            models_to_try = list(self.MODEL_CHAIN)
 
         # Try each model
-        for attempt_model in self.MODEL_CHAIN:
+        for attempt_model in models_to_try:
             try:
-                kwargs["model"] = attempt_model
                 if "groq" in attempt_model:
-                    kwargs["api_key"] = self.groq_key
+                    api_key = self.groq_key
+                elif "openai" in attempt_model or "gpt" in attempt_model:
+                    api_key = self.openai_key
                 else:
-                    kwargs["api_key"] = self.openai_key
+                    api_key = self.groq_key  # default to groq
 
-                response = litellm.completion(**kwargs)
+                response = litellm.completion(
+                    model=attempt_model,
+                    messages=messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    api_key=api_key,
+                    stream=True,
+                )
                 for chunk in response:
                     if chunk.choices[0].delta.content:
                         yield chunk.choices[0].delta.content

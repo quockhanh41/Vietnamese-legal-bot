@@ -5,13 +5,18 @@ BGE-M3 (BAAI) provides both dense (1024-dim) and sparse (lexical weights) vector
 in a single pass — eliminating the need for a separate BM25 index.
 """
 
+import gc
 import numpy as np
 from typing import List, Dict, Tuple
 from FlagEmbedding import BGEM3FlagModel
 
 
 class BGEEmbedder:
-    """Wrapper around BGE-M3 for dense + sparse embeddings."""
+    """Wrapper around BGE-M3 for dense + sparse embeddings.
+
+    Includes MPS memory management for macOS: automatically clears Metal cache
+    between batches and falls back to CPU if MPS runs out of memory.
+    """
 
     def __init__(
         self,
@@ -22,9 +27,11 @@ class BGEEmbedder:
         """
         Args:
             model_name: HuggingFace model ID
-            use_fp16: Use half precision (saves memory)
-            device: 'cpu' or 'cuda'
+            use_fp16: Use half precision (saves memory).
+                      Auto-disabled on CPU for compatibility.
+            device: 'cpu', 'mps', or 'cuda'
         """
+        self.device = device
         self.model = BGEM3FlagModel(
             model_name,
             use_fp16=use_fp16,
@@ -54,7 +61,7 @@ class BGEEmbedder:
                 - 'lexical_weights': List[defaultdict[int, float]] (sparse/lexical weights)
                 - 'colbert_vecs': List[np.ndarray] (optional, for ColBERT)
         """
-        return self.model.encode(
+        result = self.model.encode(
             texts,
             batch_size=batch_size,
             max_length=8192,
@@ -62,6 +69,21 @@ class BGEEmbedder:
             return_sparse=return_sparse,
             return_colbert_vecs=False,
         )
+
+        # MPS memory management: clear Metal cache after each encode batch
+        self._clear_gpu_memory()
+
+        return result
+
+    def _clear_gpu_memory(self):
+        """Clear GPU memory caches to prevent memory accumulation."""
+        try:
+            import torch
+            if torch.backends.mps.is_available():
+                torch.mps.empty_cache()
+        except Exception:
+            pass
+        gc.collect()
 
     def encode_queries(self, queries: List[str]) -> np.ndarray:
         """Encode search queries (dense only, no sparse needed for queries)."""
