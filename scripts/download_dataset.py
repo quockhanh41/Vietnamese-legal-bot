@@ -13,6 +13,8 @@ import json
 from pathlib import Path
 from datasets import load_dataset
 
+from src.data.constants import LEGAL_TYPES, ALL_LEGAL_TYPES, MIN_CONTENT_LENGTH
+
 
 def download_dataset(output_dir: str = "data/raw"):
     """Download both configs and merge into a single parquet file."""
@@ -107,13 +109,11 @@ def explore_dataset(df: pd.DataFrame):
 
     # After-filter estimate
     print("\n--- Post-Filter Estimate ---")
-    legal_types = ["Luật", "Bộ luật", "Nghị định", "Thông tư", "Nghị quyết", "Quyết định"]
     filtered = df[
-        df["legal_type"].isin(legal_types)
-        & (df["issuance_date"] >= pd.Timestamp("2015-01-01"))
-        & (df["content"].str.len() > 500)
+        df["legal_type"].isin(LEGAL_TYPES)
+        & (df["content"].str.len() >= MIN_CONTENT_LENGTH)
     ]
-    print(f"  Filter (type + date + length): {len(filtered):,} documents")
+    print(f"  Filter (type + length): {len(filtered):,} documents")
     print(f"  Legal type distribution after filter:")
     for t, c in filtered["legal_type"].value_counts().items():
         print(f"    {t:<20s} {c:>8,}")

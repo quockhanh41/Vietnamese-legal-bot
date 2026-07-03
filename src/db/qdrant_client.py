@@ -6,6 +6,7 @@ Compatible with Qdrant >= 1.18.x (query_points API).
 
 import os
 import uuid
+import time
 import warnings
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
@@ -52,6 +53,7 @@ class LegalVectorStore:
         url: Optional[str] = None,
         api_key: Optional[str] = None,
         collection_name: str = "vietnamese_laws",
+        timeout: int = 60,
     ):
         self.url = url or os.getenv("QDRANT_URL", "http://localhost:6333")
         self.api_key = api_key or os.getenv("QDRANT_API_KEY")
@@ -60,9 +62,9 @@ class LegalVectorStore:
         if self.url.startswith("http://") and not self.api_key:
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
-                self.client = QdrantClient(url=self.url, api_key=self.api_key)
+                self.client = QdrantClient(url=self.url, api_key=self.api_key, timeout=timeout)
         else:
-            self.client = QdrantClient(url=self.url, api_key=self.api_key)
+            self.client = QdrantClient(url=self.url, api_key=self.api_key, timeout=timeout)
 
     def create_collection(self, recreate: bool = False):
         """Create the collection with dense + sparse vector support."""
@@ -131,22 +133,32 @@ class LegalVectorStore:
             )
             points.append(point)
 
-            # Batch upsert
+            # Batch upsert with retry
             if len(points) >= batch_size:
+                self._upsert_with_retry(points)
+                points = []
+
+        # Final batch
+        if points:
+            self._upsert_with_retry(points)
+
+    def _upsert_with_retry(self, points: List[PointStruct], max_retries: int = 3):
+        """Upsert points with exponential backoff for cloud resilience."""
+        for attempt in range(max_retries):
+            try:
                 self.client.upsert(
                     collection_name=self.collection_name,
                     points=points,
                     wait=True,
                 )
-                points = []
-
-        # Final batch
-        if points:
-            self.client.upsert(
-                collection_name=self.collection_name,
-                points=points,
-                wait=True,
-            )
+                return
+            except Exception as e:
+                if attempt == max_retries - 1:
+                    raise
+                wait_s = 2 ** attempt  # 1s, 2s, 4s
+                print(f"  ⚠️  Upsert failed (attempt {attempt+1}/{max_retries}), "
+                      f"retrying in {wait_s}s... ({e})")
+                time.sleep(wait_s)
 
         print(f"Indexed {len(chunk_texts)} chunks")
 

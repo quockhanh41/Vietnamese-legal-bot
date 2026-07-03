@@ -25,11 +25,14 @@ load_dotenv()  # Load .env for Qdrant Cloud credentials
 from src.data.chunker import LegalDocumentChunker
 from src.data.embedder import BGEEmbedder
 from src.db.qdrant_client import LegalVectorStore
+from src.data.constants import (
+    LEGAL_TYPES,
+    MIN_CONTENT_LENGTH,
+    DEFAULT_COLLECTION_NAME,
+    DATE_FILTER_MIN_YEAR,
+    DATE_FILTER_MAX_YEAR,
+)
 
-
-# --- Filter Configuration ---
-LEGAL_TYPES = {"Luật", "Bộ luật", "Nghị định", "Thông tư", "Nghị quyết", "Quyết định"}
-MIN_CONTENT_LENGTH = 500  # characters
 
 # Date regex for DD/MM/YYYY format
 DATE_RE = re.compile(r'(\d{2})/(\d{2})/(\d{4})')
@@ -48,14 +51,19 @@ def parse_date(date_str):
 
 def filter_row(row: dict) -> bool:
     """Check if a single row passes filters. Fast, no pandas needed."""
-    # Legal type filter
+    # Legal type filter — only process configured types (currently "Luật")
     if row.get("legal_type") not in LEGAL_TYPES:
         return False
 
-    # Date filter: 2015-2026
-    date = parse_date(row.get("issuance_date"))
-    if date is None or date[0] < 2015 or date[0] > 2026:
-        return False
+    # Date filter (optional — currently disabled for full history)
+    if DATE_FILTER_MIN_YEAR is not None or DATE_FILTER_MAX_YEAR is not None:
+        date = parse_date(row.get("issuance_date"))
+        if date is None:
+            return False
+        if DATE_FILTER_MIN_YEAR is not None and date[0] < DATE_FILTER_MIN_YEAR:
+            return False
+        if DATE_FILTER_MAX_YEAR is not None and date[0] > DATE_FILTER_MAX_YEAR:
+            return False
 
     # Content length
     content = row.get("content")
@@ -84,7 +92,7 @@ def ingest(
     # S3 Hierarchical: best from Round 1 eval (R@5=97.3%, MRR=0.889)
     chunker = LegalDocumentChunker(min_chunk_size=200, max_chunk_size=1000)
     embedder = None  # Lazy load (BGE-M3 is heavy — ~2GB)
-    store = LegalVectorStore()
+    store = LegalVectorStore(collection_name=DEFAULT_COLLECTION_NAME, timeout=120)
     store.create_collection(recreate=recreate)
 
     total_docs = 0
@@ -139,6 +147,7 @@ def ingest(
                     dense_vectors=[b["dense"] for b in chunk_buffer],
                     sparse_vectors=[b["sparse"] for b in chunk_buffer],
                     metadata_list=[b["metadata"] for b in chunk_buffer],
+                    batch_size=25,  # Smaller batch for high-latency connections
                 )
                 chunk_buffer = []
                 embed_text_buffer = []
@@ -165,6 +174,7 @@ def ingest(
             dense_vectors=[b["dense"] for b in chunk_buffer],
             sparse_vectors=[b["sparse"] for b in chunk_buffer],
             metadata_list=[b["metadata"] for b in chunk_buffer],
+            batch_size=25,
         )
 
     # Verify

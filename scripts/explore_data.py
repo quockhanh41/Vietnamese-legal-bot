@@ -12,6 +12,8 @@ import pyarrow.parquet as pq
 import pandas as pd
 from collections import Counter
 
+from src.data.constants import LEGAL_TYPES
+
 
 DATA_PATH = "data/raw/legal_docs_merged.parquet"
 
@@ -78,8 +80,7 @@ def explore_safe():
         print(f"  {y}: {count:>8,}  {bar}")
 
     # Estimate after filter
-    filter_types = {"Luật", "Bộ luật", "Nghị định", "Thông tư", "Nghị quyết", "Quyết định"}
-    filtered_count = sum(c for t, c in type_counter.items() if t in filter_types)
+    filtered_count = sum(c for t, c in type_counter.items() if t in LEGAL_TYPES)
     recent_count = sum(date_years.get(y, 0) for y in range(2015, 2027))
     print(f"\n--- Filter Estimate ---")
     print(f"  After type filter: ~{filtered_count:,} docs")

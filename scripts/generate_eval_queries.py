@@ -23,6 +23,7 @@ import pyarrow.dataset as ds
 from tqdm import tqdm
 
 from src.data.chunker import create_chunker
+from src.data.constants import LEGAL_TYPES, MIN_CONTENT_LENGTH
 from src.llm.gateway import LLMGateway
 
 TEST_QUERY_GENERATION_PROMPT = """Bạn là chuyên gia tạo câu hỏi kiểm tra cho hệ thống tra cứu văn bản pháp luật Việt Nam.
@@ -143,8 +144,6 @@ def generate_queries(
     # Collect full documents of manageable size
     selected_docs = []
     seen_legal_types = set()
-    LEGAL_TYPES = {"Luật", "Bộ luật", "Nghị định", "Thông tư", "Nghị quyết", "Quyết định"}
-
     for batch in dataset.to_batches(batch_size=200):
         if len(selected_docs) >= num_docs:
             break

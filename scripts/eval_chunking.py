@@ -27,6 +27,7 @@ import numpy as np
 from src.data.chunker import create_chunker
 from src.data.embedder import BGEEmbedder
 from src.db.qdrant_client import LegalVectorStore
+from src.data.constants import LEGAL_TYPES, MIN_CONTENT_LENGTH
 
 
 # --- Parameter Sweeps ---
@@ -82,7 +83,6 @@ def _load_documents(data_path: str, num_docs: int, seed: int = 42,
     """Load a random sample of documents, guaranteeing required_ids are included."""
     dataset = ds.dataset(data_path, format="parquet")
 
-    LEGAL_TYPES = {"Luật", "Bộ luật", "Nghị định", "Thông tư", "Nghị quyết", "Quyết định"}
     required_ids = required_ids or set()
 
     # Phase 1: Load required docs by ID (scan full dataset)
@@ -94,7 +94,7 @@ def _load_documents(data_path: str, num_docs: int, seed: int = 42,
                 doc_id = row_dict.get("id")
                 if doc_id in required_ids and doc_id not in required_docs:
                     content = row_dict.get("content", "")
-                    if content and len(content) >= 500:
+                    if content and len(content) >= MIN_CONTENT_LENGTH:
                         if row_dict.get("legal_type") in LEGAL_TYPES:
                             required_docs[doc_id] = row_dict
             if len(required_docs) >= len(required_ids):
@@ -117,7 +117,7 @@ def _load_documents(data_path: str, num_docs: int, seed: int = 42,
                 if row_dict.get("id") in required_ids:
                     continue
                 content = row_dict.get("content", "")
-                if not content or len(content) < 500:
+                if not content or len(content) < MIN_CONTENT_LENGTH:
                     continue
                 if row_dict.get("legal_type") not in LEGAL_TYPES:
                     continue

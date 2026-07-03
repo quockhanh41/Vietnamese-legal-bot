@@ -7,17 +7,11 @@ import streamlit as st
 import requests
 import pandas as pd
 
+from src.data.constants import ALL_LEGAL_TYPES
+
 API_BASE = os.environ.get("API_URL", "http://localhost:8000")
 
-LEGAL_TYPES = [
-    "Tất cả",
-    "Luật",
-    "Bộ luật",
-    "Nghị định",
-    "Thông tư",
-    "Nghị quyết",
-    "Quyết định",
-]
+LEGAL_TYPE_OPTIONS = ["Tất cả"] + ALL_LEGAL_TYPES
 
 
 def render_documents_page():
@@ -27,7 +21,7 @@ def render_documents_page():
     # --- Filters ---
     col1, col2, col3 = st.columns([2, 3, 1])
     with col1:
-        legal_type = st.selectbox("Loại văn bản", LEGAL_TYPES)
+        legal_type = st.selectbox("Loại văn bản", LEGAL_TYPE_OPTIONS)
     with col2:
         keyword = st.text_input("Từ khóa", placeholder="Nhập từ khóa tìm kiếm...")
     with col3:
