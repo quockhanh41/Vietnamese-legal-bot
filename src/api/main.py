@@ -1,16 +1,18 @@
 """
 FastAPI backend for Vietnamese Legal Knowledge Bot.
+Phase 2: Integrated with cross-referencing, temporal versioning, and amendments.
 """
 
 import json
 import time
 from typing import Optional
 from contextlib import asynccontextmanager
+from datetime import date as DateType
 
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -18,15 +20,20 @@ from sse_starlette.sse import EventSourceResponse
 
 from src.db.qdrant_client import LegalVectorStore
 from src.data.embedder import BGEEmbedder
+from src.data.constants import DEFAULT_COLLECTION_NAME
+from src.data.metadata_store import MetadataStore
 from src.llm.gateway import LLMGateway
 from src.rag.orchestrator import NaiveRAGPipeline, AdaptiveRAGPipeline
+from src.pipeline.retriever import EnhancedRetriever
 
 
 # --- Models ---
 class ChatRequest(BaseModel):
     question: str
     session_id: Optional[str] = None
-    use_adaptive: bool = False  # MVP: False, v1.0+: True
+    use_adaptive: bool = False
+    expand_context: bool = False  # Phase 2: cross-reference expansion
+    expansion_hops: int = 1
 
 
 class ChatResponse(BaseModel):
@@ -36,6 +43,16 @@ class ChatResponse(BaseModel):
     disclaimer: str = ""
     latency_ms: float = 0
     pipeline_used: str = "naive"
+    expanded_results: int = 0  # Phase 2: context expansion count
+
+
+class EnrichRequest(BaseModel):
+    collection_name: Optional[str] = None
+
+
+class ArticleHistoryRequest(BaseModel):
+    doc_id: int
+    article: str
 
 
 class DocumentFilter(BaseModel):
@@ -49,9 +66,13 @@ class DocumentFilter(BaseModel):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    app.state.vector_store = LegalVectorStore()
+    app.state.vector_store = LegalVectorStore(
+        collection_name=DEFAULT_COLLECTION_NAME
+    )
     app.state.embedder = None  # Lazy load (BGE-M3 is heavy)
     app.state.llm = LLMGateway()
+    app.state.metadata_store = MetadataStore()
+    app.state.enhanced_retriever = None  # Lazy load
     yield
     # Shutdown
     pass
@@ -77,6 +98,17 @@ def get_embedder():
     if app.state.embedder is None:
         app.state.embedder = BGEEmbedder()
     return app.state.embedder
+
+
+def get_enhanced_retriever() -> EnhancedRetriever:
+    """Lazy-load enhanced retriever with Phase 2 capabilities."""
+    if app.state.enhanced_retriever is None:
+        app.state.enhanced_retriever = EnhancedRetriever(
+            vector_store=app.state.vector_store,
+            metadata_store=app.state.metadata_store,
+            embedder=get_embedder(),
+        )
+    return app.state.enhanced_retriever
 
 
 def get_naive_pipeline() -> NaiveRAGPipeline:
@@ -198,13 +230,202 @@ async def list_documents(
 
 @app.get("/api/stats")
 async def stats():
-    """Get system statistics."""
+    """Get system statistics (Phase 2 enhanced)."""
     try:
         store = app.state.vector_store
         info = store.get_collection_info()
+
+        # Add Phase 2 stats if enrichment has been run
+        phase2 = {}
+        try:
+            index = app.state.metadata_store.get_index()
+            phase2 = {
+                "documents_enriched": index.get("total_documents", 0),
+                "currently_in_effect": index.get("currently_in_effect", 0),
+                "amendment_laws": index.get("amendment_laws", 0),
+                "graph_nodes": index.get("total_graph_nodes", 0),
+                "graph_edges": index.get("total_graph_edges", 0),
+                "total_amendments": index.get("total_amendments", 0),
+                "last_enriched": index.get("last_enriched"),
+            }
+        except Exception:
+            pass  # Enrichment not yet run
+
         return {
             "indexed_documents": info.get("points_count", 0),
             "collection_name": info.get("name", ""),
+            "phase2": phase2,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 2 Endpoints
+# ═══════════════════════════════════════════════════════════════
+
+@app.post("/api/pipeline/enrich")
+async def run_enrichment(request: EnrichRequest = None):
+    """
+    Run the Phase 2 enrichment pipeline on all documents.
+
+    Extracts cross-references, timelines, and amendment data,
+    storing results in the metadata store.
+    """
+    try:
+        from src.pipeline.enricher import EnrichmentPipeline
+
+        pipeline = EnrichmentPipeline(
+            vector_store=app.state.vector_store,
+            metadata_store=app.state.metadata_store,
+        )
+
+        result = pipeline.run()
+
+        return {
+            "status": "completed" if not result.errors else "completed_with_errors",
+            "docs_processed": result.docs_processed,
+            "total_docs": result.total_docs,
+            "base_laws": result.base_laws,
+            "amendment_laws": result.amendment_laws,
+            "graph_nodes": result.graph_nodes,
+            "graph_edges": result.graph_edges,
+            "with_effective_date": result.with_effective_date,
+            "currently_in_effect": result.currently_in_effect,
+            "total_amendments": result.total_amendments,
+            "articles_amended": result.articles_amended,
+            "elapsed_seconds": result.elapsed_seconds,
+            "errors": result.errors,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/pipeline/status")
+async def enrichment_status():
+    """Get Phase 2 enrichment status and index."""
+    try:
+        index = app.state.metadata_store.get_index()
+        return {
+            "enriched": index.get("total_documents", 0) > 0,
+            "index": index,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/article/history")
+async def article_history(
+    doc_id: int = Query(..., description="Document ID"),
+    article: str = Query(..., description="Article number, e.g. 'Điều 123'"),
+):
+    """Get amendment history for a specific article."""
+    try:
+        retriever = get_enhanced_retriever()
+        history = retriever.get_article_history(doc_id, article)
+        return history
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/graph/stats")
+async def graph_stats():
+    """Get knowledge graph statistics."""
+    try:
+        graph_data = app.state.metadata_store.get_graph()
+        nodes = graph_data.get("nodes", [])
+        edges = graph_data.get("edges", [])
+
+        # Count by type
+        node_types = {}
+        for n in nodes:
+            nt = n.get("node_type", "unknown")
+            node_types[nt] = node_types.get(nt, 0) + 1
+
+        edge_types = {}
+        for e in edges:
+            et = e.get("ref_type", "unknown")
+            edge_types[et] = edge_types.get(et, 0) + 1
+
+        return {
+            "nodes": len(nodes),
+            "edges": len(edges),
+            "node_types": node_types,
+            "edge_types": edge_types,
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/graph/neighbors")
+async def graph_neighbors(
+    doc_id: int = Query(..., description="Document ID"),
+    article: str = Query(..., description="Article number"),
+    hops: int = Query(1, description="Number of hops (1-2)"),
+):
+    """Get neighboring articles in the cross-reference graph."""
+    try:
+        node_id = f"doc_{doc_id}_{article.lower().replace(' ', '_')}"
+        neighbors = app.state.metadata_store.get_article_neighbors(node_id, hops)
+        return {
+            "node_id": node_id,
+            "hops": hops,
+            "neighbors": neighbors[:20],
+            "count": len(neighbors),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/timeline/effective")
+async def effective_laws(
+    at_date: Optional[str] = Query(None, description="Date in YYYY-MM-DD format (default: today)"),
+):
+    """Get laws effective at a given date."""
+    try:
+        from datetime import date as dt
+
+        target_date = dt.fromisoformat(at_date) if at_date else dt.today()
+
+        effective = app.state.metadata_store.get_effective_laws(target_date)
+
+        return {
+            "at_date": target_date.isoformat(),
+            "count": len(effective),
+            "laws": [
+                {
+                    "doc_id": tl.get("doc_id"),
+                    "law_name": tl.get("law_name"),
+                    "effective_date": tl.get("effective_date"),
+                }
+                for tl in effective[:50]
+            ],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/search/enhanced")
+async def enhanced_search(
+    query: str = Query(..., description="Search query"),
+    top_k: int = Query(5, description="Number of results"),
+    expand_context: bool = Query(False, description="Enable cross-reference expansion"),
+    expansion_hops: int = Query(1, description="Number of expansion hops"),
+):
+    """Enhanced search with Phase 2 context expansion and metadata."""
+    try:
+        retriever = get_enhanced_retriever()
+        results = retriever.retrieve(
+            query=query,
+            top_k=top_k,
+            expand_context=expand_context,
+            expansion_hops=expansion_hops,
+        )
+        return {
+            "query": query,
+            "results": [r.to_dict() for r in results],
+            "expand_context": expand_context,
+            "total": len(results),
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

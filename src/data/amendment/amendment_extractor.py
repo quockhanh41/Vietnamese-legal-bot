@@ -885,7 +885,7 @@ class AmendmentExtractor:
         """Clean up a law name extracted from text."""
         name = name.strip().strip('.,;:')
         # Remove trailing "số XX/YYYY/QHXX" if present
-        name = re.sub(r'\s+số\s+[\d/]+[A-Za-z]*\s*$', '', name)
+        name = re.sub(r'\s+số\s+[\d/]+[A-Za-z]*\s*$', '', name, flags=re.IGNORECASE)
         # Remove trailing year
         name = re.sub(r'\s+(?:năm\s+)?\d{4}\s*$', '', name)
         # Remove quotes

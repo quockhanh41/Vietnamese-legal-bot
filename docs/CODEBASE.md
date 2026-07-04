@@ -2,6 +2,9 @@
 
 > Cẩm nang đọc code toàn diện: kiến trúc, data flow, từng module, cách debug.
 > Dành cho chính bạn sau này và người mới onboard vào project.
+>
+> **Version**: Phase 2 — Full Legal Intelligence Pipeline
+> **Last updated**: 2026-07-04
 
 ---
 
@@ -9,34 +12,63 @@
 
 ```
 vietnamese-legal-bot/
-├── .env                          # API keys (GROQ_API_KEY, etc.) — gitignored
+├── .env                          # API keys (GROQ_API_KEY, QDRANT_URL, etc.) — gitignored
 ├── .env.example                  # Template env vars
 ├── Dockerfile                    # Multi-stage: api / ui
 ├── docker-compose.yml            # 4 services: qdrant, redis, api, ui
 ├── Makefile                      # Shortcuts: make api, make ui, make dev, make ingest-test, etc.
 ├── pyproject.toml                # Dependencies (langchain-text-splitters, FlagEmbedding, litellm, etc.)
 │
-├── data/raw/                     # 🚫 gitignored
-│   └── legal_docs_merged.parquet # 518K docs, 3.6GB — dataset HuggingFace
+├── data/                         # 🚫 gitignored
+│   ├── raw/
+│   │   └── legal_docs_merged.parquet  # 518K docs, 3.6GB — dataset HuggingFace
+│   └── metadata/                 # ✨ Phase 2: enriched document metadata (JSON)
+│       ├── documents.json        #   Per-document cross-refs, timeline, amendments
+│       ├── graph.json            #   Knowledge graph (nodes + edges)
+│       ├── timelines.json        #   Effective/expiry dates for all docs
+│       ├── amendments.json       #   Amendment instructions (MODIFY/INSERT/REPEAL)
+│       └── index.json            #   Summary index
 │
 ├── scripts/                      # ⚡ Entry points để chạy từ CLI
 │   ├── download_dataset.py       # Tải từ HuggingFace → merge → save parquet
 │   ├── explore_data.py           # Scan stats (legal_type, dates) — LOW MEMORY
-│   └── ingest.py                 # Full pipeline: filter → chunk → embed → Qdrant
+│   ├── ingest.py                 # Full pipeline: filter → chunk → embed → Qdrant
+│   ├── eval_chunking.py          # Evaluate chunking strategies
+│   └── generate_eval_queries.py  # Generate test queries for RAGAS eval
 │
 ├── src/                          # 📦 Code chính
 │   ├── data/
-│   │   ├── chunker.py            # LegalDocumentChunker: tách văn bản pháp luật
-│   │   └── embedder.py           # BGEEmbedder: BGE-M3 (dense 1024-dim + sparse)
+│   │   ├── constants.py          # ✨ Single source of truth: LEGAL_TYPES, collection name
+│   │   ├── metadata_store.py     # ✨ Phase 2: Document metadata persistence (JSON)
+│   │   ├── chunker.py            # LegalDocumentChunker (legacy)
+│   │   ├── embedder.py           # BGEEmbedder: BGE-M3 (dense 1024-dim + sparse)
+│   │   ├── chunking/             # ✨ Modular chunking strategies
+│   │   │   ├── hierarchical.py   #   S3: Chapter → Article → Clause (default)
+│   │   │   ├── article_level.py  #   S1: Article-level boundaries
+│   │   │   ├── fixed_size.py     #   S2: Fixed-size with overlap
+│   │   │   ├── semantic.py       #   S4: Semantic (sentence-boundary aware)
+│   │   │   └── sentence.py       #   S5: Sentence-level
+│   │   ├── graph/                # ✨ Module 1: Cross-Referencing
+│   │   │   ├── ref_extractor.py  #   9 regex patterns, 5 reference types
+│   │   │   └── graph_builder.py  #   NetworkX DiGraph, BFS context expansion
+│   │   ├── timeline/             # ✨ Module 2: Temporal Versioning
+│   │   │   ├── date_extractor.py #   "Hiệu lực thi hành" parser (6 strategies)
+│   │   │   └── version_resolver.py # Time-aware query engine + version chains
+│   │   └── amendment/            # ✨ Module 3: Amendments Tracking
+│   │       ├── amendment_extractor.py  # 20+ regex patterns, 15 action types
+│   │       └── amendment_consolidator.py # Apply amendments to base law text
+│   ├── pipeline/                 # ✨ Phase 2 Integration Layer
+│   │   ├── enricher.py           # Enrichment orchestrator (runs all 3 modules)
+│   │   └── retriever.py          # Enhanced retrieval + context expansion + time filter
 │   ├── db/
-│   │   └── qdrant_client.py      # LegalVectorStore: CRUD + search (dense/sparse/hybrid)
+│   │   └── qdrant_client.py      # LegalVectorStore: CRUD + hybrid search + retry
 │   ├── llm/
 │   │   ├── gateway.py            # LLMGateway: LiteLLM fallback chain (Groq Qwen3)
 │   │   └── prompts.py            # Tất cả prompt templates
 │   ├── rag/
 │   │   └── orchestrator.py       # NaiveRAGPipeline + AdaptiveRAGPipeline
 │   ├── api/
-│   │   └── main.py               # FastAPI app (5 endpoints, SSE streaming)
+│   │   └── main.py               # FastAPI (12 endpoints: chat + Phase 2 pipeline)
 │   └── ui/
 │       ├── app.py                # Streamlit entry point (sidebar nav)
 │       └── pages/
@@ -46,13 +78,13 @@ vietnamese-legal-bot/
 │
 ├── tests/                        # Unit tests (TODO)
 └── docs/
-    ├── lessons-learned.md        # 8 bài học engineering (bugs + fixes)
+    ├── lessons-learned.md        # Bài học engineering (bugs + fixes)
     └── CODEBASE.md               # ← You are here
 ```
 
 ---
 
-## 🔄 Data Flow — 2 luồng chính
+## 🔄 Data Flow — 3 luồng chính
 
 ### Luồng 1: Ingestion (Index dữ liệu vào Qdrant)
 
@@ -72,19 +104,19 @@ vietnamese-legal-bot/
          │ ── STREAMING, batch 200 rows (~50MB mỗi batch)
          ▼
 ┌──────────────────┐
-│ filter_row()     │  Loại: legal_type ∈ {Luật, Bộ luật, Nghị định, ...}
-│                  │  Thời gian: 2015 ≤ year ≤ 2026
+│ filter_row()     │  Loại: legal_type ∈ {Luật} (Phase 2 narrowed)
+│                  │  Thời gian: DATE_FILTER_MIN_YEAR/MAX_YEAR (None = all)
 │                  │  Nội dung: len(content) ≥ 500 chars
-│                  │  → Còn ~312K docs
+│                  │  → 595 docs (Luật + Bộ luật combined)
 └────────┬─────────┘
          ▼
-┌──────────────────┐
-│ LegalDocument    │  Hierarchical Markdown Chunking:
-│ Chunker          │  - MarkdownHeaderTextSplitter (Chương/Điều/Khoản)
-│                  │  - Fallback: regex Vietnamese legal structure
-│                  │  - Size control: merge <200 chars, split >1000 chars
-│                  │  - Each chunk inherits parent metadata
-└────────┬─────────┘
+┌──────────────────────────────────────┐
+│ Hierarchical Chunking (S3 default):  │
+│  - MarkdownHeaderTextSplitter        │
+│  - Chương → Mục → Điều → Khoản       │
+│  - Size: 500-2000 chars/chunk        │
+│  - Metadata inheritance per chunk    │
+└────────┬─────────────────────────────┘
          ▼
 ┌──────────────────┐
 │ BGEEmbedder      │  BAAI/bge-m3 (FlagEmbedding):
@@ -94,49 +126,93 @@ vietnamese-legal-bot/
 └────────┬─────────┘
          ▼
 ┌──────────────────┐
-│ Qdrant           │  Collection: "vietnamese_laws"
-│ (Docker)         │  - Dense vector: 1024-dim COSINE
+│ Qdrant Cloud     │  Collection: "luat_law"
+│ (Australia)      │  - Dense vector: 1024-dim COSINE
 │                  │  - Sparse vector: lexical index
 │                  │  - Payload: chunk_text + full metadata
+│                  │  - Retry logic: 3 attempts, exponential backoff
 └──────────────────┘
 ```
 
-### Luồng 2: Query (Hỏi đáp pháp luật)
+### Luồng 2: Phase 2 Enrichment (Làm giàu metadata)
 
 ```
 ┌──────────────────┐
-│ User Question    │  "Thủ tục cấp giấy phép xây dựng là gì?"
+│ Qdrant Cloud     │  Collection: "luat_law"
+│ (6/595 docs)     │
+└────────┬─────────┘
+         │ EnrichmentPipeline.run()
+         │ Scroll tất cả points → dedup by document_id
+         │ Reconstruct full text từ chunks
+         ▼
+┌──────────────────────────────────────────────────────────────┐
+│                     FOR EACH DOCUMENT                        │
+│                                                              │
+│  ┌─────────────────┐  ┌─────────────────┐  ┌──────────────┐ │
+│  │ M1: Cross-Ref   │  │ M2: Temporal    │  │ M3: Amendment│ │
+│  │                 │  │                 │  │              │ │
+│  │ 9 regex patterns│  │ rfind strategy  │  │ 20+ patterns │ │
+│  │ → Reference[]   │  │ → LawTimeline   │  │ → Instruction│ │
+│  │ → KnowledgeGraph│  │ → Version chain │  │ → Target map │ │
+│  └────────┬────────┘  └────────┬────────┘  └──────┬───────┘ │
+│           │                    │                   │         │
+└───────────┼────────────────────┼───────────────────┼─────────┘
+            │                    │                   │
+            ▼                    ▼                   ▼
+┌──────────────────────────────────────────────────────────────┐
+│                      MetadataStore                            │
+│                                                              │
+│  data/metadata/                                              │
+│  ├── documents.json   ← DocumentMeta (refs, dates, amend)    │
+│  ├── graph.json       ← Knowledge graph (nodes + edges)      │
+│  ├── timelines.json   ← LawTimeline (effective/expiry dates) │
+│  ├── amendments.json  ← AmendmentInstruction list            │
+│  └── index.json       ← Summary index                        │
+└──────────────────────────────────────────────────────────────┘
+```
+
+### Luồng 3: Enhanced Query (Hỏi đáp pháp luật — Phase 2)
+
+```
+┌──────────────────┐
+│ User Question    │  "Điều 123 Bộ luật Hình sự 2018 quy định thế nào?"
 └────────┬─────────┘
          │ POST /api/chat hoặc /api/chat/stream
+         │ expand_context=true, expansion_hops=1
          ▼
 ┌──────────────────┐
 │ FastAPI          │  src/api/main.py
-│                  │  Lazy-load BGEEmbedder (nặng ~2GB, load 1 lần)
+│                  │  Lazy-load BGEEmbedder, EnhancedRetriever
 │                  │  Chọn NaiveRAGPipeline hoặc AdaptiveRAGPipeline
 └────────┬─────────┘
          ▼
-┌──────────────────────────────────────────────────┐
-│ NaiveRAGPipeline.query()                         │
-│                                                  │
-│  Step 1: embedder.encode_queries([question])     │
-│          → dense vector (1024,)                  │
-│                                                  │
-│  Step 2: vector_store.search_dense(vector, k=5)  │
-│          → List[SearchResult]                    │
-│                                                  │
-│  Step 3: _build_context(results)                 │
-│          → format "[1] Title — Điều X\nchunk..."  │
-│                                                  │
-│  Step 4: LLM.generate(prompt, json_mode=True)    │
-│          → Groq Qwen 3 32B (fallback chain)      │
-│                                                  │
-│  Step 5: _parse_response(json) → RAGResponse     │
-│          answer + citations + confidence         │
-└──────────────────┬───────────────────────────────┘
+┌──────────────────────────────────────────────────────────┐
+│ EnhancedRetriever.retrieve()                             │
+│                                                          │
+│  Step 1: embedder.encode(query) → dense + sparse         │
+│                                                          │
+│  Step 2: vector_store.search_hybrid(dense, sparse, k=15) │
+│          → List[SearchResult]                            │
+│                                                          │
+│  Step 3: _enrich_result() — merge Phase 2 metadata:      │
+│          ├── effective_date từ MetadataStore              │
+│          ├── is_amended check (article có bị sửa đổi?)    │
+│          └── amending_laws list                           │
+│                                                          │
+│  Step 4: (optional) _expand_context() — BFS on graph:    │
+│          ├── Follow edges: Điều 123 → Điều 456, Điều 789 │
+│          └── Add referenced article chunks into context   │
+│                                                          │
+│  Step 5: NaiveRAGPipeline.query() — generate answer      │
+│          → LLM.generate(context+question, json_mode)     │
+│                                                          │
+│  Step 6: _parse_response(json) → RAGResponse             │
+│          answer + citations + confidence + expanded      │
+└──────────────────┬───────────────────────────────────────┘
                    ▼
 ┌──────────────────┐
 │ ChatResponse     │  JSON: {answer, citations[], confidence, disclaimer,
-│ (JSON)           │         latency_ms, pipeline_used}
+│ (JSON)           │         latency_ms, pipeline_used, expanded_results}
 └──────────────────┘
 ```
 
@@ -194,7 +270,29 @@ LegalDocumentChunker
 
 ---
 
-### 2. `src/data/embedder.py` — BGEEmbedder
+### 2. `src/data/constants.py` — Shared Configuration ✨
+
+**Vai trò**: Single source of truth cho tất cả shared config.
+
+```python
+LEGAL_TYPES: set[str] = {"Luật"}            # Phase 2: narrowed from 6 types
+ALL_LEGAL_TYPES: list[str] = [              # For UI dropdowns
+    "Luật", "Bộ luật", "Nghị định", "Thông tư", "Nghị quyết", "Quyết định"
+]
+MIN_CONTENT_LENGTH: int = 500               # Skip short/empty docs
+DEFAULT_COLLECTION_NAME: str = "luat_law"   # Phase 2 collection
+DATE_FILTER_MIN_YEAR: int | None = None     # No date filter (keep all)
+DATE_FILTER_MAX_YEAR: int | None = None
+```
+
+**Điểm cần lưu ý**:
+- "Bộ luật" documents are classified as "Luật" in the source dataset
+- Được import từ 6 files (ingest.py, explore_data.py, download_dataset.py, etc.)
+- Python 3.9: cần `from __future__ import annotations` cho `int | None` syntax
+
+---
+
+### 3. `src/data/embedder.py` — BGEEmbedder
 
 **Vai trò**: Encode text thành dense + sparse vectors dùng BGE-M3.
 
@@ -340,6 +438,208 @@ OPENAI_API_KEY=sk-xxxxxxxxxxxxx   # Optional fallback
 
 ---
 
+## 🧩 Phase 2 Modules — Legal Intelligence
+
+### 6a. `src/data/graph/` — Module 1: Cross-Referencing 🔗
+
+**Vai trò**: Trích xuất và xây dựng knowledge graph từ các tham chiếu chéo giữa các điều luật.
+
+**Cấu trúc**:
+```
+src/data/graph/
+├── ref_extractor.py        # ReferenceExtractor
+│   ├── 9 compiled regex patterns:
+│   │   ├── EXTERNAL_LAW:  "Điều X của Luật Y"
+│   │   ├── EXTERNAL_CODE: "Điều X của Bộ luật Y"
+│   │   ├── INTERNAL:      "Điều X của Luật/Bộ luật này"
+│   │   ├── CLAUSE_DIEU:   "khoản X Điều Y"
+│   │   ├── TAI_DIEU_LUAT: "tại Điều X của Luật Y"
+│   │   ├── MULTI_DIEU:    "Điều X và Điều Y"
+│   │   └── CHAPTER:       "tại Chương X"
+│   ├── RefType enum: INTERNAL, EXTERNAL, CLAUSE, MULTI, CHAPTER
+│   └── Reference dataclass: source/target doc_id, article, clause, confidence
+│
+└── graph_builder.py        # LegalKnowledgeGraph
+    ├── NetworkX DiGraph — directed edges
+    ├── ArticleNode dataclass (node_id format: doc_{id}_dieu_{num})
+    ├── add_references(refs) → builds nodes + edges
+    ├── get_neighbors(article_id, hops, direction) → BFS traversal
+    ├── expand_context(article_ids, hops) → query-time expansion
+    ├── most_referenced(top_n) → highest in-degree articles
+    ├── find_orphans() → articles with no outgoing refs
+    └── to_dict() → JSON-serializable export
+```
+
+**Usage**:
+```python
+from src.data.graph import ReferenceExtractor, LegalKnowledgeGraph
+
+extractor = ReferenceExtractor()
+graph = LegalKnowledgeGraph()
+
+refs = extractor.extract(text=content, doc_id=123, law_name="Luật ABC")
+graph.add_references(refs)
+
+# Query-time: expand context
+expanded = graph.expand_context(["doc_123_dieu_5"], hops=1)
+```
+
+**Stats (6 Criminal Code docs)**:
+- 409 nodes, 403 edges, 204 internal refs, 23 external refs
+- 6 connected components, density: 0.002
+
+---
+
+### 6b. `src/data/timeline/` — Module 2: Temporal Versioning 📅
+
+**Vai trò**: Trích xuất ngày hiệu lực/hết hiệu lực và resolve phiên bản luật theo thời gian.
+
+**Cấu trúc**:
+```
+src/data/timeline/
+├── date_extractor.py       # DateExtractor
+│   ├── LawTimeline dataclass: effective_date, expiry_date, article_dates
+│   ├── _find_effectiveness_article() — 4 chiến lược:
+│   │   ├── 1. rfind("Hiệu lực thi hành") — last occurrence (>70% position)
+│   │   ├── 2. Regex "Điều X. Hiệu lực thi hành"
+│   │   ├── 3. Amendment pattern "Điều 2. Hiệu lực thi hành"
+│   │   └── 4. Any "hiệu lực thi hành" (after preamble)
+│   ├── _extract_primary_date() — priority:
+│   │   ├── "có hiệu lực thi hành từ ngày DD/MM/YYYY"
+│   │   ├── "ngày DD tháng MM năm YYYY"
+│   │   └── Any DD/MM/YYYY (validated: 1990-2030)
+│   ├── _extract_relative_date() — "sau X ngày kể từ ngày công bố"
+│   ├── _extract_expiry() — replaced laws detection
+│   └── Fallback: search last 3000 chars for any date
+│
+└── version_resolver.py     # VersionResolver
+    ├── VersionResult: law_name, effective_date, status, replaced_by
+    ├── at_time(when, law_name) → laws valid at a point in time
+    ├── version_chain(law_name) → all versions sorted by date
+    ├── find_replacement(doc_id) → which law replaced this one?
+    ├── _classify_status() → "current" | "future" | "expired" | "unknown"
+    └── _normalize_name() → strip year/number for fuzzy matching
+```
+
+**Version Chain example (BLHS)**:
+```
+Bộ Luật Hình sự 1999 (1999-12-21)
+  → Bộ luật hình sự 2015 (2016-07-01)
+  → Luật sửa đổi BLHS 2017 (2018-01-01)
+  → Luật sửa đổi BLHS 2025 (2025-06-25) 🟢 current
+```
+
+---
+
+### 6c. `src/data/amendment/` — Module 3: Amendments Tracking 🔧
+
+**Vai trò**: Phát hiện "Luật sửa đổi", trích xuất hướng dẫn sửa đổi, áp dụng vào văn bản gốc.
+
+**Cấu trúc**:
+```
+src/data/amendment/
+├── amendment_extractor.py  # AmendmentExtractor
+│   ├── AmendmentAction enum (15 types):
+│   │   ├── MODIFY: modify_article, modify_clause, modify_point,
+│   │   │          modify_multi, modify_multi_article
+│   │   ├── INSERT:  insert_article, insert_clause, insert_point
+│   │   ├── REPEAL:  repeal_article, repeal_clause, repeal_point
+│   │   ├── REPLACE_WORD, BATCH_REPLACE, BATCH_INSERT
+│   │   └── UNKNOWN
+│   ├── 20+ regex patterns phủ các dạng:
+│   │   ├── "Sửa đổi, bổ sung Điều X như sau:"
+│   │   ├── "Sửa đổi, bổ sung khoản X Điều Y như sau:"
+│   │   ├── "Sửa đổi, bổ sung các khoản X, Y, Z Điều W"
+│   │   ├── "Bổ sung điểm X vào sau điểm Y khoản Z Điều W"
+│   │   ├── "Bổ sung Điều X vào sau Điều Y"
+│   │   ├── "Bãi bỏ Điều X / khoản X Điều Y"
+│   │   ├── "Thay thế cụm từ X bằng Y"
+│   │   └── "Sửa đổi, bổ sung tên điều, các khoản X, Y"
+│   ├── extract_target_laws() — detect base laws from title
+│   ├── _split_sections() — handle multi-law amendments
+│   ├── _detect_target_in_instruction() — detect target law changes within section
+│   └── _parse_sub_instructions() — handle a), b), c) sub-items
+│
+└── amendment_consolidator.py  # AmendmentConsolidator
+    ├── apply(base_text, instructions) → ConsolidationResult
+    ├── apply_to_article(article_text, instructions)
+    ├── _apply_modify_article/clause/point() — text replacement
+    ├── _apply_insert_article/clause/point() — text insertion
+    ├── _apply_repeal_article/clause/point() — mark as [Bãi bỏ]
+    ├── _apply_replace_word() — inline word substitution
+    ├── _find_article_range() — locate article boundaries
+    └── extract_article_text() / list_articles()
+```
+
+**Known limitation**: Consolidation works best with article-level chunks; full-text reconstruction từ Qdrant chunks có thể bị thiếu article headers.
+
+**Stats (3 amendment laws trên 6 docs)**:
+- 2017 amendment: 180 instructions, 149 articles affected
+- 2021 amendment: 7 instructions, 7 articles
+- 2025 amendment: 46 instructions, 27 articles
+
+---
+
+### 6d. `src/data/metadata_store.py` — Metadata Persistence 💾
+
+**Vai trò**: JSON-backed document metadata store cho toàn bộ Phase 2 enrichment data.
+
+```python
+MetadataStore("data/metadata")
+├── documents.json   ← Dict[int, DocumentMeta]  (per-doc metadata)
+├── graph.json       ← {nodes, edges}            (knowledge graph)
+├── timelines.json   ← List[LawTimeline dict]    (temporal data)
+├── amendments.json  ← List[Instruction dict]    (amendment data)
+└── index.json       ← Summary index
+
+DocumentMeta fields:
+  - ref_count, internal_refs, external_refs    (M1)
+  - effective_date, expiry_date, is_in_effect  (M2)
+  - is_amendment, target_laws, amendment_count (M3)
+  - version_chain, graph_node_id, enriched_at
+```
+
+**Key operations**:
+- `get_document(doc_id)` → DocumentMeta
+- `get_effective_laws(at_date)` → laws valid at a date
+- `get_article_neighbors(node_id, hops)` → graph traversal
+- `get_amendments_for_doc(doc_id)` → amendment instructions
+- `build_index()` → summary statistics
+
+---
+
+### 6e. `src/pipeline/` — Integration Layer 🔄
+
+**Vai trò**: Orchestrate Phase 2 enrichment và enhanced retrieval.
+
+```
+src/pipeline/
+├── enricher.py             # EnrichmentPipeline
+│   ├── run() → EnrichmentResult
+│   │   ├── _collect_documents() → Dict[int, DocInfo] (scroll Qdrant)
+│   │   ├── FOR each document:
+│   │   │   ├── M1: extract refs → build graph
+│   │   │   ├── M2: extract timeline → version chain
+│   │   │   ├── M3: extract amendments (if amendment law)
+│   │   │   └── Save DocumentMeta to MetadataStore
+│   │   ├── Resolve version chains via VersionResolver
+│   │   ├── Save graph, timelines, amendments to MetadataStore
+│   │   └── Build index
+│   └── get_status() → current enrichment status
+│
+└── retriever.py            # EnhancedRetriever
+    ├── retrieve(query, top_k, at_date, expand_context, hops)
+    │   ├── Hybrid search (dense + sparse RRF)
+    │   ├── _enrich_result() → merge Phase 2 metadata
+    │   ├── Time filter (at_date): skip not-yet-effective laws
+    │   └── _expand_context() → BFS graph traversal
+    ├── retrieve_with_expansion() → convenience wrapper
+    ├── get_article_history(doc_id, article) → amendment timeline
+    └── stats → system statistics
+```
+
+---
+
 ### 5. `src/llm/prompts.py` — Prompt Templates
 
 **Vai trò**: Tất cả prompt templates cho từng bước trong pipeline.
@@ -424,44 +724,59 @@ pipeline_used: str    # "naive" | "simple" | "medium" | "complex"
 
 ---
 
-### 7. `src/api/main.py` — FastAPI Backend
+### 7. `src/api/main.py` — FastAPI Backend (Phase 2)
 
-**Vai trò**: REST API server — entry point chính của backend.
+**Vai trò**: REST API server — 12 endpoints including Phase 2 pipeline.
 
 **Cấu trúc**:
 ```
 FastAPI app (port 8000)
 ├── Lifespan:
-│   ├── Startup:  khởi tạo LegalVectorStore, LLMGateway
-│   │              embedder = None (lazy-load vì BGE-M3 nặng 2GB)
+│   ├── Startup:  khởi tạo LegalVectorStore, LLMGateway, MetadataStore
+│   │              embedder + enhanced_retriever = None (lazy-load)
 │   └── Shutdown: (no-op)
 │
 ├── Middleware: CORS (allow all origins)
 │
-├── GET  /health              → {"status": "ok", "version": "0.1.0"}
+├── ── Core Endpoints ──
 │
-├── POST /api/chat            → ChatResponse
-│   ├── Input:  {question, session_id?, use_adaptive=false}
-│   ├── Logic:  pipeline.query(question) → RAGResponse
-│   └── Output: ChatResponse {answer, citations, confidence, latency_ms, pipeline_used}
+├── GET  /health              → {"status": "ok", "version": "0.2.0"}
+│
+├── POST /api/chat            → ChatResponse (Phase 2 enhanced)
+│   ├── Input:  {question, session_id?, use_adaptive, expand_context, expansion_hops}
+│   └── Output: ChatResponse {answer, citations, ..., expanded_results}
 │
 ├── POST /api/chat/stream     → SSE (Server-Sent Events)
-│   ├── Input:  {question, session_id?, use_adaptive=false}
-│   ├── Logic:  pipeline.query_stream(question) → Generator
-│   │           Parse "__CITATIONS__" marker → yield citations event
-│   │           Stream tokens → yield token event
-│   │           Done → yield done event (full_answer + citations + confidence)
-│   └── Output: EventSourceResponse
-│               event: citations → data: [{doc_title, article, ...}, ...]
-│               event: token     → data: {"token": "..."}
-│               event: done      → data: {full_answer, citations, confidence, latency_ms}
+│   └── Streaming với citations + token + done events
 │
-├── GET  /api/documents        → Dict
-│   ├── Query:  ?legal_type=Luật&keyword=doanh nghiệp&page=1&page_size=20
-│   └── Logic:  store.list_documents() → scroll + dedup + paginate
+├── GET  /api/documents        → Dict (paginated document list)
 │
-└── GET  /api/stats            → Dict
-    └── Logic:  store.get_collection_info() → #points, collection name
+├── ── Phase 2 Pipeline Endpoints ──
+│
+├── POST /api/pipeline/enrich  → Run Phase 2 enrichment
+│   └── Output: {status, docs_processed, graph_nodes, total_amendments, errors, ...}
+│
+├── GET  /api/pipeline/status  → Enrichment status + index
+│
+├── POST /api/search/enhanced  → Enhanced search (Phase 2)
+│   ├── Query: ?query=...&top_k=5&expand_context=true&expansion_hops=1
+│   └── Output: {results: [{...phase2 metadata...}], total}
+│
+├── GET  /api/article/history  → Article amendment timeline
+│   ├── Query: ?doc_id=296661&article=Điều 3
+│   └── Output: {is_amended, amending_laws[], version_chain[]}
+│
+├── GET  /api/graph/stats      → Knowledge graph statistics
+│   └── Output: {nodes, edges, node_types{}, edge_types{}}
+│
+├── GET  /api/graph/neighbors   → Graph neighbors for article
+│   └── Query: ?doc_id=296661&article=Điều 3&hops=1
+│
+├── GET  /api/timeline/effective → Laws effective at a date
+│   └── Query: ?at_date=2018-01-01
+│
+└── GET  /api/stats            → System stats (Phase 2 enhanced)
+    └── Output: {indexed_documents, collection_name, phase2: {enriched, graph, ...}}
 ```
 
 **Thứ tự startup**:
@@ -569,7 +884,7 @@ render_eval_page()
 
 ---
 
-### 9. `scripts/ingest.py` — Data Ingestion CLI
+### 9. `scripts/ingest.py` — Data Ingestion CLI (Phase 2)
 
 **Vai trò**: Full pipeline từ parquet → Qdrant, chạy 1 lần.
 
@@ -584,27 +899,36 @@ ingest(data_path, recreate, limit, embed_batch_size, device)
 │   ├── batch.to_pandas()
 │   ├── For each row:
 │   │   ├── filter_row(row_dict)
-│   │   │   ├── legal_type check
-│   │   │   ├── date check: 2015 ≤ year ≤ 2026
+│   │   │   ├── legal_type ∈ {Luật}        ← Phase 2: narrowed from 6 types
+│   │   │   ├── date check: configurable (DATE_FILTER_MIN/MAX_YEAR)
 │   │   │   └── content length ≥ 500
 │   │   │
-│   │   ├── chunker.chunk_document(row_dict) → List[LegalChunk]
+│   │   ├── HierarchicalChunker (S3 default)
+│   │   │   └── Chương → Mục → Điều → Khoản hierarchy
 │   │   ├── Accumulate vào embed_text_buffer + chunk_buffer
 │   │   │
 │   │   └── Khi buffer đủ (≥ embed_batch_size * 4):
 │   │       ├── embedder.encode_documents(texts) → (dense, sparse)
 │   │       └── store.upsert_chunks(texts, dense, sparse, metadata)
+│   │           └── Batch size 25 (Cloud), 3 retries with exponential backoff
 │   │
 │   └── Progress log mỗi 500 docs
 │
 └── Final flush: embed + index remaining chunks
 ```
 
+**Key changes from Phase 1**:
+- Legal type filter narrowed to `{"Luật"}` only
+- Date filter made optional (None = keep all years for temporal analysis)
+- Collection name changed to `luat_law` via `constants.py`
+- Qdrant Cloud: timeout=120s, batch_size=25, retry với exponential backoff
+
 **Options**:
 - `--limit N`: Số documents tối đa (None = toàn bộ)
 - `--recreate`: Xóa collection cũ trước khi index
 - `--embed-batch-size 32`: Batch size cho embedding
 - `--device cpu`: Device cho BGE-M3
+- `--chunk-strategy s3`: Chunking strategy (s1-s5)
 
 ---
 
@@ -706,6 +1030,35 @@ curl -s http://localhost:8000/api/documents?legal_type=Luật&page_size=5 | pyth
 curl -s -X POST http://localhost:8000/api/chat \
   -H 'Content-Type: application/json' \
   -d '{"question":"Điều kiện thành lập công ty TNHH là gì?"}' | python3 -m json.tool
+
+# Phase 2: Test enrichment pipeline
+.venv/bin/python -c "
+from dotenv import load_dotenv; load_dotenv()
+from src.db.qdrant_client import LegalVectorStore
+from src.data.metadata_store import MetadataStore
+from src.pipeline.enricher import EnrichmentPipeline
+store = LegalVectorStore(collection_name='luat_law', timeout=120)
+meta = MetadataStore()
+pipe = EnrichmentPipeline(store, meta)
+result = pipe.run()
+print(f'Enriched: {result.docs_processed} docs, {result.total_amendments} amendments')
+print(f'Graph: {result.graph_nodes} nodes, {result.graph_edges} edges')
+"
+
+# Phase 2: Test enhanced search
+curl -s -X POST 'http://localhost:8000/api/search/enhanced?query=Điều+123+hình+sự&top_k=5&expand_context=true'
+
+# Phase 2: Test article history
+curl -s 'http://localhost:8000/api/article/history?doc_id=296661&article=Điều+3'
+
+# Phase 2: Check enrichment status
+curl -s http://localhost:8000/api/pipeline/status | python3 -m json.tool
+
+# Phase 2: Run enrichment via API
+curl -s -X POST http://localhost:8000/api/pipeline/enrich | python3 -m json.tool
+
+# View metadata store
+cat data/metadata/index.json | python3 -m json.tool
 ```
 
 ---
@@ -727,12 +1080,15 @@ curl -s -X POST http://localhost:8000/api/chat \
 
 | Issue | File | Status |
 |---|---|---|
-| Qwen 3 `<think>` tags trong stream output | `gateway.py:generate_stream()` | Chưa fix — non-streaming đã fix với `_clean_thinking()` |
-| SSE streaming chậm hơn non-streaming do parsing overhead | `chat.py`, `api/main.py` | Chấp nhận được cho MVP |
-| Chỉ index được 100 docs (MVP) | `scripts/ingest.py` | Để index toàn bộ: `python scripts/ingest.py --recreate` (~vài giờ) |
-| Documents page scroll-based (không phải full-text search) | `qdrant_client.py:list_documents()` | OK cho MVP, sau có thể chuyển sang Qdrant full-text |
-| Eval dashboard toàn placeholder data | `eval_dashboard.py` | Cần chạy `scripts/eval.py` + RAGAS để có data thật |
-| Không có rate limiting | `api/main.py` | Cần thêm trước production |
+| Qwen 3 `<think>` tags trong stream output | `gateway.py:generate_stream()` | Chưa fix |
+| SSE streaming chậm hơn non-streaming | `chat.py`, `api/main.py` | Acceptable |
+| Qdrant Cloud latency từ Vietnam | `qdrant_client.py` | Mitigated: retry + smaller batches |
+| 1/6 docs thiếu effective date (BLHS 1999 format cũ) | `date_extractor.py` | Data limitation |
+| NetworkX graph không persist (rebuild mỗi lần) | `graph_builder.py` | Saved as JSON in MetadataStore |
+| Consolidation limited by chunked text | `amendment_consolidator.py` | Cần full-text article reconstruction |
+| Sub-instructions trong batch ops classified UNKNOWN | `amendment_extractor.py` | Minor — ~19/180 items |
+| Eval dashboard toàn placeholder data | `eval_dashboard.py` | Cần RAGAS eval |
+| Không có rate limiting | `api/main.py` | Cần trước production |
 
 ---
 
@@ -741,21 +1097,48 @@ curl -s -X POST http://localhost:8000/api/chat \
 | Decision | Rationale | Trade-off |
 |---|---|---|
 | BGE-M3 thay vì text-embedding-3-large | Free, multilingual tốt, có sẵn sparse | Chậm hơn API-based embedding |
-| Qdrant thay vì Pinecone/Weaviate | Open-source, self-hosted, hybrid search native | Cần Docker, tự quản lý infra |
+| Qdrant Cloud thay vì local Docker | Production-ready, no local RAM usage | Network latency (Vietnam→Australia) |
+| Qdrant native RRF thay vì client-side | Nhanh hơn, ít code hơn | Lock vào Qdrant ≥ 1.18 |
 | LiteLLM thay vì gọi API trực tiếp | Auto-fallback, unified interface | Thêm 1 dependency |
 | pyarrow streaming thay vì pandas | Memory: ~100MB vs 10GB | Code phức tạp hơn 1 chút |
-| Qdrant native RRF thay vì client-side | Nhanh hơn, ít code hơn | Lock vào Qdrant ≥ 1.8 |
 | Groq free tier thay vì OpenAI | $0 cost cho dev | Model có thể thay đổi bất kỳ lúc nào |
 | Naive RAG trước Adaptive RAG | Có baseline để so sánh | MVP ít tính năng hơn |
 | Streamlit thay vì React/Next.js | Tốc độ dev, Python-only | UX kém mượt hơn SPA |
+| ✨ Single collection + metadata filter | Đơn giản, đủ cho 595 docs | Không scale đến hàng triệu docs |
+| ✨ JSON metadata store | Human-readable, no DB dependency | Cần migrate nếu >10K docs |
+| ✨ NetworkX cho graph (không Neo4j) | In-memory, no infra, đủ cho <100K edges | Không persist, phải rebuild |
+| ✨ Regex-based extraction (không LLM) | Nhanh, deterministic, free | Miss edge cases in unstructured text |
+| ✨ rfind strategy cho "Hiệu lực" | Bắt đúng article cuối cùng | Old laws without the article format fail (1/6) |
+| ✨ Lazy-load embedder trong retriever | Import pipeline không cần FlagEmbedding | Hơi chậm ở lần gọi đầu tiên |
 
 ---
 
-## 🗺️ Hướng phát triển tiếp theo
+## 🗺️ Roadmap
 
-Xem chi tiết trong [Vietnamese Legal Knowledge Bot Plan](../../../Vietnamese_Legal_Knowledge_Bot_Plan.md)
+### Phase 1: MVP ✅
+- Naive RAG pipeline (dense search → LLM generate)
+- Streamlit UI (chat, documents, eval dashboard)
+- FastAPI backend (5 endpoints)
+- 100 docs indexed
 
-- **Week 1-2**: ✅ MVP — Naive RAG (hoàn thành)
-- **Week 3-4**: Adaptive RAG (enable `use_adaptive=True`)
-- **Week 5-6**: Confidence-based Answering + Hallucination Verification
-- **Week 7-8**: Full ingestion (312K docs), RAGAS eval, production deploy
+### Phase 2: Legal Intelligence ✅
+- ✅ **Module 1**: Cross-Referencing — 409 nodes, 403 edges knowledge graph
+- ✅ **Module 2**: Temporal Versioning — effective dates, version chains, time travel queries
+- ✅ **Module 3**: Amendments Tracking — 15 action types, 233 instructions extracted
+- ✅ **Integration**: Enrichment pipeline + Enhanced retriever + 12 API endpoints
+- ✅ Tested on 6-doc Criminal Code cluster (BLHS 1999→2015→2017→2025)
+
+### Phase 3: Scale & Production 📋
+- Scale enrichment to all 595 docs (toàn bộ Luật + Bộ luật)
+- Article-level re-indexing with amendment-consolidated text
+- RAGAS evaluation: compare Phase 2-expanded context vs baseline
+- Full ingestion pipeline optimization (parallel embedding)
+- Production deployment (Docker Compose / cloud)
+
+### Phase 4: Advanced Features 💡
+- LLM-based amendment consolidation (semantic text alignment)
+- Real-time legal updates (monitor for new "Luật sửa đổi")
+- Cross-law impact analysis: "nếu Điều X thay đổi, điều gì bị ảnh hưởng?"
+- Temporal RAG: automatically resolve "at what date" from query context
+- Vietnamese legal ontology / taxonomy integration
+- GraphQL API for knowledge graph queries

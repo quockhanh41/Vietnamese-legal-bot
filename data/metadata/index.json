@@ -1,0 +1,68 @@
+{
+  "total_documents": 6,
+  "amendment_laws": 3,
+  "base_laws": 3,
+  "with_effective_date": 6,
+  "currently_in_effect": 6,
+  "total_graph_nodes": 409,
+  "total_graph_edges": 403,
+  "total_amendments": 158,
+  "total_articles_amended": 145,
+  "last_enriched": "2026-07-04T09:17:40.552264",
+  "documents": [
+    {
+      "doc_id": 46056,
+      "title": "Bộ Luật Hình sự 1999",
+      "is_amendment": false,
+      "effective_date": "1999-12-21",
+      "is_in_effect": true,
+      "ref_count": 53,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 296661,
+      "title": "Bộ luật hình sự 2015",
+      "is_amendment": false,
+      "effective_date": "2016-07-01",
+      "is_in_effect": true,
+      "ref_count": 110,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 296884,
+      "title": "Bộ luật tố tụng hình sự 2015",
+      "is_amendment": false,
+      "effective_date": "2015-11-27",
+      "is_in_effect": true,
+      "ref_count": 123,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 354053,
+      "title": "Luật sửa đổi Bộ luật Hình sự 2017",
+      "is_amendment": true,
+      "effective_date": "2018-01-01",
+      "is_in_effect": true,
+      "ref_count": 232,
+      "amendment_count": 120
+    },
+    {
+      "doc_id": 489113,
+      "title": "Luật sửa đổi Bộ luật Tố tụng hình sự 2021",
+      "is_amendment": true,
+      "effective_date": "2021-12-01",
+      "is_in_effect": true,
+      "ref_count": 7,
+      "amendment_count": 7
+    },
+    {
+      "doc_id": 662377,
+      "title": "Luật sửa đổi Bộ luật Hình sự 2025",
+      "is_amendment": true,
+      "effective_date": "2025-06-25",
+      "is_in_effect": true,
+      "ref_count": 93,
+      "amendment_count": 31
+    }
+  ]
+}
