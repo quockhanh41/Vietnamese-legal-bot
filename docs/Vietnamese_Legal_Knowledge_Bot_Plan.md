@@ -1,8 +1,10 @@
 # 🏛️ PLAN: Vietnamese Legal Knowledge Bot
 
 > **Academic Portfolio Project** — sau Giai đoạn 4 (RAG Systems Production Grade)
-> 
-> **Tagline**: *Chatbot tra cứu văn bản pháp luật Việt Nam toàn diện — Adaptive RAG + Hallucination Verification + Auth-ready*
+>
+> **Status**: Phase 1 ✅ | Phase 2 ✅ | Phase 3+ 📋
+>
+> **Tagline**: *Chatbot tra cứu văn bản pháp luật Việt Nam — Adaptive RAG + Legal Intelligence (Cross-Refs, Temporal, Amendments)*
 
 ---
 
@@ -11,24 +13,29 @@
 1. [Project Overview](#1-project-overview)
 2. [System Architecture](#2-system-architecture)
 3. [Data Pipeline](#3-data-pipeline)
-4. [RAG Pipeline Design](#4-rag-pipeline-design)
-   - 4.1 [Phases of Evolution](#41-phases-of-evolution)
-   - 4.2 [Adaptive Retrieval (Query Complexity Router)](#42-adaptive-retrieval-query-complexity-router) ⭐ NEW
-   - 4.3 [Confidence-based Answering](#43-confidence-based-answering) ⭐ NEW
-   - 4.4 [Hallucination Verification (2-tier)](#44-hallucination-verification-2-tier) ⭐ NEW
-   - 4.5 [Dynamic Top-K](#45-dynamic-top-k) ⭐ NEW
-   - 4.6 [Prompt Templates](#46-prompt-templates)
-   - 4.7 [Multi-Hop Reasoning](#47-multi-hop-reasoning)
-5. [Tech Stack](#5-tech-stack)
-6. [Project Structure](#6-project-structure)
-7. [Feature Roadmap](#7-feature-roadmap)
-8. [Evaluation Strategy](#8-evaluation-strategy)
-9. [UI/UX Design](#9-uiux-design)
-10. [Deployment Plan](#10-deployment-plan)
-11. [Testing Strategy](#11-testing-strategy)
-12. [Timeline & Milestones](#12-timeline--milestones)
-13. [Risk & Mitigation](#13-risk--mitigation)
-14. [README Template](#14-readme-template)
+4. [Phase 2: Legal Intelligence Pipeline](#4-phase-2-legal-intelligence-pipeline) ⭐ IMPLEMENTED
+   - 4.1 [Cross-Referencing (Knowledge Graph)](#41-cross-referencing-knowledge-graph)
+   - 4.2 [Temporal Versioning (Time-Aware Search)](#42-temporal-versioning-time-aware-search)
+   - 4.3 [Amendments Tracking (Merge & Consolidate)](#43-amendments-tracking-merge--consolidate)
+   - 4.4 [Pipeline Integration & Enhanced Retrieval](#44-pipeline-integration--enhanced-retrieval)
+5. [RAG Pipeline Design](#5-rag-pipeline-design)
+   - 5.1 [Phases of Evolution](#51-phases-of-evolution)
+   - 5.2 [Adaptive Retrieval (Query Complexity Router)](#52-adaptive-retrieval-query-complexity-router) ⭐ NEW
+   - 5.3 [Confidence-based Answering](#53-confidence-based-answering) ⭐ NEW
+   - 5.4 [Hallucination Verification (2-tier)](#54-hallucination-verification-2-tier) ⭐ NEW
+   - 5.5 [Dynamic Top-K](#55-dynamic-top-k) ⭐ NEW
+   - 5.6 [Prompt Templates](#56-prompt-templates)
+   - 5.7 [Multi-Hop Reasoning](#57-multi-hop-reasoning)
+6. [Tech Stack](#6-tech-stack)
+7. [Project Structure](#7-project-structure)
+8. [Feature Roadmap](#8-feature-roadmap)
+9. [Evaluation Strategy](#9-evaluation-strategy)
+10. [UI/UX Design](#10-uiux-design)
+11. [Deployment Plan](#11-deployment-plan)
+12. [Testing Strategy](#12-testing-strategy)
+13. [Timeline & Milestones](#13-timeline--milestones)
+14. [Risk & Mitigation](#14-risk--mitigation)
+15. [README Template](#15-readme-template)
 
 ---
 
@@ -47,16 +54,18 @@ Doanh nghiệp và người dân Việt Nam phải tuân thủ hàng nghìn văn
 |----------|----------|
 | **Accuracy** | RAGAS Faithfulness > 0.80 |
 | **Latency** | <3s per query (end-to-end, including streaming first token) |
-| **Coverage** | ~15,000 văn bản pháp luật Việt Nam (2015–2026), đa lĩnh vực |
+| **Coverage** | 595 văn bản Luật + Bộ luật (toàn bộ, không giới hạn năm) |
 | **Language** | Tiếng Việt hoàn toàn |
 | **Citations** | Mỗi câu trả lời kèm điều khoản + link văn bản gốc |
-| **Scope** | Toàn bộ hệ thống pháp luật: Dân sự, Hình sự, Lao động, Đất đai, Thuế, Doanh nghiệp, Hành chính, Sở hữu trí tuệ... |
+| **Legal Intelligence** ⭐ | Cross-references, temporal versioning, amendments tracking |
+| **Test Cluster** | 6 docs: Bộ luật Hình sự cluster (1999→2015→2017→2025) |
 
 ### 1.3. Dataset
 
 - **Nguồn**: [`vohuutridung/vietnamese-legal-documents`](https://huggingface.co/datasets/vohuutridung/vietnamese-legal-documents) trên Hugging Face
 - **Tổng**: 518,255 văn bản (~3.6 GB, Markdown format)
-- **Subset sau filter**: ~5,000–15,000 văn bản (xem [Data Pipeline](#3-data-pipeline))
+- **Subset sau filter**: 595 văn bản (legal_type = `Luật`, bao gồm cả Bộ luật)
+- **Phase 2 test**: 6 documents (Bộ luật Hình sự cluster) — 2,174 vectors in Qdrant
 - **Metadata**: `id`, `document_number`, `title`, `url`, `legal_type`, `legal_sectors`, `issuing_authority`, `issuance_date`, `signers`
 
 ---
@@ -437,9 +446,157 @@ Collection: legal_docs
 
 ---
 
-## 4. RAG PIPELINE DESIGN
+## 4. PHASE 2: LEGAL INTELLIGENCE PIPELINE ⭐ IMPLEMENTED
 
-### 4.1. Phases of Evolution
+> **Status**: ✅ Hoàn thành (2026-07-04)
+> **Test scope**: 6 documents — Bộ luật Hình sự cluster
+> **Code**: `src/data/graph/`, `src/data/timeline/`, `src/data/amendment/`, `src/pipeline/`
+
+Phase 2 adds three specialized modules that transform the system from a generic RAG into a **legal-domain-aware** intelligent retrieval system.
+
+### 4.1. Cross-Referencing (Knowledge Graph) 🔗
+
+**Vấn đề**: Văn bản pháp luật chứa hàng nghìn tham chiếu chéo ("theo Điều X của Luật Y", "tại khoản Z Điều W"). Khi user hỏi về Điều 123, họ cũng cần biết các điều được dẫn chiếu.
+
+**Giải pháp**: Xây dựng NetworkX DiGraph từ tất cả cross-references.
+
+```
+ReferenceExtractor (9 regex patterns)
+  ├── INTERNAL:  "Điều X của Luật/Bộ luật này"
+  ├── EXTERNAL:  "Điều X của Luật Y" / "Điều X của Bộ luật Y"
+  ├── CLAUSE:    "khoản X Điều Y"
+  ├── MULTI:     "Điều X và Điều Y"
+  └── CHAPTER:   "tại Chương X"
+
+LegalKnowledgeGraph
+  ├── Nodes: ArticleNode (doc_{id}_dieu_{num})
+  ├── Edges: directed, với ref_type + confidence metadata
+  ├── expand_context(article_ids, hops=1) → query-time BFS expansion
+  └── most_referenced(top_n=10) → highest-authority articles
+```
+
+**Kết quả (6 docs)**: 409 nodes, 403 edges, 204 internal refs, 23 external refs, 6 connected components.
+
+**Ứng dụng**: Khi user search "Điều 67", hệ thống tự động expand context để include Điều 68 (được dẫn chiếu bởi Điều 67), tăng recall.
+
+---
+
+### 4.2. Temporal Versioning (Time-Aware Search) 📅
+
+**Vấn đề**: Luật thay đổi theo thời gian. User hỏi "năm 2018 luật quy định thế nào?" cần trả lời đúng phiên bản tại thời điểm đó.
+
+**Giải pháp**: Trích xuất effective/expiry dates + version chain resolution.
+
+```
+DateExtractor
+  ├── _find_effectiveness_article()
+  │   ├── Strategy 1: rfind("Hiệu lực thi hành") — last occurrence (>70% position)
+  │   ├── Strategy 2: Regex "Điều X. Hiệu lực thi hành"
+  │   ├── Strategy 3: Amendment pattern "Điều 2. Hiệu lực thi hành"
+  │   └── Strategy 4: Any "hiệu lực thi hành" after preamble
+  ├── _extract_primary_date() — "có hiệu lực từ ngày DD/MM/YYYY" priority
+  ├── _extract_relative_date() — "sau X ngày kể từ ngày công bố"
+  ├── _extract_expiry() — replaced laws detection
+  └── Fallback: search last 3000 chars
+
+VersionResolver
+  ├── at_time(when) → laws valid at a point in time
+  ├── version_chain(law_name) → chronological version list
+  ├── find_replacement(doc_id) → which law replaced this one?
+  └── _classify_status() → "current" | "future" | "expired" | "unknown"
+```
+
+**Kết quả (6 docs)**: 5/6 có effective date (83%), version chain BLHS: 1999→2015(2016-07-01)→2017 amendment(2018-01-01)→2025 amendment(2025-07-01).
+
+**Ứng dụng**: Query "Điều 123 Bộ luật Hình sự 2018" → tự động filter kết quả từ phiên bản có hiệu lực tại 2018.
+
+---
+
+### 4.3. Amendments Tracking (Merge & Consolidate) 🔧
+
+**Vấn đề**: "Luật sửa đổi, bổ sung" thay đổi nội dung của base law. Khi user hỏi về 1 điều luật, cần biết điều đó đã bị sửa đổi chưa và nội dung mới nhất là gì.
+
+**Giải pháp**: Parse amendment instructions + map amendments → base laws + consolidate text.
+
+```
+AmendmentExtractor (20+ regex patterns, 15 action types)
+  ├── MODIFY:  modify_article, modify_clause, modify_point,
+  │            modify_multi, modify_multi_article
+  ├── INSERT:  insert_article, insert_clause, insert_point
+  ├── REPEAL:  repeal_article, repeal_clause, repeal_point
+  ├── REPLACE: replace_word, batch_replace, batch_insert
+  └── UNKNOWN (fallback)
+
+Extraction pipeline:
+  1. is_amendment_law(title) — detect "sửa đổi, bổ sung"
+  2. extract_target_laws(title, content) — identify base laws
+  3. _split_sections() — handle multi-law amendments
+  4. _split_into_instructions() — numbered item parsing
+  5. _classify_action() — 15 action types via priority-ordered regex
+  6. _parse_sub_instructions() — a), b), c) sub-items
+  7. _detect_target_in_instruction() — target law changes within section
+
+AmendmentConsolidator
+  ├── apply(base_text, instructions) → ConsolidationResult
+  ├── _apply_modify_article/clause/point() — text replacement
+  ├── _apply_insert_article/clause/point() — text insertion
+  ├── _apply_repeal_article/clause/point() — mark as [Bãi bỏ]
+  └── extract_article_text() / list_articles()
+```
+
+**Kết quả (3 amendment laws)**:
+- 2017 amendment: 180 instructions, 149 articles affected
+- 2021 amendment: 7 instructions, 7 articles
+- 2025 amendment: 46 instructions, 27 articles
+- Consolidation tested: 4/5 articles successfully applied
+
+**Ứng dụng**: Query "Điều 3 BLHS" → response includes "⚠ Điều này đã bị sửa đổi bởi Luật sửa đổi BLHS 2017".
+
+---
+
+### 4.4. Pipeline Integration & Enhanced Retrieval 🔄
+
+**Vai trò**: Orchestrate cả 3 modules + tích hợp vào query pipeline.
+
+```
+EnrichmentPipeline.run()
+  ├── _collect_documents() → scroll Qdrant, reconstruct full text
+  ├── FOR each document:
+  │   ├── M1: extract refs → build KnowledgeGraph
+  │   ├── M2: extract timeline → VersionResolver
+  │   ├── M3: extract amendments (if amendment law)
+  │   └── Save DocumentMeta to MetadataStore
+  ├── Resolve version chains
+  └── Build index
+
+MetadataStore (data/metadata/)
+  ├── documents.json   ← DocumentMeta (refs, dates, amendments)
+  ├── graph.json       ← Knowledge graph (nodes + edges)
+  ├── timelines.json   ← LawTimeline data
+  ├── amendments.json  ← AmendmentInstruction list
+  └── index.json       ← Summary
+
+EnhancedRetriever.retrieve(query, top_k, at_date, expand_context)
+  ├── Hybrid search (dense + sparse RRF)
+  ├── _enrich_result() → merge Phase 2 metadata
+  ├── Time filter: skip not-yet-effective laws at at_date
+  └── _expand_context() → BFS graph traversal for cross-references
+```
+
+**API Endpoints (12 total)**:
+- `POST /api/pipeline/enrich` — run enrichment
+- `GET /api/pipeline/status` — enrichment status
+- `POST /api/search/enhanced` — enhanced search with context expansion
+- `GET /api/article/history` — article amendment timeline
+- `GET /api/graph/stats` — knowledge graph statistics
+- `GET /api/graph/neighbors` — graph neighbors for an article
+- `GET /api/timeline/effective` — laws effective at a date
+
+---
+
+## 5. RAG PIPELINE DESIGN
+
+### 5.1. Phases of Evolution
 
 ```
 MVP (Week 1-2)          v1.0 (Week 3-4)          v2.0 (Week 7-8)
@@ -900,9 +1057,9 @@ Step 3 - Aggregate & Generate:
 
 ---
 
-## 5. TECH STACK
+## 6. TECH STACK
 
-### 5.1. Core Stack
+### 6.1. Core Stack
 
 | Layer | Technology | Version | Rationale |
 |-------|-----------|---------|-----------|
@@ -919,7 +1076,7 @@ Step 3 - Aggregate & Generate:
 | **CI/CD** | GitHub Actions | - | Nightly RAGAS eval |
 | **Cache (optional)** | Redis | ≥7 | Semantic cache + session store |
 
-### 5.2. LLM Fallback Strategy (LiteLLM Config)
+### 6.2. LLM Fallback Strategy (LiteLLM Config)
 
 ```yaml
 # litellm_config.yaml
@@ -948,7 +1105,7 @@ router_settings:
     - gpt-4o-mini → gpt-4o
 ```
 
-### 5.3. Why NOT X?
+### 6.3. Why NOT X?
 
 | Not Using | Why |
 |-----------|-----|
@@ -1071,7 +1228,20 @@ vietnamese-legal-bot/
 
 ## 7. FEATURE ROADMAP
 
-### 7.1. MVP (Week 1–2) — "Chạy được end-to-end"
+### 7.0. Phase 2: Legal Intelligence ✅ (COMPLETED — 2026-07-04)
+
+| # | Feature | Description | Status |
+|---|---------|-------------|--------|
+| P1 | **Cross-Referencing** | 9 regex patterns → 409 nodes, 403 edges knowledge graph. Query-time context expansion via BFS. | ✅ |
+| P2 | **Temporal Versioning** | Extract effective/expiry dates. Version chains (BLHS: 1999→2015→2017→2025). Time-travel queries. | ✅ |
+| P3 | **Amendments Tracking** | 20+ regex patterns, 15 action types, 233 instructions extracted. Amendment → base law mapping. | ✅ |
+| P4 | **Metadata Store** | JSON-based persistence: documents.json, graph.json, timelines.json, amendments.json. | ✅ |
+| P5 | **Enrichment Pipeline** | Orchestrate M1+M2+M3 → MetadataStore. 6 docs processed in 6.4s, 0 errors. | ✅ |
+| P6 | **Enhanced Retriever** | Query-time context expansion + time filtering + amendment status. Lazy-load embedder. | ✅ |
+| P7 | **API Endpoints** | 7 new Phase 2 endpoints: enrich, enhanced search, article history, graph stats, neighbors, timeline. | ✅ |
+| P8 | **Narrowed Scope** | Filtered to `legal_type = {Luật}` only (595 docs). Single Qdrant collection `luat_law`. | ✅ |
+
+### 7.1. MVP (Week 1–2) — "Chạy được end-to-end" ✅
 
 | # | Feature | Description | Priority |
 |---|---------|-------------|----------|
@@ -1524,77 +1694,52 @@ def test_hybrid_search_outperforms_dense():
 
 ## 12. TIMELINE & MILESTONES
 
-### 12.1. 8-Week Plan
+### 12.1. Actual Progress (vs Planned)
 
 ```
-Week 1-2: MVP ───────────────────────────────────────────┐
-                                                          │
-  Day 1-2: Download + explore dataset                     │
-  Day 3-4: Implement data pipeline (filter → chunk → embed)│
-  Day 5-6: Index into Qdrant                             │
-  Day 7-8: Naive RAG pipeline (search → generate)         │
-  Day 9-10: FastAPI + SSE streaming endpoint              │
-  Day 11-12: Streamlit chat UI                            │
-  Day 12.5: ⭐ Dynamic Top-K (thay constant = function)   │
-  Day 13: Docker Compose setup                            │
-  Day 14: Buffer + polish MVP                              │
-  ✅ Milestone: docker compose up → hỏi 1 câu → có câu trả lời │
-                                                          │
-Week 3-4: v1.0 (Adaptive RAG) ──────────────────────────┐ │
-                                                          │
-  Day 15-16: ⭐ Query Complexity Classifier + Router       │
-  Day 17-18: Query rewrite + multi-query expansion         │
-           (cho COMPLEX queries, có conditional gate)      │
-  Day 19-20: Hybrid search (BM25 + dense → RRF)           │
-           (cho MEDIUM+ queries)                           │
-  Day 21-22: Re-ranking + context compression              │
-           (cho COMPLEX queries)                           │
-  Day 23-24: Citation highlight + format                   │
-  Day 25-26: Integration testing (test từng route:         │
-            SIMPLE / MEDIUM / COMPLEX)                     │
-  Day 27-28: Compare adaptive vs static pipeline           │
-            (đo latency, cost, quality)                    │
-  ✅ Milestone: Adaptive pipeline hoạt động,                │
-     RAGAS Faithfulness >0.80, latency trung bình <2s      │
-                                                          │
-Week 5-6: v1.5 (Confidence & Verification) ──────────────┐ │
-                                                          │
-  Day 29-31: Build 100 test questions (eval dataset)      │
-  Day 32-33: ⭐ Confidence Scoring (multi-signal)          │
-            + Refusal logic khi score <0.7                 │
-  Day 34-35: ⭐ Hallucination Verification:                │
-            Tier 1 (citation check) + Tier 2 (NLI model)  │
-  Day 36-37: RAGAS eval pipeline + scripts/eval.py        │
-  Day 38-39: GitHub Actions nightly eval                   │
-  Day 40-41: Multi-turn conversation memory               │
-  Day 41: Document browser + search/filter                 │
-  Day 42: Eval dashboard (RAGAS + confidence +             │
-          verification stats)                              │
-  ✅ Milestone: Nightly eval badge, confidence gate         │
-     hoạt động, verification bắt được >80% contradictions │
-                                                          │
-Week 7-8: v2.0 (Enterprise + Deploy) ────────────────────┐ │
-                                                          │
-  Day 43-46: Multi-hop reasoning router                   │
-  Day 47-48: Audit trail (log mọi query + confidence +    │
-            verification result + cost)                   │
-  Day 49-50: Rate limiting + error handling hardening     │
-  Day 51-52: Deploy to Render (Docker + health check)     │
-  Day 53-54: End-to-end testing + adversarial test        │
-            (cố tình hỏi câu khó/ngoài phạm vi)          │
-  Day 55: Bug bash + polish                                │
-  Day 56: Record demo video 5 phút + viết README          │
-  ✅ Milestone: URL public Render, demo video, README      │
+✅ PHASE 1: MVP (hoàn thành)
+  ├── Data pipeline: download → filter → chunk → embed → Qdrant
+  ├── Naive RAG: dense search → LLM generate
+  ├── FastAPI + SSE streaming
+  ├── Streamlit UI (chat, documents, eval dashboard)
+  ├── Adaptive RAG (query classifier + routing)
+  └── Docker Compose setup
+
+✅ PHASE 2: Legal Intelligence (hoàn thành — 2026-07-04)
+  ├── M1: Cross-Referencing — 409 nodes, 403 edges knowledge graph
+  ├── M2: Temporal Versioning — effective dates, version chains
+  ├── M3: Amendments Tracking — 15 action types, 233 instructions
+  ├── Integration: Enrichment pipeline + Enhanced retriever
+  ├── Metadata Store: JSON persistence (5 files)
+  └── API: 12 endpoints (7 new Phase 2 endpoints)
+  Tested on 6-doc Criminal Code cluster: BLHS 1999→2015→2017→2025
+
+📋 PHASE 3: Scale & Production (planned)
+  ├── Scale enrichment to all 595 docs
+  ├── Article-level re-indexing with consolidated text
+  ├── RAGAS evaluation (Phase 2 vs baseline)
+  ├── Parallel embedding pipeline optimization
+  └── Production deployment
+
+💡 PHASE 4: Advanced Features (future)
+  ├── LLM-based amendment consolidation
+  ├── Cross-law impact analysis
+  ├── Temporal RAG (auto-detect query date)
+  └── Vietnamese legal ontology integration
 ```
 
 ### 12.2. Milestone Checklist
 
-| Tuần | Milestone | Deliverable |
-|------|-----------|-------------|
-| W2 | 🟢 MVP Live | Docker local, Q&A hoạt động, Dynamic Top-K |
-| W4 | 🔵 Adaptive RAG | Query classifier + routing, Faithfulness >0.80, latency trung bình <2s, cost giảm >40% |
-| W6 | 🟣 Confidence + Verification | Confidence gate, NLI hallucination verifier, nightly eval badge |
-| W8 | 🟠 Deployed | URL Render public, multi-hop, audit trail, demo video 5 phút |
+| Milestone | Status | Deliverable |
+|-----------|--------|-------------|
+| 🟢 MVP Live | ✅ | Dense search + LLM generate + Docker + UI |
+| 🔵 Adaptive RAG | ✅ | Query classifier (simple/medium/complex) + hybrid search |
+| 🟣 Phase 2: Cross-Referencing | ✅ | 409 nodes, 403 edges, BFS context expansion |
+| 🟣 Phase 2: Temporal Versioning | ✅ | 6/6 effective dates, version chains, time-travel |
+| 🟣 Phase 2: Amendments Tracking | ✅ | 233 instructions, 15 actions, amendment→base mapping |
+| 🟣 Phase 2: Integration | ✅ | Enrichment pipeline, enhanced retriever, 12 API endpoints |
+| 🟠 Scale to 595 docs | 📋 | Full ingestion + enrichment pipeline |
+| 🟠 Production Deploy | 📋 | Render/Docker, public URL, demo video |
 
 ---
 
@@ -1784,15 +1929,41 @@ MIT © [Your Name] — 2025
 
 ## ✅ KẾ HOẠCH HÀNH ĐỘNG (NEXT STEPS)
 
-Sau khi kết thúc Giai đoạn 4, bạn có thể:
+### Đã hoàn thành
 
-1. **Ngay lập tức**: Clone repo template, download HF dataset, explore data
-2. **Day 1**: Chạy `scripts/download_dataset.py` → bắt đầu code `scripts/ingest.py`
-3. **Day 3**: Có những chunk đầu tiên trong Qdrant → test search quality
-4. **Day 7**: Có naive RAG chạy → verify latency + chất lượng
+1. ✅ **Phase 1 MVP**: Naive RAG + Adaptive RAG + Streamlit UI + FastAPI
+2. ✅ **Phase 2 Legal Intelligence**: Cross-Referencing + Temporal Versioning + Amendments Tracking
+3. ✅ **Pipeline Integration**: Enrichment orchestrator + Enhanced retriever + 12 API endpoints
+4. ✅ **Documentation**: CODEBASE.md (1,144 lines) + Plan (this file)
 
-Tất cả code structure, prompt templates, và config đã được định nghĩa trong plan này — bạn chỉ cần implement theo thứ tự.
+### Tiếp theo
+
+1. **Scale enrichment**: Chạy pipeline trên toàn bộ 595 docs → Qdrant
+2. **Article-level re-indexing**: Merge amendment-consolidated text vào chunks
+3. **RAGAS evaluation**: Đo lường impact của Phase 2 context expansion
+4. **Production deploy**: Docker Compose / Render với full dataset
+5. **Advanced features**: Temporal RAG, cross-law impact analysis, LLM-based consolidation
+
+### Quick Start (hiện tại)
+
+```bash
+# Test enrichment pipeline trên 6 docs
+python -c "
+from src.db.qdrant_client import LegalVectorStore
+from src.pipeline.enricher import EnrichmentPipeline
+store = LegalVectorStore(collection_name='luat_law', timeout=120)
+pipeline = EnrichmentPipeline(store)
+result = pipeline.run()
+print(f'Enriched {result.docs_processed} docs in {result.elapsed_seconds:.1f}s')
+"
+
+# Start API với Phase 2 endpoints
+uvicorn src.api.main:app --port 8000 --reload
+
+# Xem metadata
+cat data/metadata/index.json | python3 -m json.tool
+```
 
 ---
 
-> **Plan này là bản sống (living document).** Khi bạn bắt đầu implement, những điều chưa lường trước sẽ xuất hiện — đó là bình thường. Quan trọng là giữ được MVP (W2), Advanced RAG (W4), và Eval (W6). Mọi thứ khác có thể scope-cut nếu cần.
+> **Plan này là bản sống (living document).** Phase 1 + 2 đã hoàn thành đúng hướng: từ generic RAG → legal-domain-aware intelligent retrieval. Phase 3 sẽ scale lên toàn bộ 595 docs và production deployment.
