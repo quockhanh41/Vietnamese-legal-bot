@@ -31,11 +31,11 @@ def render_chat_page():
         st.divider()
         st.subheader("💡 Gợi ý câu hỏi")
         suggestions = [
-            "Thủ tục ly hôn đơn phương cần những giấy tờ gì?",
-            "Điều kiện thành lập công ty TNHH một thành viên?",
-            "Quyền và nghĩa vụ của người lao động khi nghỉ thai sản?",
-            "Thời hiệu khởi kiện tranh chấp hợp đồng dân sự là bao lâu?",
-            "Các hình thức xử phạt vi phạm hành chính?",
+            "Tội lừa đảo chiếm đoạt tài sản bị xử phạt thế nào?",
+            "Người dưới 18 tuổi phạm tội thì bị xử lý ra sao?",
+            "Có được bảo lãnh cho người bị bắt tạm giam không?",
+            "Tội cố ý gây thương tích theo luật năm 2015 quy định gì?",
+            "Những trường hợp nào được miễn trách nhiệm hình sự?",
         ]
         for s in suggestions:
             if st.button(s, key=f"sug_{s[:20]}"):
@@ -55,6 +55,8 @@ def render_chat_page():
                 _render_confidence(msg["confidence"])
             if msg.get("latency_ms"):
                 st.caption(f"⏱️ {msg['latency_ms']:.0f}ms | Pipeline: {msg.get('pipeline_used', 'naive')}")
+            if msg.get("role") == "assistant":
+                st.caption("⚠️ *Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.*")
 
     # --- Chat Input ---
     question = st.chat_input("💬 Nhập câu hỏi pháp lý của bạn...")
@@ -139,17 +141,19 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
                         citations = data
                     elif event_type == "token" and "token" in data:
                         full_answer += data["token"]
-                        answer_placeholder.markdown(full_answer + "▌")
+                        # Dynamically hide <think> blocks while streaming
+                        display_text = re.sub(r'<think>[\s\S]*?(?:</think>|$)', '', full_answer, flags=re.IGNORECASE)
+                        answer_placeholder.markdown(display_text + "▌")
                     elif event_type == "done":
                         full_answer = data.get("full_answer", full_answer)
                         citations = data.get("citations", citations)
                         confidence = data.get("confidence", "medium")
                         latency_ms = data.get("latency_ms", 0)
+                        
+                        # Clean thinking tags from final answer
+                        full_answer = re.sub(r'<think>[\s\S]*?</think>', '', full_answer, flags=re.IGNORECASE)
+                        full_answer = full_answer.strip()
                         answer_placeholder.markdown(full_answer)
-
-            # Fallback: clean thinking tags from final answer
-            full_answer = re.sub(r'<think>[\s\S]*?</think>', '', full_answer, flags=re.IGNORECASE)
-            full_answer = full_answer.strip()
 
         return {
             "answer": full_answer,
@@ -169,24 +173,28 @@ def _render_citations(citations: List[Dict]):
     if not citations:
         return
     st.divider()
-    st.caption("📎 **Trích dẫn:**")
+    st.markdown("### 📚 Căn cứ pháp lý")
     for i, cite in enumerate(citations, 1):
-        with st.container():
-            st.markdown(f"""
-            <div style="border-left: 3px solid #4CAF50; padding-left: 12px; margin: 8px 0;">
-                <strong>📄 {cite.get('document_title', '')}</strong><br/>
-                {cite.get('article', '')} — {cite.get('clause', '')}<br/>
-                <small><em>"{cite.get('excerpt', '')[:200]}..."</em></small>
-            </div>
-            """, unsafe_allow_html=True)
+        title = cite.get('document_title', 'Văn bản pháp luật')
+        article = cite.get('article', '')
+        clause = cite.get('clause', '')
+        header = f"📘 **{title}**"
+        if article:
+            header += f" — {article}"
+        if clause:
+            header += f", {clause}"
+            
+        with st.expander(header):
+            st.markdown(f"*{cite.get('excerpt', '...')}*")
+            st.caption(f"Độ liên quan: {cite.get('relevance', 'cao')}")
 
 
 def _render_confidence(confidence: str):
     """Render confidence indicator."""
     colors = {
-        "high": ("🟢", "green"),
-        "medium": ("🟡", "orange"),
-        "low": ("🔴", "red"),
+        "high": ("🟢", "Cao", "green"),
+        "medium": ("🟡", "Trung bình", "orange"),
+        "low": ("🔴", "Thấp", "red"),
     }
-    icon, color = colors.get(confidence, ("⚪", "gray"))
-    st.caption(f"{icon} Độ tin cậy: **{confidence.upper()}**")
+    icon, text, color = colors.get(confidence, ("⚪", "Không xác định", "gray"))
+    st.markdown(f"**{icon} Độ tin cậy:** :{color}[**{text}**]")

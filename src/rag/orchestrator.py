@@ -28,6 +28,8 @@ from src.llm.prompts import (
 )
 
 
+from dataclasses import dataclass, field
+
 @dataclass
 class RAGResponse:
     """Structured response from the RAG pipeline."""
@@ -37,6 +39,7 @@ class RAGResponse:
     disclaimer: str
     latency_ms: float
     pipeline_used: str  # "simple", "medium", "complex"
+    related_questions: List[str] = field(default_factory=list)
 
 
 class NaiveRAGPipeline:
@@ -79,11 +82,12 @@ class NaiveRAGPipeline:
             prompt=prompt,
             system_prompt=SYSTEM_PROMPT,
             temperature=0.1,
-            json_mode=True,
+            json_mode=False,
         )
 
         # Step 5: Parse response
-        parsed = self._parse_response(raw_response)
+        citations = self._build_citations(results)
+        parsed = self._parse_response(raw_response, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
         parsed.pipeline_used = "naive"
 
@@ -153,27 +157,20 @@ class NaiveRAGPipeline:
             })
         return citations
 
-    def _parse_response(self, raw: str) -> RAGResponse:
-        """Parse LLM JSON response into RAGResponse."""
-        try:
-            data = json.loads(raw)
-            return RAGResponse(
-                answer=data.get("answer", raw),
-                citations=data.get("citations", []),
-                confidence=data.get("confidence", "medium"),
-                disclaimer=data.get("disclaimer", ""),
-                latency_ms=0,
-                pipeline_used="naive",
-            )
-        except json.JSONDecodeError:
-            return RAGResponse(
-                answer=raw,
-                citations=[],
-                confidence="medium",
-                disclaimer="",
-                latency_ms=0,
-                pipeline_used="naive",
-            )
+    def _parse_response(self, raw: str, citations: List[Dict]) -> RAGResponse:
+        """Parse markdown response into RAGResponse."""
+        import re
+        clean_raw = re.sub(r'<think>[\s\S]*?</think>', '', raw, flags=re.IGNORECASE).strip()
+        
+        return RAGResponse(
+            answer=clean_raw,
+            citations=citations,
+            confidence="high" if len(citations) >= 2 else "medium",
+            disclaimer="⚠️ Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.",
+            latency_ms=0,
+            pipeline_used="naive",
+            related_questions=[]
+        )
 
 
 class AdaptiveRAGPipeline(NaiveRAGPipeline):
@@ -223,9 +220,10 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         context = self._build_context(results)
 
         prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=True)
+        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
 
-        parsed = self._parse_response(raw)
+        citations = self._build_citations(results)
+        parsed = self._parse_response(raw, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
         parsed.pipeline_used = "simple"
         return parsed
@@ -242,9 +240,10 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         context = self._build_context(results[:5])  # Top-5 after fusion
 
         prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=True)
+        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
 
-        parsed = self._parse_response(raw)
+        citations = self._build_citations(results[:5])
+        parsed = self._parse_response(raw, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
         parsed.pipeline_used = "medium"
         return parsed
@@ -297,9 +296,10 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
         # 5. Generate
         prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=True)
+        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
 
-        parsed = self._parse_response(raw)
+        citations = self._build_citations(unique_results[:5])
+        parsed = self._parse_response(raw, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
         parsed.pipeline_used = "complex"
         return parsed

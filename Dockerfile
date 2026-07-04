@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -e . && pip install python-dotenv
 FROM base AS api
 COPY src/ ./src/
 COPY scripts/ ./scripts/
-COPY .env .env 2>/dev/null || true
+COPY .env* ./
 HEALTHCHECK --interval=30s --timeout=10s --retries=3 CMD curl -f http://localhost:8000/health || exit 1
 CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
