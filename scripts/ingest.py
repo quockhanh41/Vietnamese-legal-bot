@@ -23,6 +23,7 @@ from dotenv import load_dotenv
 load_dotenv()  # Load .env for Qdrant Cloud credentials
 
 from src.data.chunker import LegalDocumentChunker
+from src.data.chunking.article_level import ArticleLevelChunker
 from src.data.embedder import BGEEmbedder
 from src.db.qdrant_client import LegalVectorStore
 from src.data.constants import (
@@ -36,6 +37,9 @@ from src.data.constants import (
 
 # Date regex for DD/MM/YYYY format
 DATE_RE = re.compile(r'(\d{2})/(\d{2})/(\d{4})')
+
+# Amendment law detection: titles containing "sửa đổi" or "bổ sung"
+_AMENDMENT_RE = re.compile(r'(?:sửa\s+đổi|bổ\s+sung)', re.IGNORECASE)
 
 
 def parse_date(date_str):
@@ -91,6 +95,8 @@ def ingest(
     # Init components
     # S3 Hierarchical: best from Round 1 eval (R@5=97.3%, MRR=0.889)
     chunker = LegalDocumentChunker(min_chunk_size=200, max_chunk_size=1000)
+    # S5 Article-level: for amendment laws (different structure — no chapters, quoted replacement text)
+    amendment_chunker = ArticleLevelChunker(min_article_length=100)
     embedder = None  # Lazy load (BGE-M3 is heavy — ~2GB)
     store = LegalVectorStore(collection_name=DEFAULT_COLLECTION_NAME, timeout=120)
     store.create_collection(recreate=recreate)
@@ -119,14 +125,22 @@ def ingest(
 
             total_docs += 1
 
-            # Chunk this document
-            chunks = chunker.chunk_document(row_dict)
+            # Detect amendment law → use article-level chunker instead of hierarchical
+            title = row_dict.get("title", "")
+            is_amend = bool(_AMENDMENT_RE.search(title))
+
+            # Chunk this document (article-level for amendment laws, hierarchical for the rest)
+            active_chunker = amendment_chunker if is_amend else chunker
+            chunks = active_chunker.chunk_document(row_dict)
             for chunk in chunks:
                 total_chunks += 1
                 embed_text_buffer.append(chunk.chunk_text)
+                meta = chunk.to_dict()
+                if is_amend:
+                    meta["is_amendment_chunk"] = True
                 chunk_buffer.append({
                     "text": chunk.chunk_text,
-                    "metadata": chunk.to_dict(),
+                    "metadata": meta,
                 })
 
             # Embed + index when buffer has enough texts
