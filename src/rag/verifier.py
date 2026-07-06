@@ -80,8 +80,10 @@ class HallucinationVerifier:
             result.passed = False
             return result
 
-        # Tier 1: Structural citation check
-        self._verify_citations(citations, context, result)
+        # Tier 1: Structural citation check — verify articles cited IN THE ANSWER
+        # actually appear in the retrieved context (citations list is not used here,
+        # since it's built from the same retrieval results as context and would be vacuous).
+        self._verify_citations(answer, context, result)
 
         # Tier 2: Semantic NLI verification
         self._verify_semantic(answer, context, result)
@@ -102,28 +104,31 @@ class HallucinationVerifier:
 
     # ── Tier 1: Structural ──────────────────────────────────────
 
-    def _verify_citations(self, citations: List[Dict], context: str, result: VerificationResult):
-        """Check that each cited article/clause actually appears in the context."""
-        if not citations:
+    def _verify_citations(self, answer: str, context: str, result: VerificationResult):
+        """
+        Check that each article reference CITED IN THE ANSWER actually appears
+        in the retrieved context. Parses "Điều <n>" mentions directly from the
+        LLM-generated answer text (not from citations built off the same
+        retrieval results as context, which would make this check vacuous).
+        """
+        article_nums = self.ARTICLE_PATTERN.findall(answer)
+        if not article_nums:
             result.all_citations_valid = True
             return
 
-        for cite in citations:
-            article = cite.get("article", "")
-            clause = cite.get("clause", "")
+        # Deduplicate while preserving order
+        seen = set()
+        unique_articles = []
+        for num in article_nums:
+            if num not in seen:
+                seen.add(num)
+                unique_articles.append(num)
 
-            # Check article reference in context
-            article_valid = True
-            if article:
-                # Extract article number "Điều X" from citation
-                m = self.ARTICLE_PATTERN.search(article)
-                if m:
-                    article_num = m.group(1)
-                    if not self._article_in_context(article_num, context):
-                        article_valid = False
-                        result.invalid_citations.append(f"Điều {article_num}")
-
-            result.citation_validity.append(article_valid)
+        for article_num in unique_articles:
+            valid = self._article_in_context(article_num, context)
+            result.citation_validity.append(valid)
+            if not valid:
+                result.invalid_citations.append(f"Điều {article_num}")
 
         result.all_citations_valid = all(result.citation_validity)
 
@@ -135,6 +140,13 @@ class HallucinationVerifier:
 
     # ── Tier 2: Semantic NLI ────────────────────────────────────
 
+    # Maps the model's native output labels to our ENTAILMENT/NEUTRAL/CONTRADICTION strings.
+    NLI_LABEL_MAP = {
+        "entailment": "ENTAILMENT",
+        "neutral": "NEUTRAL",
+        "contradiction": "CONTRADICTION",
+    }
+
     def _load_nli_model(self):
         """Lazy-load the NLI model."""
         if self._nli_model is not None:
@@ -144,8 +156,11 @@ class HallucinationVerifier:
             from transformers import pipeline
             MODEL_NAME = "MoritzLaurer/mDeBERTa-v3-base-mnli-xnli"
             logger.info(f"Loading NLI model {MODEL_NAME}...")
+            # This is a native NLI model (premise/hypothesis pair classification),
+            # NOT a zero-shot classifier — use "text-classification" and pass the
+            # context as `text` (premise) and the claim as `text_pair` (hypothesis).
             self._nli_model = pipeline(
-                "zero-shot-classification",
+                "text-classification",
                 model=MODEL_NAME,
                 device=-1,  # CPU
             )
@@ -219,7 +234,9 @@ class HallucinationVerifier:
             return
 
         result.claims = claims
-        # Truncate context to fit model max length (typically 512 tokens)
+        # Truncate context to fit model max length (typically 512 tokens).
+        # Keep the char-based truncation as a cheap first pass; the tokenizer
+        # will also truncate (truncation=True) so we don't overflow the model.
         truncated_context = context[:2000]
 
         entail_count = 0
@@ -227,13 +244,16 @@ class HallucinationVerifier:
 
         for claim in claims:
             try:
+                # Native NLI pair: premise=context, hypothesis=claim.
                 output = self._nli_model(
-                    sequences=claim,
-                    candidate_labels=["ENTAILMENT", "CONTRADICTION", "NEUTRAL"],
-                    hypothesis_template="The context says: {}.",
-                    multi_label=False,
+                    {"text": truncated_context, "text_pair": claim},
+                    truncation=True,
                 )
-                label = output["labels"][0]  # Top label
+                # pipeline() may return a dict or a list with one dict depending on version
+                if isinstance(output, list):
+                    output = output[0]
+                raw_label = str(output["label"]).lower()
+                label = self.NLI_LABEL_MAP.get(raw_label, "NEUTRAL")
                 result.entailment_labels.append(label)
 
                 if label == "ENTAILMENT":

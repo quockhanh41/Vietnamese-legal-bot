@@ -7,9 +7,10 @@ v1.0: Adaptive RAG (query classifier + routing)
 
 import json
 import os
+import re
 import sys
 import statistics, time
-from typing import List, Dict, Optional, Generator
+from typing import List, Dict, Optional, Generator, Tuple
 
 from dataclasses import dataclass, field
 # Ensure project root is on path for imports
@@ -256,16 +257,25 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
     def _classify(self, question: str) -> str:
         """Classify query complexity: simple/medium/complex."""
         prompt = COMPLEXITY_CLASSIFIER_PROMPT.format(question=question)
-        result = self.llm.generate(prompt=prompt, temperature=0, max_tokens=10)
+        result = self.llm.generate(
+            prompt=prompt, temperature=0, max_tokens=100, reasoning_effort="none",
+        )
         result = result.strip().upper()
-        if result in ("SIMPLE", "MEDIUM", "COMPLEX"):
-            return result.lower()
+        # Search rather than exact-match: the (thinking) model may wrap the
+        # label in extra text even after <think> stripping.
+        m = re.search(r'\b(SIMPLE|MEDIUM|COMPLEX)\b', result)
+        if m:
+            return m.group(1).lower()
         return "medium"  # Safe default
 
     def _post_process(self, question: str, answer: str, results: List[SearchResult],
-                      context: str) -> tuple:
+                      context: str, rerank_scores: Optional[List[float]] = None) -> tuple:
         """
         Post-generation: verifier (Tier 1 + 2) + confidence scoring + refusal gate.
+
+        Args:
+            rerank_scores: Cross-encoder scores from `_rerank_results`, if reranking
+                ran for this query (None otherwise — distinct from "ran but empty").
 
         Returns:
             (conf_result, ver_result, final_answer)
@@ -281,16 +291,18 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         context_str = context
         ver_result = self._verifier.verify(answer, citations, context_str)
 
-        # Get reranker scores if available (from _rerank_results output)
-        # We don't store them separately, so pass None and let confidence handle it
-        rerank_scores = None
+        # Semantic verification (NLI) is "skipped" when no claims were labeled —
+        # pass None so confidence scoring can drop this signal instead of treating
+        # a 0.0 ratio as "answer entails nothing".
+        entailment_ratio = ver_result.entailment_ratio if ver_result.entailment_labels else None
+
         result = self._confidence_scorer.score(
             question=question,
             answer=answer,
             context=context_str,
             search_results=results,
             rerank_scores=rerank_scores,
-            entailment_ratio=ver_result.entailment_ratio,
+            entailment_ratio=entailment_ratio,
         )
 
         # Refusal gate
@@ -346,7 +358,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         results = results[:top_k]
 
         # Re-rank (if available)
-        results = self._rerank_results(question, results)
+        results, rerank_scores = self._rerank_results(question, results)
 
         context = self._build_context(results[:15])
         prompt = GENERATION_PROMPT.format(context=context, question=question)
@@ -356,7 +368,9 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         context = self._build_context(results[:15])
 
         # Post-process: verify + confidence
-        conf_result, ver_result, final_answer = self._post_process(question, raw, results[:15], context)
+        conf_result, ver_result, final_answer = self._post_process(
+            question, raw, results[:15], context, rerank_scores=rerank_scores,
+        )
 
         parsed = self._parse_response(final_answer, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
@@ -398,7 +412,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         results = unique_results[:top_k]
 
         # 6. Re-rank (if available)
-        results = self._rerank_results(question, results)
+        results, rerank_scores = self._rerank_results(question, results)
 
         # 7. Context Compression — extract only relevant sentences
         context = self._build_context(results)
@@ -412,7 +426,9 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         context = self._build_context(results)
 
         # Post-process: verify + confidence
-        conf_result, ver_result, final_answer = self._post_process(question, raw, results, context)
+        conf_result, ver_result, final_answer = self._post_process(
+            question, raw, results, context, rerank_scores=rerank_scores,
+        )
 
         parsed = self._parse_response(final_answer, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
@@ -422,14 +438,23 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
     # ── Re-ranking ───────────────────────────────────────────
 
-    def _rerank_results(self, question: str, results: List[SearchResult]) -> List[SearchResult]:
-        """Re-rank results using BGE-Reranker v2 (if available). Falls back to score sort."""
+    def _rerank_results(
+        self, question: str, results: List[SearchResult]
+    ) -> Tuple[List[SearchResult], Optional[List[float]]]:
+        """
+        Re-rank results using BGE-Reranker v2 (if available). Falls back to score sort.
+
+        Returns:
+            (results, rerank_scores) — rerank_scores is None when reranking did not
+            run (too few results / reranker unavailable / error), so callers can
+            tell "no signal" apart from "signal is empty".
+        """
         if len(results) <= 1:
-            return results
+            return results, None
         reranker = self._get_reranker()
         if reranker is None:
             # Fallback: already sorted by Qdrant score — keep as-is
-            return results
+            return results, None
         try:
             passages = [r.chunk_text[:512] for r in results]
             pairs = [[question, p] for p in passages]
@@ -437,10 +462,12 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             # Re-sort by reranker score
             indexed = list(enumerate(results))
             indexed.sort(key=lambda x: scores[x[0]], reverse=True)
-            return [results[i] for i, _ in indexed]
+            sorted_results = [results[i] for i, _ in indexed]
+            sorted_scores = [scores[i] for i, _ in indexed]
+            return sorted_results, sorted_scores
         except Exception as e:
             print(f"⚠️ Reranking failed (skip): {e}")
-            return results
+            return results, None
 
     # ── Context Compression ──────────────────────────────────
 
@@ -477,6 +504,8 @@ Các câu liên quan (giữ nguyên văn):"""
         complexity = self._classify(question)
         yield f'__STEP__{json.dumps({"step": "Classification", "result": complexity.upper()})}'
 
+        rerank_scores = None
+
         if complexity == "simple":
             yield f'__STEP__{json.dumps({"step": "Routing", "result": "Simple Pipeline (Dense Search)"})}'
             query_vector = self.embedder.encode_queries([question])[0]
@@ -484,7 +513,7 @@ Các câu liên quan (giữ nguyên văn):"""
             # Dynamic top-k
             top_k = self._dynamic_top_k(results, min_k=3, max_k=15)
             results = results[:top_k]
-            
+
         elif complexity == "medium":
             yield f'__STEP__{json.dumps({"step": "Routing", "result": "Medium Pipeline (Hybrid Search)"})}'
             output = self.embedder.encode([question], return_dense=True, return_sparse=True)
@@ -494,8 +523,8 @@ Các câu liên quan (giữ nguyên văn):"""
             # Dynamic top-k + rerank
             top_k = self._dynamic_top_k(results, min_k=5, max_k=15)
             results = results[:top_k]
-            results = self._rerank_results(question, results)
-            
+            results, rerank_scores = self._rerank_results(question, results)
+
         else: # complex
             yield f'__STEP__{json.dumps({"step": "Routing", "result": "Complex Pipeline (Rewrite + HyDE + Multi-query)"})}'
             
@@ -539,7 +568,7 @@ Các câu liên quan (giữ nguyên văn):"""
             results = unique_results[:top_k]
 
             # Re-rank (if available)
-            results = self._rerank_results(question, results)
+            results, rerank_scores = self._rerank_results(question, results)
 
         # Build context & citations
         context = self._build_context(results)
@@ -556,10 +585,34 @@ Các câu liên quan (giữ nguyên văn):"""
         # Stream generation
         prompt = GENERATION_PROMPT.format(context=context, question=question)
         yield f'__STEP__{json.dumps({"step": "LLM Prompt", "result": prompt})}'
-        
+
+        full_answer = ""
         for token in self.llm.generate_stream(
             prompt=prompt,
             system_prompt=SYSTEM_PROMPT,
             temperature=0.1,
         ):
+            full_answer += token
             yield token
+
+        # Post-process (verify + confidence) on the full answer, same as the
+        # non-streaming path — run after generation so it doesn't add latency
+        # to the first token, but still reaches the UI before the turn is "done".
+        # Strip <think> blocks first: the raw stream includes Qwen3 reasoning
+        # (the UI hides it for display), and verifying reasoning text as claims
+        # wrecks the entailment/overlap signals.
+        clean_answer = re.sub(r'<think>[\s\S]*?(?:</think>|$)', '', full_answer, flags=re.IGNORECASE).strip()
+        conf_result, ver_result, final_answer = self._post_process(
+            question, clean_answer, results, context, rerank_scores=rerank_scores,
+        )
+        verification_payload = {
+            "confidence_score": conf_result.score,
+            "confidence": conf_result.label,
+            "refused": conf_result.refused,
+            "warnings": ver_result.warnings,
+            "entailment_ratio": ver_result.entailment_ratio,
+            "contradiction_ratio": ver_result.contradiction_ratio,
+        }
+        if conf_result.refused:
+            verification_payload["refusal_answer"] = final_answer
+        yield f'__VERIFICATION__{json.dumps(verification_payload, ensure_ascii=False)}'

@@ -77,6 +77,21 @@ Citations được build từ chính retrieval results, rồi verifier kiểm tr
 
 ---
 
+### ✅ Trạng thái fix (cập nhật 2026-07-06, cùng ngày)
+
+Cả 6 bug đã được fix (sub-agent Sonnet 5 thực hiện, Fable 5 verify bằng live test với Groq + model NLI thật):
+
+| Bug | Trạng thái | Ghi chú verify |
+|-----|-----------|----------------|
+| 1a NLI | ✅ Fixed | Test thật với mDeBERTa: answer bịa → 67% contradiction + flag "Điều 99"; answer đúng → pass, 3/5 ENTAILMENT |
+| 1b Classifier | ✅ Fixed (có chỉnh) | Sub-agent dùng `reasoning_format="hidden"` → **vẫn rỗng** (model vẫn đốt token budget để think). Fable đổi sang `reasoning_effort="none"` (Groq-native, tắt hẳn thinking) → live test trả về `SIMPLE`/`MEDIUM` đúng; self-eval trả về số |
+| 1c Citation check | ✅ Fixed | Giờ parse "Điều n" từ answer text, đối chiếu context — bắt được citation bịa |
+| 1d Streaming verification | ✅ Fixed (có chỉnh) | Event SSE `verification` mới với score thật; `done` dùng giá trị thật. Fable phát hiện thêm: raw stream chứa `<think>` bị đưa vào NLI → đã strip trước khi verify |
+| 1e Confidence signals | ✅ Fixed | Rerank scores được truyền thật; weights renormalize khi thiếu tín hiệu (max đạt 1.0); RRF dùng margin-over-median thay vì `*60`. E2E: answer tốt + phân bố RRF thực tế → 0.808 (không refuse), có rerank → 0.830 |
+| 1f Fallback + event loop | ✅ Fixed | Chain: qwen3-32b → llama-3.3-70b → gpt-4o-mini (skip khi thiếu key); `/api/chat` sync def; stream dùng `iterate_in_threadpool` |
+
+**Việc còn lại liên quan**: (i) calibrate threshold 0.7 + công thức margin RRF bằng eval data thật (tuần 2 roadmap); (ii) UI chưa render event `verification`/`refusal_answer` trong chế độ stream (hiện bỏ qua an toàn); (iii) NLI hay trả NEUTRAL với claim ngắn tiếng Việt → entailment_ratio thiên thấp, cân nhắc khi calibrate.
+
 ## 2. Gap so với production (plan hứa nhưng chưa có)
 
 | # | Gap | Chi tiết |

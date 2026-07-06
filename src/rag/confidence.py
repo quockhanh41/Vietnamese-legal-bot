@@ -20,6 +20,7 @@ Usage:
 from __future__ import annotations
 
 import re
+import statistics
 import logging
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
@@ -105,7 +106,7 @@ class ConfidenceScorer:
         context: str,
         search_results: List[SearchResult],
         rerank_scores: Optional[List[float]] = None,
-        entailment_ratio: float = 0.0,
+        entailment_ratio: Optional[float] = None,
     ) -> ConfidenceResult:
         """
         Compute multi-signal confidence score.
@@ -115,8 +116,12 @@ class ConfidenceScorer:
             answer: The generated answer
             context: The retrieved context used for generation
             search_results: Results from vector search (for scores)
-            rerank_scores: Scores from cross-encoder reranker (if available)
-            entailment_ratio: Ratio of entailed claims from verifier (F17)
+            rerank_scores: Scores from cross-encoder reranker. None means
+                reranking did not run for this query (signal unavailable) —
+                distinct from an (impossible) empty-but-ran list.
+            entailment_ratio: Ratio of entailed claims from verifier (F17).
+                None means semantic (NLI) verification was skipped (signal
+                unavailable), not "0% entailed".
 
         Returns:
             ConfidenceResult with score, refusal flag, and per-signal breakdown
@@ -127,14 +132,22 @@ class ConfidenceScorer:
         sig_entailment = entailment_ratio
         sig_llm = self._llm_self_eval(question, answer, context)
 
-        # Weighted aggregation
-        weighted_score = (
-            self.weights["retriever"] * sig_retriever
-            + self.weights["reranker"] * sig_reranker
-            + self.weights["context_overlap"] * sig_overlap
-            + self.weights["entailment"] * sig_entailment
-            + self.weights["llm_self_eval"] * sig_llm
-        )
+        # Weighted aggregation over available signals only — when a signal is
+        # unavailable (None), drop it and renormalize the remaining weights so
+        # the max achievable score stays 1.0 instead of silently capping below it.
+        signals = {
+            "retriever": sig_retriever,
+            "reranker": sig_reranker,
+            "context_overlap": sig_overlap,
+            "entailment": sig_entailment,
+            "llm_self_eval": sig_llm,
+        }
+        available = {k: v for k, v in signals.items() if v is not None}
+        weight_sum = sum(self.weights[k] for k in available)
+        if weight_sum > 0:
+            weighted_score = sum(self.weights[k] * v for k, v in available.items()) / weight_sum
+        else:
+            weighted_score = 0.0
 
         # Clamp to [0, 1]
         weighted_score = max(0.0, min(1.0, weighted_score))
@@ -142,37 +155,54 @@ class ConfidenceScorer:
         return ConfidenceResult(
             score=weighted_score,
             refused=weighted_score < self.refusal_threshold,
-            retriever_score=sig_retriever,
-            reranker_score=sig_reranker,
-            llm_self_eval_score=sig_llm,
-            context_overlap_score=sig_overlap,
-            entailment_score=sig_entailment,
+            retriever_score=sig_retriever or 0.0,
+            reranker_score=sig_reranker or 0.0,
+            llm_self_eval_score=sig_llm or 0.0,
+            context_overlap_score=sig_overlap or 0.0,
+            entailment_score=sig_entailment or 0.0,
         )
 
     # ── Signal ①: Retriever Score ──────────────────────────
 
     @staticmethod
-    def _retriever_signal(results: List[SearchResult]) -> float:
-        """Max cosine similarity score from search results."""
+    def _retriever_signal(results: List[SearchResult]) -> Optional[float]:
+        """
+        Retriever confidence signal from search result scores (0-1).
+
+        Qdrant returns cosine scores (0-1) for dense search, or RRF scores
+        (typically << 0.1, saturating near 1/60 for the top hit) for hybrid
+        search. RRF scores can't be rescaled by a fixed multiplier (`* 60`)
+        without saturating at ~1.0 for virtually every query — instead, for
+        RRF-scale scores we use a distribution-aware proxy: how far the top
+        score stands above the median of the returned scores. A large margin
+        means one result clearly dominates (confident); a small margin means
+        the results are close together (ambiguous). This is monotone in the
+        top score's separation and doesn't saturate.
+        """
         if not results:
-            return 0.0
+            return None
         scores = [r.score for r in results if r.score is not None]
         if not scores:
-            return 0.0
-        # Qdrant scores are 0-1 for dense, or RRF score for hybrid
-        # Normalize if needed: RRF scores are typically < 0.1
+            return None
         max_s = max(scores)
-        if max_s < 0.1:  # RRF score — rescale to 0-1
-            return min(1.0, max_s * 60)  # RRF k=60 typically
+        if max_s < 0.1:  # RRF-scale scores
+            median_s = statistics.median(scores)
+            if max_s <= 0:
+                return 0.0
+            # Relative margin of top score over median, mapped to [0, 1].
+            margin = (max_s - median_s) / max_s
+            return max(0.0, min(1.0, margin))
         return max_s
 
     # ── Signal ②: Reranker Score ──────────────────────────
 
     @staticmethod
-    def _reranker_signal(scores: Optional[List[float]]) -> float:
-        """Max cross-encoder score from reranker (0-1)."""
+    def _reranker_signal(scores: Optional[List[float]]) -> Optional[float]:
+        """Max cross-encoder score from reranker (0-1), or None if unavailable."""
+        if scores is None:
+            return None
         if not scores:
-            return 0.0
+            return None
         return max(scores)
 
     # ── Signal ③: LLM Self-Eval ───────────────────────────
@@ -185,7 +215,9 @@ class ConfidenceScorer:
                 answer=answer[:1000],  # Keep prompt manageable
                 context=context[:2000],
             )
-            result = self.llm.generate(prompt=prompt, temperature=0, max_tokens=10)
+            result = self.llm.generate(
+                prompt=prompt, temperature=0, max_tokens=100, reasoning_effort="none",
+            )
             # Extract number from response
             nums = re.findall(r'\d+', result.strip())
             if nums:

@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
+from starlette.concurrency import iterate_in_threadpool
 
 from src.db.qdrant_client import LegalVectorStore
 from src.data.embedder import BGEEmbedder
@@ -136,8 +137,9 @@ async def health():
 
 
 @app.post("/api/chat", response_model=ChatResponse)
-async def chat(request: ChatRequest):
-    """Non-streaming chat endpoint."""
+def chat(request: ChatRequest):
+    """Non-streaming chat endpoint. Sync `def` so FastAPI runs it in the
+    threadpool instead of blocking the event loop with sync pipeline calls."""
     try:
         if request.use_adaptive:
             pipeline = get_adaptive_pipeline()
@@ -173,8 +175,15 @@ async def chat_stream(request: ChatRequest):
             full_answer = ""
             citations = []
             citations_sent = False
+            # Falls back to these when the pipeline never emits __VERIFICATION__
+            # (e.g. NaiveRAGPipeline, which has no confidence/verification step).
+            confidence_label = "medium"
+            confidence_score = 0.0
 
-            for token in pipeline.query_stream(request.question):
+            # pipeline.query_stream is a sync generator (blocking model/network
+            # calls) — run its iteration in the threadpool so it doesn't block
+            # the event loop while other requests are being served.
+            async for token in iterate_in_threadpool(pipeline.query_stream(request.question)):
                 # Intercept step marker
                 if token.startswith("__STEP__"):
                     try:
@@ -200,6 +209,21 @@ async def chat_stream(request: ChatRequest):
                         pass
                     continue
 
+                # Intercept verification marker (confidence + hallucination check,
+                # computed after the full answer has streamed)
+                if token.startswith("__VERIFICATION__"):
+                    try:
+                        verification = json.loads(token[len("__VERIFICATION__"):])
+                        confidence_label = verification.get("confidence", confidence_label)
+                        confidence_score = verification.get("confidence_score", confidence_score)
+                        yield {
+                            "event": "verification",
+                            "data": json.dumps(verification, ensure_ascii=False),
+                        }
+                    except json.JSONDecodeError:
+                        pass
+                    continue
+
                 full_answer += token
                 yield {
                     "event": "token",
@@ -212,7 +236,8 @@ async def chat_stream(request: ChatRequest):
                 "data": json.dumps({
                     "full_answer": full_answer,
                     "citations": citations,
-                    "confidence": "high" if len(citations) >= 2 else "medium",
+                    "confidence": confidence_label,
+                    "confidence_score": confidence_score,
                     "latency_ms": (time.time() - start_time) * 1000,
                 }, ensure_ascii=False),
             }
