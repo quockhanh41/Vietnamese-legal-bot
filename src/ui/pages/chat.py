@@ -82,6 +82,10 @@ def render_chat_page():
                         lines.append("---")
                     st.markdown("\n".join(lines))
             st.markdown(_highlight_legal_refs(msg["content"]))
+            # Phase B: original (pre-refusal) answer, kept available for inspection
+            if msg.get("original_answer"):
+                with st.expander("Xem câu trả lời gốc (độ tin cậy thấp)", expanded=False):
+                    st.markdown(_highlight_legal_refs(msg["original_answer"]))
             if msg.get("citations"):
                 _render_citations(msg["citations"])
             if msg.get("confidence"):
@@ -91,9 +95,8 @@ def render_chat_page():
             if conf_score is not None:
                 _render_confidence_score(conf_score)
             # Phase B: verification warnings
-            if msg.get("verification_warnings"):
-                for w in msg["verification_warnings"]:
-                    st.warning(w)
+            if msg.get("warnings"):
+                st.warning("\n".join(msg["warnings"]))
             # Phase B: refused notice
             if msg.get("refused"):
                 st.info("ℹ️ Bot không đủ tự tin để trả lời câu hỏi này một cách chính xác.")
@@ -132,6 +135,8 @@ def render_chat_page():
                 "confidence": response_data.get("confidence", "medium"),
                 "confidence_score": response_data.get("confidence_score", 0.0),
                 "refused": response_data.get("refused", False),
+                "original_answer": response_data.get("original_answer"),
+                "warnings": response_data.get("warnings", []),
                 "latency_ms": response_data.get("latency_ms", 0),
                 "pipeline_used": response_data.get("pipeline_used", "naive"),
             })
@@ -161,6 +166,10 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
     full_answer = ""
     citations = []
     confidence = "medium"
+    confidence_score = 0.0
+    refused = False
+    warnings = []
+    refusal_answer = None
     latency_ms = 0
     pipeline_used = "naive"
     steps = []
@@ -206,22 +215,50 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
                         # Dynamically hide <think> blocks while streaming
                         display_text = re.sub(r'<think>[\s\S]*?(?:</think>|$)', '', full_answer, flags=re.IGNORECASE)
                         answer_placeholder.markdown(_highlight_legal_refs(display_text) + "▌")
+                    elif event_type == "verification":
+                        # Only emitted by the adaptive pipeline, after the full
+                        # answer has streamed (hallucination check + confidence
+                        # gate). Never arrives for the naive pipeline.
+                        confidence = data.get("confidence", confidence)
+                        confidence_score = data.get("confidence_score", confidence_score)
+                        refused = data.get("refused", False)
+                        warnings = data.get("warnings", [])
+                        refusal_answer = data.get("refusal_answer")
                     elif event_type == "done":
                         full_answer = data.get("full_answer", full_answer)
                         citations = data.get("citations", citations)
-                        confidence = data.get("confidence", "medium")
+                        # "done" carries the same real values when a "verification"
+                        # event preceded it; otherwise (naive pipeline) these are
+                        # the backend defaults, so fall back to what we already have.
+                        confidence = data.get("confidence", confidence)
+                        confidence_score = data.get("confidence_score", confidence_score)
                         latency_ms = data.get("latency_ms", 0)
-                        
+
                         # Clean thinking tags from final answer
                         full_answer = re.sub(r'<think>[\s\S]*?</think>', '', full_answer, flags=re.IGNORECASE)
                         full_answer = full_answer.strip()
-                        answer_placeholder.markdown(_highlight_legal_refs(full_answer))
+
+                        if refused and refusal_answer:
+                            # Confidence gate refused: show the refusal message as the
+                            # main answer, keep the original streamed answer inspectable.
+                            answer_placeholder.markdown(_highlight_legal_refs(refusal_answer))
+                            with st.expander("Xem câu trả lời gốc (độ tin cậy thấp)", expanded=False):
+                                st.markdown(_highlight_legal_refs(full_answer))
+                        else:
+                            answer_placeholder.markdown(_highlight_legal_refs(full_answer))
+
+                        if warnings:
+                            st.warning("\n".join(warnings))
 
         return {
-            "answer": full_answer,
+            "answer": refusal_answer if (refused and refusal_answer) else full_answer,
+            "original_answer": full_answer if (refused and refusal_answer) else None,
             "steps": steps,
             "citations": citations,
             "confidence": confidence,
+            "confidence_score": confidence_score,
+            "refused": refused,
+            "warnings": warnings,
             "latency_ms": latency_ms,
             "pipeline_used": pipeline_used,
         }

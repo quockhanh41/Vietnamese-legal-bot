@@ -1,0 +1,326 @@
+{
+  "config": {
+    "set": "criminal",
+    "limit": 3,
+    "collection": "luat_law",
+    "tier": "tier1_retrieval",
+    "generated_at_utc": "2026-07-06T16:57:35.277302+00:00"
+  },
+  "tier1": {
+    "n_questions_total": 3,
+    "n_questions_eligible": 3,
+    "n_questions_skipped": 0,
+    "modes": {
+      "dense": {
+        "n": 3,
+        "recall@5_strict": 0.0,
+        "recall@5_lenient": 0.0,
+        "recall@10_strict": 0.0,
+        "recall@10_lenient": 0.0,
+        "mrr_strict": 0.0,
+        "mrr_lenient": 0.0,
+        "by_type": {
+          "citation-lookup": {
+            "n": 3,
+            "recall@5_strict": 0.0,
+            "recall@10_strict": 0.0,
+            "recall@5_lenient": 0.0,
+            "recall@10_lenient": 0.0,
+            "mrr_strict": 0.0,
+            "mrr_lenient": 0.0
+          }
+        }
+      },
+      "hybrid": {
+        "n": 3,
+        "recall@5_strict": 0.0,
+        "recall@5_lenient": 0.0,
+        "recall@10_strict": 0.0,
+        "recall@10_lenient": 0.0,
+        "mrr_strict": 0.0,
+        "mrr_lenient": 0.0,
+        "by_type": {
+          "citation-lookup": {
+            "n": 3,
+            "recall@5_strict": 0.0,
+            "recall@10_strict": 0.0,
+            "recall@5_lenient": 0.0,
+            "recall@10_lenient": 0.0,
+            "mrr_strict": 0.0,
+            "mrr_lenient": 0.0
+          }
+        }
+      }
+    },
+    "rows": {
+      "dense": [
+        {
+          "id": "crim-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.5949
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.5946
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5911
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 313. Tội che giấu tội phạm",
+              "score": 0.5789
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Hình sự",
+              "score": 0.5753
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 489113,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Tố tụng hình sự",
+              "score": 0.5956
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.5751
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.57
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 1. Phạm vi điều chỉnh",
+              "score": 0.57
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5652
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-003",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 51"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.6065
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.5874
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 313. Tội che giấu tội phạm",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.5709
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 313. Tội che giấu tội phạm",
+              "score": 0.5666
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        }
+      ],
+      "hybrid": [
+        {
+          "id": "crim-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.75
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.4333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.4103
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Hình sự",
+              "score": 0.3667
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 489113,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Tố tụng hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 1. Phạm vi điều chỉnh",
+              "score": 0.5333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.3409
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 2. Cơ sở của trách nhiệm hình sự",
+              "score": 0.3026
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-003",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 51"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 1.0
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Hình sự",
+              "score": 0.3929
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 2. Cơ sở của trách nhiệm hình sự",
+              "score": 0.3333
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 2. Bổ sung, thay thế, bỏ một số từ, cụm từ, dấu chấm, dấu phẩy, dấu chấm phẩy tại một số điều, khoản, điểm của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.2917
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        }
+      ]
+    }
+  }
+}

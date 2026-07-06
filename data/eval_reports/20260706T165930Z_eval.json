@@ -1,0 +1,42 @@
+{
+  "config": {
+    "set": "criminal",
+    "limit": 1,
+    "collection": "luat_law",
+    "tier": "tier2_answers",
+    "generated_at_utc": "2026-07-06T16:59:16.364832+00:00",
+    "sleep_s": 0.0
+  },
+  "tier2": {
+    "aggregate": {
+      "n": 1,
+      "n_errors": 0,
+      "refusal_accuracy": null,
+      "false_refusal_rate": 1.0,
+      "mean_citation_accuracy": 0.0,
+      "confidence_distribution": {
+        "answer": {
+          "n": 1,
+          "mean": 0.6734,
+          "min": 0.6734,
+          "max": 0.6734,
+          "median": 0.6734
+        }
+      }
+    },
+    "rows": [
+      {
+        "id": "crim-001",
+        "type": "citation-lookup",
+        "expected_behavior": "answer",
+        "error": null,
+        "refused": true,
+        "confidence_score": 0.6734,
+        "confidence_label": "medium",
+        "pipeline_used": "simple",
+        "latency_ms": 14474.5,
+        "citation_accuracy": 0.0
+      }
+    ]
+  }
+}

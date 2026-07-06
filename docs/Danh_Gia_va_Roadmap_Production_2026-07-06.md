@@ -92,6 +92,24 @@ Cả 6 bug đã được fix (sub-agent Sonnet 5 thực hiện, Fable 5 verify b
 
 **Việc còn lại liên quan**: (i) calibrate threshold 0.7 + công thức margin RRF bằng eval data thật (tuần 2 roadmap); (ii) UI chưa render event `verification`/`refusal_answer` trong chế độ stream (hiện bỏ qua an toàn); (iii) NLI hay trả NEUTRAL với claim ngắn tiếng Việt → entailment_ratio thiên thấp, cân nhắc khi calibrate.
 
+### ✅ Trạng thái Tuần 2 (cập nhật 2026-07-07): eval foundation + UI verification đã xong
+
+**Đã có** (Sonnet 5 implement, Fable 5 verify):
+- 2 eval set: `data/eval/eval_set_criminal_v1.json` (41 câu, ground truth đối chiếu corpus thật) + `eval_set_general_v1.json` (29 câu, vai trò kép refuse-now/answer-later)
+- `scripts/validate_eval_set.py` (schema + grounding check), `scripts/eval.py` (Tier 1 retrieval không tốn LLM: recall@5/10 + MRR, dense vs hybrid, strict vs lenient; Tier 2 `--answers`: refusal accuracy + citation accuracy + phân bố confidence cho calibration), `src/eval/metrics.py` + 27 unit tests đầu tiên của repo, `.github/workflows/eval.yml` (nightly, chỉ Tier 1)
+- UI đã render event SSE `verification`: confidence thật, warnings, refusal answer (câu gốc trong expander)
+
+**📉 Kết quả đo baseline đầu tiên (14 câu, hybrid, strict):**
+
+| Loại câu hỏi | recall@5 | MRR | Kết luận |
+|---|---|---|---|
+| single-hop (câu hỏi tự nhiên) | **0.83** | 0.72 | Retrieval hoạt động tốt |
+| citation-lookup ("Điều X quy định gì?") | **0.125** | 0.03 | Gần như thất bại hoàn toàn |
+
+Phát hiện kèm theo: (i) hybrid == dense trên bộ này — BGE-M3 sparse không cứu được citation-lookup vì chunk luật sửa đổi chứa rất nhiều số "Điều N" gây nhiễu; (ii) lenient (match theo text) = 0.0 < strict — tức **chunk_text thường thiếu header "Điều N."** (bắt đầu giữa điều luật); (iii) Tier 2 smoke: crim-001 bị false-refuse ở confidence 0.673 (ngưỡng 0.70).
+
+**→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) citation-lookup route (mục 3.3) — impact lớn nhất, đo được ngay; (2) contextual retrieval / prepend header vào chunk (mục 3.1) — giải quyết trực tiếp phát hiện (ii); (3) calibrate ngưỡng 0.70 bằng phân bố confidence từ Tier 2 full-run. Cải tiến nhỏ cho eval: đổi lenient thành strict∨text (semantics "rescue") thay vì text-only.
+
 ## 2. Gap so với production (plan hứa nhưng chưa có)
 
 | # | Gap | Chi tiết |
