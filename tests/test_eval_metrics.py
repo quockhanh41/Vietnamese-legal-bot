@@ -74,6 +74,22 @@ def test_lenient_rescues_misaligned_article_metadata():
     assert lenient_match(result, expected) is True
 
 
+def test_lenient_match_is_superset_of_strict_even_without_literal_text():
+    """Rescue semantics: lenient_match = strict_match OR text_match. When the
+    `article` payload field is correct (strict match) but the chunk's own
+    text does NOT repeat "Điều N." verbatim (e.g. it continues mid-article),
+    lenient must still be True — it can only ever find MORE than strict."""
+    result = {
+        "document_id": 296661,
+        "article": "Điều 173",
+        "chunk_text": "...tiếp tục nội dung khoản 2 không nhắc lại tiêu đề điều...",
+    }
+    expected = {"doc_id": 296661, "article": "Điều 173"}
+    assert strict_match(result, expected) is True
+    assert lenient_text_match(artnum(expected["article"]), result["chunk_text"]) is False
+    assert lenient_match(result, expected) is True  # rescued by strict, not by text
+
+
 def test_lenient_text_match_requires_delimiter():
     # "Điều 17" must not fuzzy-match inside "Điều 173" (no `.`/`:` after "17")
     assert lenient_text_match("17", "Điều 173. Tội trộm cắp tài sản") is False

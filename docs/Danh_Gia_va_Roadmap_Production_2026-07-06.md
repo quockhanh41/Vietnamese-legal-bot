@@ -108,7 +108,20 @@ Cả 6 bug đã được fix (sub-agent Sonnet 5 thực hiện, Fable 5 verify b
 
 Phát hiện kèm theo: (i) hybrid == dense trên bộ này — BGE-M3 sparse không cứu được citation-lookup vì chunk luật sửa đổi chứa rất nhiều số "Điều N" gây nhiễu; (ii) lenient (match theo text) = 0.0 < strict — tức **chunk_text thường thiếu header "Điều N."** (bắt đầu giữa điều luật); (iii) Tier 2 smoke: crim-001 bị false-refuse ở confidence 0.673 (ngưỡng 0.70).
 
-**→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) citation-lookup route (mục 3.3) — impact lớn nhất, đo được ngay; (2) contextual retrieval / prepend header vào chunk (mục 3.1) — giải quyết trực tiếp phát hiện (ii); (3) calibrate ngưỡng 0.70 bằng phân bố confidence từ Tier 2 full-run. Cải tiến nhỏ cho eval: đổi lenient thành strict∨text (semantics "rescue") thay vì text-only.
+**→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) ~~citation-lookup route (mục 3.3)~~ ✅ ĐÃ XONG 2026-07-07; (2) contextual retrieval / prepend header vào chunk (mục 3.1) — giải quyết trực tiếp phát hiện (ii); (3) calibrate ngưỡng 0.70 bằng phân bố confidence từ Tier 2 full-run. ~~Cải tiến nhỏ cho eval: lenient thành strict∨text~~ ✅ đã sửa.
+
+**✅ Citation-lookup route (2026-07-07)** — `src/rag/citation_lookup.py`: parse "Điều N + tên luật + năm" → tra trực tiếp metadata trong Qdrant, tích hợp vào AdaptiveRAGPipeline (route "lookup" đi trước classifier, tiết kiệm 1 LLM call; Điều không tồn tại → KHÔNG fallback vector search, để refusal gate xử lý). Kết quả đo trên toàn bộ 34 câu (mode "routed" trong Tier 1):
+
+| Metric (strict) | hybrid | routed |
+|---|---|---|
+| recall@5 tổng | 0.588 | **0.794** |
+| recall@10 tổng | 0.701 | **0.922** |
+| MRR tổng | 0.476 | **0.701** |
+| citation-lookup recall@5 | 0.125 | **1.0** (MRR 1.0) |
+| single-hop recall@5 | 0.882 | 0.882 (không tụt) |
+| amendment recall@10 | 0.833 | **0.933** |
+
+Đã verify: câu hỏi tự nhiên không bị parser hijack (route field ghi nhận); "Điều 999" → 0 hits; "Điều 173" không kèm tên luật → trả về đúng cả 3 bộ luật (ambiguity xử lý đúng). Lưu ý nhỏ khi đọc MRR: Qdrant tie-break không ổn định với các hit đồng điểm RRF → MRR dao động nhẹ giữa các lần chạy. TODO scale: thêm payload index `article_number` lúc ingest khi corpus lớn.
 
 ## 2. Gap so với production (plan hứa nhưng chưa có)
 

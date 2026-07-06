@@ -30,6 +30,7 @@ from src.llm.prompts import (
 
 from src.rag.confidence import ConfidenceScorer, REFUSAL_ANSWER
 from src.rag.verifier import HallucinationVerifier
+from src.rag.citation_lookup import parse_citation, CitationLookup, retrieve_routed
 
 @dataclass
 class RAGResponse:
@@ -197,6 +198,13 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         self._reranker = None  # Lazy-loaded FlagReranker
         self._confidence_scorer = None  # Lazy-loaded
         self._verifier = None  # Lazy-loaded
+        self._citation_lookup = None  # Lazy-loaded CitationLookup
+
+    def _get_citation_lookup(self) -> CitationLookup:
+        """Lazy-init CitationLookup (builds a document alias index from Qdrant on first use)."""
+        if self._citation_lookup is None:
+            self._citation_lookup = CitationLookup(self.vector_store)
+        return self._citation_lookup
 
     def _get_reranker(self):
         """Lazy-load BGE-Reranker v2."""
@@ -243,16 +251,55 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         """Process with adaptive routing."""
         start_time = time.time()
 
-        # Step 0: Classify query complexity
+        # Step 0: Citation-lookup route — parsed BEFORE the (LLM) complexity
+        # classifier, so citation-style queries ("Điều 173 BLHS 2015 quy
+        # định về tội gì?") skip the classifier call entirely and go
+        # straight to a direct metadata lookup instead of vector search
+        # (vector search measured recall@5=0.125 on this query shape — see
+        # docs/Danh_Gia_va_Roadmap_Production_2026-07-06.md).
+        parsed_citation = parse_citation(question)
+        if parsed_citation is not None:
+            return self._lookup_pipeline(question, start_time)
+
+        # Step 1: Classify query complexity
         complexity = self._classify(question)
 
-        # Step 1-5: Route to appropriate pipeline
+        # Step 2-6: Route to appropriate pipeline
         if complexity == "simple":
             return self._simple_pipeline(question, start_time)
         elif complexity == "medium":
             return self._medium_pipeline(question, start_time)
         else:
             return self._complex_pipeline(question, start_time)
+
+    def _lookup_pipeline(self, question: str, start_time: float) -> RAGResponse:
+        """LOOKUP: direct metadata lookup for 'Điều N' citations (+ dense fill) → generate.
+
+        Deliberately does NOT fall back to vector search when the lookup finds
+        nothing (e.g. "Điều 999" doesn't exist) — context stays empty/small so
+        the existing refusal path (confidence gate + system prompt instruction)
+        triggers naturally instead of citing a plausible-looking wrong article.
+        """
+        citation_lookup = self._get_citation_lookup()
+        results, _route, _parsed = retrieve_routed(
+            question, self.vector_store, self.embedder, citation_lookup, fill_top_k=10,
+        )
+
+        context = self._build_context(results)
+        prompt = GENERATION_PROMPT.format(context=context, question=question)
+        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
+
+        citations = self._build_citations(results)
+        context = self._build_context(results)
+
+        # Post-process: verify + confidence (same as every other route)
+        conf_result, ver_result, final_answer = self._post_process(question, raw, results, context)
+
+        parsed = self._parse_response(final_answer, citations)
+        parsed.latency_ms = (time.time() - start_time) * 1000
+        parsed.pipeline_used = "lookup"
+        parsed = self._enrich_response(parsed, conf_result, ver_result)
+        return parsed
 
     def _classify(self, question: str) -> str:
         """Classify query complexity: simple/medium/complex."""
@@ -500,13 +547,36 @@ Các câu liên quan (giữ nguyên văn):"""
         """Process a question with streaming response and intermediate steps."""
         start_time = time.time()
 
-        # Step 0: Classify query complexity
-        complexity = self._classify(question)
-        yield f'__STEP__{json.dumps({"step": "Classification", "result": complexity.upper()})}'
-
         rerank_scores = None
 
-        if complexity == "simple":
+        # Step 0: Citation-lookup route — parsed BEFORE the (LLM) complexity
+        # classifier; citation-style queries ("Điều 173 BLHS 2015 quy định
+        # về tội gì?") skip the classifier call entirely (see
+        # AdaptiveRAGPipeline.query for the full rationale).
+        parsed_citation = parse_citation(question)
+        if parsed_citation is not None:
+            complexity = "lookup"
+            citation_lookup = self._get_citation_lookup()
+            doc_ids = citation_lookup.resolve_doc(parsed_citation.doc_hint, parsed_citation.year)
+            aliases = citation_lookup._get_alias_index()
+            resolved_titles = [aliases.get(d, str(d)) for d in doc_ids[:3]]
+            article_label = f"Điều {parsed_citation.primary.number}"
+            if parsed_citation.primary.khoan:
+                article_label += f", Khoản {parsed_citation.primary.khoan}"
+            resolved_str = ", ".join(resolved_titles) if resolved_titles else "(ambiguous — searched all documents)"
+            yield f'__STEP__{json.dumps({"step": "Citation Lookup", "result": f"{article_label} — resolved: {resolved_str}"})}'
+        else:
+            # Step 1: Classify query complexity
+            complexity = self._classify(question)
+            yield f'__STEP__{json.dumps({"step": "Classification", "result": complexity.upper()})}'
+
+        if complexity == "lookup":
+            results, route, _ = retrieve_routed(
+                question, self.vector_store, self.embedder, citation_lookup, fill_top_k=10,
+            )
+            yield f'__STEP__{json.dumps({"step": "Routing", "result": f"Citation Lookup ({len(results)} chunks, route={route})"})}'
+
+        elif complexity == "simple":
             yield f'__STEP__{json.dumps({"step": "Routing", "result": "Simple Pipeline (Dense Search)"})}'
             query_vector = self.embedder.encode_queries([question])[0]
             results = self.vector_store.search_dense(query_vector.tolist(), top_k=20)

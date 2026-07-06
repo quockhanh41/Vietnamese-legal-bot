@@ -67,7 +67,17 @@ def strict_match(result: Dict, expected: Dict) -> bool:
 
 
 def lenient_match(result: Dict, expected: Dict) -> bool:
-    """result.document_id == expected.doc_id AND expected article number literally in chunk_text."""
+    """strict_match OR (doc matches AND expected article number literally in chunk_text).
+
+    "Rescue" semantics: lenient is a superset of strict — it can only find
+    MORE matches than strict, never fewer, so lenient >= strict always holds.
+    (Previously lenient was text-match-only, which made lenient < strict
+    whenever the `article` payload field was correct but the chunk's own
+    text happened to not repeat "Điều N." verbatim — confusing, since a
+    "more forgiving" metric scored lower than the strict one.)
+    """
+    if strict_match(result, expected):
+        return True
     if result.get("document_id") != expected.get("doc_id"):
         return False
     return lenient_text_match(artnum(expected.get("article")), result.get("chunk_text"))

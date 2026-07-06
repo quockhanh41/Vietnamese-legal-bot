@@ -57,6 +57,7 @@ from src.eval.metrics import (
     refusal_accuracy,
 )
 from src.llm.gateway import LLMGateway
+from src.rag.citation_lookup import CitationLookup, retrieve_routed
 from src.rag.orchestrator import AdaptiveRAGPipeline
 
 CRIMINAL_SET = "data/eval/eval_set_criminal_v1.json"
@@ -92,14 +93,22 @@ def _result_to_dict(r: SearchResult) -> Dict:
 # ── Tier 1: Retrieval eval ────────────────────────────────────────────────
 
 def run_tier1(questions: List[Dict], vector_store: LegalVectorStore, embedder: BGEEmbedder) -> Dict:
-    """Retrieval-only eval: no LLM calls. Returns {"dense": {...}, "hybrid": {...}}."""
+    """Retrieval-only eval: no LLM calls. Returns {"dense": {...}, "hybrid": {...}, "routed": {...}}.
+
+    "routed" is the citation-lookup route (src/rag/citation_lookup.py): for
+    citation-style questions ("Điều 173 BLHS 2015 quy định về tội gì?") it
+    uses direct metadata lookup + dense fill instead of vector search; for
+    every other question it falls back to hybrid search (same as the
+    "hybrid" mode) — see retrieve_routed() docstring.
+    """
     eligible = [
         q for q in questions
         if q.get("expected_behavior") == "answer" and q.get("expected_articles")
     ]
     skipped = len(questions) - len(eligible)
 
-    rows_by_mode = {"dense": [], "hybrid": []}
+    rows_by_mode = {"dense": [], "hybrid": [], "routed": []}
+    citation_lookup = CitationLookup(vector_store)
 
     for q in eligible:
         output = embedder.encode([q["question"]], return_dense=True, return_sparse=True)
@@ -108,8 +117,11 @@ def run_tier1(questions: List[Dict], vector_store: LegalVectorStore, embedder: B
 
         dense_hits = vector_store.search_dense(dense_vec.tolist(), top_k=FETCH_K)
         hybrid_hits = vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=FETCH_K)
+        routed_hits, route, _parsed = retrieve_routed(
+            q["question"], vector_store, embedder, citation_lookup, fill_top_k=FETCH_K,
+        )
 
-        for mode, hits in (("dense", dense_hits), ("hybrid", hybrid_hits)):
+        for mode, hits in (("dense", dense_hits), ("hybrid", hybrid_hits), ("routed", routed_hits)):
             hit_dicts = [_result_to_dict(r) for r in hits]
             expected = q["expected_articles"]
             row = {
@@ -122,6 +134,8 @@ def run_tier1(questions: List[Dict], vector_store: LegalVectorStore, embedder: B
                     for h in hit_dicts[:5]
                 ],
             }
+            if mode == "routed":
+                row["route"] = route
             for k in RETRIEVAL_K:
                 row[f"recall@{k}_strict"] = recall_at_k(hit_dicts, expected, k, lenient=False)
                 row[f"recall@{k}_lenient"] = recall_at_k(hit_dicts, expected, k, lenient=True)
@@ -278,7 +292,7 @@ def print_tier1_summary(tier1: Dict, set_name: str):
                     "(cần expected_behavior=answer và expected_articles non-empty).")
         return
 
-    for mode in ("dense", "hybrid"):
+    for mode in ("dense", "hybrid", "routed"):
         agg = tier1["modes"][mode]
         click.echo(f"### Mode: {mode} (n={agg['n']})\n")
         click.echo("| metric | strict | lenient |")
@@ -296,8 +310,31 @@ def print_tier1_summary(tier1: Dict, set_name: str):
 
     d5 = tier1["modes"]["dense"]["recall@5_strict"] or 0
     h5 = tier1["modes"]["hybrid"]["recall@5_strict"] or 0
+    r5 = tier1["modes"]["routed"]["recall@5_strict"] or 0
     verdict = "hybrid > dense ✅" if h5 > d5 else ("hybrid == dense" if h5 == d5 else "hybrid < dense ⚠️")
     click.echo(f"So sánh recall@5 (strict): dense={d5} vs hybrid={h5} -> {verdict}")
+
+    routed_verdict = "routed > hybrid ✅" if r5 > h5 else ("routed == hybrid" if r5 == h5 else "routed < hybrid ⚠️")
+    click.echo(f"So sánh recall@5 (strict): routed={r5} vs hybrid={h5} -> {routed_verdict}")
+
+    # citation-lookup is the type the routed mode targets specifically —
+    # break it out so the "did the route fix the known failure" claim is
+    # checked directly, not just averaged in with every other type.
+    cl_hybrid = tier1["modes"]["hybrid"]["by_type"].get("citation-lookup")
+    cl_routed = tier1["modes"]["routed"]["by_type"].get("citation-lookup")
+    if cl_hybrid and cl_routed:
+        click.echo(
+            f"citation-lookup recall@5 (strict): hybrid={cl_hybrid['recall@5_strict']} "
+            f"-> routed={cl_routed['recall@5_strict']} "
+            f"(MRR {cl_hybrid['mrr_strict']} -> {cl_routed['mrr_strict']})"
+        )
+    sh_hybrid = tier1["modes"]["hybrid"]["by_type"].get("single-hop")
+    sh_routed = tier1["modes"]["routed"]["by_type"].get("single-hop")
+    if sh_hybrid and sh_routed:
+        click.echo(
+            f"single-hop recall@5 (strict, must NOT regress): hybrid={sh_hybrid['recall@5_strict']} "
+            f"-> routed={sh_routed['recall@5_strict']}"
+        )
 
 
 def print_tier2_summary(tier2: Dict, set_name: str):
