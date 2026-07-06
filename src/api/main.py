@@ -40,6 +40,8 @@ class ChatResponse(BaseModel):
     answer: str
     citations: list = []
     confidence: str = "medium"
+    confidence_score: float = 0.0   # Phase B: exact score 0.0-1.0
+    refused: bool = False            # Phase B: confidence gate refused?
     disclaimer: str = ""
     latency_ms: float = 0
     pipeline_used: str = "naive"
@@ -147,6 +149,8 @@ async def chat(request: ChatRequest):
             answer=response.answer,
             citations=response.citations,
             confidence=response.confidence,
+            confidence_score=response.confidence_score,
+            refused=response.refused,
             disclaimer=response.disclaimer,
             latency_ms=response.latency_ms,
             pipeline_used=response.pipeline_used,
@@ -171,6 +175,18 @@ async def chat_stream(request: ChatRequest):
             citations_sent = False
 
             for token in pipeline.query_stream(request.question):
+                # Intercept step marker
+                if token.startswith("__STEP__"):
+                    try:
+                        step_data = json.loads(token[len("__STEP__"):])
+                        yield {
+                            "event": "step",
+                            "data": json.dumps(step_data, ensure_ascii=False),
+                        }
+                    except json.JSONDecodeError:
+                        pass
+                    continue
+
                 # Intercept citations marker
                 if token.startswith("__CITATIONS__"):
                     try:

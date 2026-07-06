@@ -84,6 +84,18 @@ Câu hỏi: {question}
 Phân loại:"""
 
 
+CONFIDENCE_EVAL_PROMPT = """Đánh giá độ tin cậy của câu trả lời dựa trên tài liệu tham khảo.
+
+Câu hỏi: {question}
+Câu trả lời: {answer}
+Tài liệu tham khảo: {context}
+
+Trên thang 0-100, câu trả lời này có bao nhiêu % thông tin được hỗ trợ bởi tài liệu?
+CHỈ trả về một số từ 0-100. Không giải thích.
+
+Điểm:"""
+
+
 GENERATION_PROMPT = """Dựa trên các tài liệu pháp luật được cung cấp, hãy trả lời câu hỏi sau.
 
 Tài liệu tham khảo:

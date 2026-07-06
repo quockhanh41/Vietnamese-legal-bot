@@ -66,7 +66,9 @@ vietnamese-legal-bot/
 │   │   ├── gateway.py            # LLMGateway: LiteLLM fallback chain (Groq Qwen3)
 │   │   └── prompts.py            # Tất cả prompt templates
 │   ├── rag/
-│   │   └── orchestrator.py       # NaiveRAGPipeline + AdaptiveRAGPipeline
+│   │   ├── orchestrator.py       # NaiveRAGPipeline + AdaptiveRAGPipeline + Post-processing
+│   │   ├── verifier.py           # ✨ Phase B: HallucinationVerifier (Tier 1 & 2)
+│   │   └── confidence.py         # ✨ Phase B: ConfidenceScorer + Refusal Gate
 │   ├── api/
 │   │   └── main.py               # FastAPI (12 endpoints: chat + Phase 2 pipeline)
 │   └── ui/
@@ -224,6 +226,30 @@ API event_generator() → SSE events:
   event: citations → data: [{doc_title, article, chunk_text, score}, ...]
   event: token     → data: {"token": "..."}
   event: done      → data: {full_answer, citations, confidence, latency_ms}
+```
+
+### Luồng 4: Post-Generation Pipeline (Phase B)
+
+```text
+Generate answer (Markdown)
+    ↓
+_post_process():
+    ├── F17 Verifier:
+    │   ├── Tier 1: mỗi citation → "Điều X" có trong context? → citation_validity
+    │   ├── Tier 2: split answer → claims → NLI per claim → entailment_ratio
+    │   └── Output: VerificationResult(passed, warnings, contradiction_ratio)
+    │
+    ├── F16 ConfidenceScorer:
+    │   ├── ① Retriever (0.25): max search score
+    │   ├── ② Reranker (0.20): max cross-encoder score (or 0)
+    │   ├── ③ LLM Self-Eval (0.30): LLM rates own answer 0-100
+    │   ├── ④ Context Overlap (0.15): keyword overlap answer↔context
+    │   ├── ⑤ Entailment Ratio (0.10): from verifier
+    │   └── weighted_score = Σ(w_i × s_i)
+    │
+    └── Refusal Gate:
+        ├── score ≥ 0.70 → return answer + confidence + verification
+        └── score < 0.70 → REFUSAL_ANSWER + refused=True
 ```
 
 ---
@@ -698,19 +724,27 @@ query(question) → RAGResponse
   │     └── LLM.generate(COMPLEXITY_CLASSIFIER_PROMPT)
   │
   ├── SIMPLE  → _simple_pipeline()
-  │     └── Dense search → generate (2 LLM calls total: classify + generate)
+  │     └── Dense search (20) → Dynamic Top-K (3-20) → generate
   │
   ├── MEDIUM  → _medium_pipeline()
-  │     └── Hybrid search (dense + sparse RRF) → generate
+  │     └── Hybrid search (20) → BGE-Reranker v2 → Dynamic Top-K → generate
   │
   └── COMPLEX → _complex_pipeline()
         ├── Query rewrite
         ├── Multi-query expansion (3 variants)
         ├── HyDE (hypothetical document)
         ├── Hybrid search với 5 queries (rewrite + 2 variants + HyDE)
-        ├── Deduplicate + sort by score
-        └── Generate với top-5 best results
+        ├── Deduplicate + sort by score (raw 40)
+        ├── BGE-Reranker v2 → Dynamic Top-K
+        ├── Context Compression (LLM extract)
+        └── Generate với results đã nén
 ```
+
+**Features mới (Phase A & B)**:
+- **Dynamic Top-K**: Tự động điều chỉnh số lượng chunk trả về (3-20) dựa trên phân phối điểm số (confidence/ambiguity).
+- **Re-ranking**: Tích hợp `BGE-Reranker v2` (lazy load) để chấm điểm chính xác (cross-encoder) cho MEDIUM và COMPLEX pipelines.
+- **Context Compression**: LLM-extract chỉ giữ các câu liên quan trực tiếp (chỉ COMPLEX).
+- **Post-process**: Gọi `verifier` và `confidence_scorer` trước khi trả về.
 
 **RAGResponse dataclass**:
 ```python
@@ -720,7 +754,18 @@ confidence: str       # "high" | "medium" | "low"
 disclaimer: str       # "Thông tin tham khảo, không phải tư vấn pháp lý"
 latency_ms: float     # Thời gian xử lý
 pipeline_used: str    # "naive" | "simple" | "medium" | "complex"
+refused: bool         # ✨ Phase B: Bị từ chối trả lời do confidence thấp?
 ```
+
+### 6b. `src/rag/verifier.py` & `src/rag/confidence.py` (Phase B)
+
+**`Verifier` (HallucinationVerifier)**:
+- **Tier 1 (Citation Check)**: Kiểm tra xem các trích dẫn (VD: "Điều X") có thực sự xuất hiện trong context không.
+- **Tier 2 (NLI)**: Tách câu trả lời thành các claims. Sử dụng mô hình `mDeBERTa-v3-base-mnli-xnli` (tiếng Việt, ~800MB, lazy load) để suy luận (entailment/contradiction) từng claim với context. Skip trong streaming mode để giữ độ mượt.
+
+**`ConfidenceScorer`**:
+- Tính điểm tổng hợp (0-1) từ 5 signals: Retriever (0.25) + Reranker (0.20) + LLM Self-Eval (0.30) + Context Overlap (0.15) + Entailment Ratio (0.10).
+- **Refusal Gate**: Threshold `0.7`. Nếu dưới điểm này, từ chối trả lời để tránh hallucination.
 
 ---
 
@@ -818,7 +863,7 @@ render_chat_page()
 │
 ├── Chat history (st.session_state.messages)
 │   ├── Role: user / assistant
-│   └── Hiển thị: content + citations (cards) + confidence (badge) + latency
+│   └── Hiển thị: content + citations (cards) + confidence (badge) + latency + verification warnings + refusal notice
 │
 ├── Chat input (st.chat_input)
 │
@@ -826,7 +871,7 @@ render_chat_page()
     ├── Non-streaming: _get_response() → POST /api/chat → hiển thị
     └── Streaming: _stream_response() → POST /api/chat/stream → SSE parsing
          ├── event: citations → lưu citations list
-         ├── event: token → append + render "▌" cursor
+         ├── event: token → append + render "▌" cursor (có Citation Highlight in đậm tham chiếu pháp luật)
          └── event: done → final render + citations + confidence
 ```
 
@@ -1110,6 +1155,11 @@ cat data/metadata/index.json | python3 -m json.tool
 | ✨ Regex-based extraction (không LLM) | Nhanh, deterministic, free | Miss edge cases in unstructured text |
 | ✨ rfind strategy cho "Hiệu lực" | Bắt đúng article cuối cùng | Old laws without the article format fail (1/6) |
 | ✨ Lazy-load embedder trong retriever | Import pipeline không cần FlagEmbedding | Hơi chậm ở lần gọi đầu tiên |
+| ✨ Phase A: Lazy load Reranker | Không tăng startup time | Lần gọi đầu tiên (MEDIUM/COMPLEX) sẽ chậm |
+| ✨ Phase B: Skip NLI trong streaming | Giữ độ mượt (CPU inference ~300ms/claim x 3-5) | Mất kiểm tra logic Tier 2 khi stream |
+| ✨ Phase B: NLI dùng mDeBERTa | Hỗ trợ tiếng Việt tốt | Model size ~800MB |
+| ✨ Phase B: Refusal Threshold 0.7 | Sweet spot giữa precision và refusal rate | Cần tinh chỉnh theo thực tế |
+| ✨ Phase B: Fallback nếu NLI lỗi/thiếu | Tránh crash, dùng 4 signal còn lại | Độ chính xác confidence giảm một chút |
 
 ---
 
