@@ -1,0 +1,269 @@
+{
+  "generated_at_utc": "2026-07-07T01:03:01.885691+00:00",
+  "input_reports": [
+    "data/eval_reports/20260707T010104Z_eval.json"
+  ],
+  "n_rows_total": 41,
+  "n_rows_errors_skipped": 10,
+  "n_rows_usable": 31,
+  "n_answer": 30,
+  "n_refuse": 1,
+  "sweep": [
+    {
+      "threshold": 0.3,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.325,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.35,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.375,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.4,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.425,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.45,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.475,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.5,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.525,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.55,
+      "refusal_recall": 0.0,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.967741935483871,
+      "youden": 0.0
+    },
+    {
+      "threshold": 0.575,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.03333333333333333,
+      "answer_precision": 1.0,
+      "youden": 0.9666666666666667
+    },
+    {
+      "threshold": 0.6,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.03333333333333333,
+      "answer_precision": 1.0,
+      "youden": 0.9666666666666667
+    },
+    {
+      "threshold": 0.625,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.03333333333333333,
+      "answer_precision": 1.0,
+      "youden": 0.9666666666666667
+    },
+    {
+      "threshold": 0.65,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.03333333333333333,
+      "answer_precision": 1.0,
+      "youden": 0.9666666666666667
+    },
+    {
+      "threshold": 0.675,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.03333333333333333,
+      "answer_precision": 1.0,
+      "youden": 0.9666666666666667
+    },
+    {
+      "threshold": 0.7,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.1,
+      "answer_precision": 1.0,
+      "youden": 0.9
+    },
+    {
+      "threshold": 0.725,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.1,
+      "answer_precision": 1.0,
+      "youden": 0.9
+    },
+    {
+      "threshold": 0.75,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.26666666666666666,
+      "answer_precision": 1.0,
+      "youden": 0.7333333333333334
+    },
+    {
+      "threshold": 0.775,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.3,
+      "answer_precision": 1.0,
+      "youden": 0.7
+    },
+    {
+      "threshold": 0.8,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.36666666666666664,
+      "answer_precision": 1.0,
+      "youden": 0.6333333333333333
+    },
+    {
+      "threshold": 0.825,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.5666666666666667,
+      "answer_precision": 1.0,
+      "youden": 0.43333333333333335
+    },
+    {
+      "threshold": 0.85,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.6666666666666666,
+      "answer_precision": 1.0,
+      "youden": 0.33333333333333337
+    },
+    {
+      "threshold": 0.875,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.7,
+      "answer_precision": 1.0,
+      "youden": 0.30000000000000004
+    },
+    {
+      "threshold": 0.9,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.8666666666666667,
+      "answer_precision": 1.0,
+      "youden": 0.1333333333333333
+    }
+  ],
+  "best_threshold": {
+    "threshold": 0.575,
+    "refusal_recall": 1.0,
+    "false_refusal_rate": 0.03333333333333333,
+    "answer_precision": 1.0,
+    "youden": 0.9666666666666667
+  },
+  "histograms": {
+    "answer": {
+      "0.00-0.05": 0,
+      "0.05-0.10": 0,
+      "0.10-0.15": 0,
+      "0.15-0.20": 0,
+      "0.20-0.25": 0,
+      "0.25-0.30": 0,
+      "0.30-0.35": 0,
+      "0.35-0.40": 0,
+      "0.40-0.45": 0,
+      "0.45-0.50": 0,
+      "0.50-0.55": 0,
+      "0.55-0.60": 1,
+      "0.60-0.65": 0,
+      "0.65-0.70": 2,
+      "0.70-0.75": 5,
+      "0.75-0.80": 3,
+      "0.80-0.85": 9,
+      "0.85-0.90": 6,
+      "0.90-0.95": 4,
+      "0.95-1.00": 0
+    },
+    "refuse": {
+      "0.00-0.05": 0,
+      "0.05-0.10": 0,
+      "0.10-0.15": 0,
+      "0.15-0.20": 0,
+      "0.20-0.25": 0,
+      "0.25-0.30": 0,
+      "0.30-0.35": 0,
+      "0.35-0.40": 0,
+      "0.40-0.45": 0,
+      "0.45-0.50": 0,
+      "0.50-0.55": 0,
+      "0.55-0.60": 1,
+      "0.60-0.65": 0,
+      "0.65-0.70": 0,
+      "0.70-0.75": 0,
+      "0.75-0.80": 0,
+      "0.80-0.85": 0,
+      "0.85-0.90": 0,
+      "0.90-0.95": 0,
+      "0.95-1.00": 0
+    }
+  },
+  "overlap": {
+    "max_refuse_score": 0.5667,
+    "min_answer_score": 0.5597,
+    "gap": -0.007,
+    "overlaps": true
+  },
+  "outliers": {
+    "lowest_scoring_answer_questions": [
+      {
+        "id": "crim-108",
+        "confidence_score": 0.5597
+      },
+      {
+        "id": "crim-116",
+        "confidence_score": 0.6797
+      },
+      {
+        "id": "crim-202",
+        "confidence_score": 0.6979
+      }
+    ],
+    "highest_scoring_refuse_questions": [
+      {
+        "id": "crim-406",
+        "confidence_score": 0.5667
+      }
+    ]
+  }
+}

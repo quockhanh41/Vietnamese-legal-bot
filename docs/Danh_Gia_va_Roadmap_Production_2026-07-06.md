@@ -108,7 +108,13 @@ Cả 6 bug đã được fix (sub-agent Sonnet 5 thực hiện, Fable 5 verify b
 
 Phát hiện kèm theo: (i) hybrid == dense trên bộ này — BGE-M3 sparse không cứu được citation-lookup vì chunk luật sửa đổi chứa rất nhiều số "Điều N" gây nhiễu; (ii) lenient (match theo text) = 0.0 < strict — tức **chunk_text thường thiếu header "Điều N."** (bắt đầu giữa điều luật); (iii) Tier 2 smoke: crim-001 bị false-refuse ở confidence 0.673 (ngưỡng 0.70).
 
-**→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) ~~citation-lookup route (mục 3.3)~~ ✅ ĐÃ XONG 2026-07-07; (2) ~~contextual retrieval (mục 3.1)~~ ✅ ĐÃ XONG 2026-07-07; (3) calibrate ngưỡng 0.70 bằng phân bố confidence từ Tier 2 full-run. ~~Cải tiến nhỏ cho eval: lenient thành strict∨text~~ ✅ đã sửa.
+**→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) ~~citation-lookup route (mục 3.3)~~ ✅ ĐÃ XONG 2026-07-07; (2) ~~contextual retrieval (mục 3.1)~~ ✅ ĐÃ XONG 2026-07-07; (3) calibrate ngưỡng 0.70 — 🟡 TOOLING XONG, chờ dữ liệu (xem dưới). ~~Cải tiến nhỏ cho eval: lenient thành strict∨text~~ ✅ đã sửa.
+
+**🟡 Calibrate ngưỡng confidence (2026-07-07) — tooling xong, ngưỡng CHƯA đổi (thiếu dữ liệu phía refuse)**
+- `scripts/calibrate_threshold.py` (sweep t∈[0.30,0.90], Youden index, histogram, outliers) + 18 tests (70 total pass).
+- Run Tier 2 bị **Groq daily token cap** chặn: criminal xong 31/41 (10 lỗi = 24.4%, vượt gate 20%), general chỉ chạy được ~8/29 rồi bị hủy. Chỉ có **1 câu refuse** hoàn thành → theo đúng decision rule, KHÔNG đổi ngưỡng trên dữ liệu này.
+- **Tín hiệu sơ bộ từ dữ liệu partial** (chưa hành động): 0.70 có vẻ hơi cao — tại t∈[0.575, 0.675] false-refusal giảm từ 10% xuống 3.3% mà vẫn giữ refusal recall 1.0 (n=1). Outliers cần soi per-signal ở run sau: crim-108 (0.5597), crim-116 (0.6797), crim-202 (0.6979) — các câu answer bị điểm thấp.
+- **Việc cần làm để chốt**: sau khi Groq TPD reset (~24h) hoặc thêm OPENAI_API_KEY thật vào .env (hiện là placeholder rỗng → fallback cross-provider bị skip), chạy lại: `caffeinate -i .venv/bin/python scripts/eval.py --set criminal --answers --sleep 3` và `--set general --answers`, rồi `scripts/calibrate_threshold.py`. Lưu ý chi phí thực đo được: ~3.5k token/câu qua adaptive pipeline (generate + self-eval + verify).
 
 **✅ Contextual Retrieval rule-based (2026-07-07)** — `src/data/contextualizer.py`: prepend header metadata (`Bộ luật hình sự 2015 (Luật 100/2015/QH13) | Chương | Điều N. tiêu đề | Khoản n`) vào text TRƯỚC KHI EMBED (chunk_text hiển thị giữ nguyên; không tốn LLM call nào); re-embed 1670 chunks vào collection `luat_law_ctx` (script `scripts/reindex_contextual.py`, collection cũ giữ để so sánh); `scripts/ingest.py` áp dụng cho ingest tương lai. `DEFAULT_COLLECTION_NAME` đã chuyển sang `luat_law_ctx`. Kèm bug fix quan trọng: `embedder.py` truyền `device=` bị FlagEmbedding ≥1.3 âm thầm bỏ qua (đúng tên là `devices=`) → model tự chạy MPS và OOM 17GB với chunk dài.
 
