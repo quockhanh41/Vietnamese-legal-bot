@@ -192,6 +192,24 @@ class HallucinationVerifier:
             line = line.strip()
             if not line:
                 continue
+            # Stop at the "related questions" section (SYSTEM_PROMPT mandates
+            # every answer end with "### 💡 Câu hỏi liên quan" + 3 suggested
+            # follow-up questions). These are UI suggestions for the user's
+            # NEXT query, not factual claims about the law — they're
+            # interrogative, so NLI can never sensibly label them ENTAILMENT
+            # against a legal-context premise. Since every single answer this
+            # pipeline produces has this trailer, leaving it in the claim set
+            # systematically (and meaninglessly) deflates entailment_ratio
+            # for every question, not just these 4. The section is always
+            # last per the fixed prompt structure, so breaking here drops it
+            # (and everything after it) without touching real claims above.
+            # Match only a standalone header line (nothing but non-word chars
+            # around the phrase) — "câu hỏi liên quan đến X" occurs in natural
+            # Vietnamese mid-sentence, and truncating there would silently
+            # drop every real claim after it; missing a malformed header just
+            # falls back to the old noisy-but-harmless behavior.
+            if re.match(r'^\W*câu\s*hỏi\s*liên\s*quan\W*$', line, re.IGNORECASE):
+                break
             # Bullet items
             bullet_match = re.match(r'^[\-\*\•]\s+(.*)', line)
             if bullet_match:
