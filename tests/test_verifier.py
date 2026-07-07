@@ -195,6 +195,73 @@ def test_grounding_questions_trailer_never_counted():
     assert 99 not in result.invalid_block_refs
 
 
+def test_grounding_ignores_ungrounded_summary_and_label_lines():
+    """`grounding_ratio` must be measured only over the "### 📋 Chi tiết"
+    bullets. A "Trả lời ngắn" summary sentence with no `[n]` (the prompt
+    never asks it to carry one) and a bare "**Label**:" sub-heading inside
+    Chi tiết must NOT drag the ratio below 1.0 when every real bullet is
+    grounded — this was the false-negative this fix addresses."""
+    verifier = HallucinationVerifier()
+    answer = """### 💬 Trả lời ngắn
+**Đồng phạm** là những người tham gia thực hiện tội phạm với vai trò khác nhau, theo Điều 17 BLHS 2015.
+
+### 📋 Chi tiết
+**Phương thức thực hiện**:
+- Đồng phạm là trường hợp có từ hai người trở lên cùng cố ý thực hiện tội phạm (Điều 17 BLHS 2015) [1].
+- Người tổ chức, người thực hành đều được coi là đồng phạm (Điều 20 BLHS 2015) [2]."""
+
+    result = _run_grounding(verifier, answer, CONTEXT_2_BLOCKS)
+
+    assert result.grounding_ratio == 1.0
+    assert len(result.grounded_claims) == 2
+    assert all(result.grounded_claims)
+    assert result.invalid_block_refs == []
+    assert result.ungrounded_article_citations == []
+
+
+def test_groundable_claims_excludes_summary_trailer_and_labels():
+    """Direct unit test of `_groundable_claims` (not just the ratio it
+    feeds): only the two substantive Chi-tiết bullets should survive."""
+    verifier = HallucinationVerifier()
+    answer = """### 💬 Trả lời ngắn
+**Đồng phạm** là những người tham gia thực hiện tội phạm với vai trò khác nhau, theo Điều 17 BLHS 2015.
+
+### 📋 Chi tiết
+**Phương thức thực hiện**:
+- Đồng phạm là trường hợp có từ hai người trở lên cùng cố ý thực hiện tội phạm (Điều 17 BLHS 2015) [1].
+- Người tổ chức, người thực hành đều được coi là đồng phạm (Điều 20 BLHS 2015) [2].
+
+### 💡 Câu hỏi liên quan
+- Trách nhiệm hình sự của đồng phạm được quy định như thế nào?"""
+
+    claims = verifier._groundable_claims(answer)
+
+    assert len(claims) == 2
+    assert not any("Đồng phạm là những người tham gia" in c for c in claims)  # Trả lời ngắn excluded
+    assert not any("Phương thức thực hiện" in c for c in claims)  # bare label excluded
+    assert not any("Trách nhiệm hình sự" in c for c in claims)  # trailer excluded
+    assert any("hai người trở lên" in c for c in claims)
+    assert any("Người tổ chức, người thực hành" in c for c in claims)
+
+
+def test_split_claims_unchanged_guard_against_nli_drift():
+    """Regression guard: `_split_claims` (Tier 2 NLI's claim set, which
+    feeds entailment_ratio — a signal in the calibrated REFUSAL_THRESHOLD
+    confidence pipeline) must NOT be affected by the addition of
+    `_groundable_claims`. Pins down the exact claim list for a
+    representative answer so any accidental change to `_split_claims`
+    itself is caught here."""
+    verifier = HallucinationVerifier()
+    claims = verifier._split_claims(ANSWER_WITH_RELATED_QUESTIONS)
+
+    assert claims == [
+        "Đồng phạm là những người tham gia thực hiện tội phạm với vai trò khác nhau, "
+        "được quy định tại Điều 17 Bộ luật Hình sự 2015.",
+        "Người tổ chức: Chủ mưu, cầm đầu, chỉ huy việc thực hiện tội phạm (Điều 17 BLHS 2015).",
+        "Người thực hành: Trực tiếp thực hiện hành vi phạm tội (Điều 17 BLHS 2015).",
+    ]
+
+
 def _run_grounding(verifier, answer, context):
     """Helper: exercise `_verify_grounding` directly (pure string logic, no
     model load) via a fresh VerificationResult, mirroring how `verify()`

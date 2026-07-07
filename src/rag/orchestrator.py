@@ -150,10 +150,20 @@ class NaiveRAGPipeline:
         return "\n\n---\n\n".join(parts)
 
     def _build_citations(self, results: List[SearchResult]) -> List[Dict]:
-        """Build citation list from search results."""
+        """Build citation list from search results.
+
+        `results` MUST be the exact same list (same order, same slice) passed
+        to `_build_context()` for this route — `block_index` is assigned with
+        the identical 1-based enumeration `_build_context` uses for its `[n]`
+        headers, so a `[n]` the model cites in the answer maps 1:1 to the
+        citation at that `block_index` here. Returns ALL of `results` (not
+        just the top few) so every `[n]` the model could possibly cite
+        resolves to a readable card.
+        """
         citations = []
-        for r in results[:3]:  # Top 3 for citations
+        for i, r in enumerate(results, 1):
             citations.append({
+                "block_index": i,
                 "document_title": r.document_title,
                 "article": r.article,
                 "chunk_text": r.chunk_text[:200] if r.chunk_text else "",

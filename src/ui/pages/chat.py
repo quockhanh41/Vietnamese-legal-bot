@@ -30,11 +30,23 @@ def _highlight_legal_refs(text: str) -> str:
         (r'(Luật\s+[^"“\n,.;:()]+?)(?:\s|$|[,.;:()])', r'**\1**'),
         (r'(Nghị\s+định\s+\d+)', r'**\1**'),
         (r'(Thông\s+tư\s+\d+)', r'**\1**'),
+        # Grounded block-citation markers, e.g. "[2]" or "[2][3]" at the end
+        # of a "Chi tiết" bullet — bold them so they read as a distinct
+        # footnote-style marker rather than blending into the sentence.
+        (r'(\[\d{1,3}\])', r'**\1**'),
     ]
     result = text
     for pattern, replacement in patterns:
         result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
     return result
+
+
+def _cited_block_indices(answer_text: str) -> set:
+    """Parse `[n]` block-citation markers out of an answer's raw text
+    (before `_highlight_legal_refs` bolds them)."""
+    if not answer_text:
+        return set()
+    return {int(n) for n in re.findall(r'\[(\d+)\]', answer_text)}
 
 
 def render_chat_page():
@@ -86,23 +98,8 @@ def render_chat_page():
             if msg.get("original_answer"):
                 with st.expander("Xem câu trả lời gốc (độ tin cậy thấp)", expanded=False):
                     st.markdown(_highlight_legal_refs(msg["original_answer"]))
-            if msg.get("citations"):
-                _render_citations(msg["citations"])
-            if msg.get("confidence"):
-                _render_confidence(msg["confidence"])
-            # Phase B: confidence score badge
-            conf_score = msg.get("confidence_score")
-            if conf_score is not None:
-                _render_confidence_score(conf_score)
-            # Phase B: verification warnings
-            if msg.get("warnings"):
-                st.warning("\n".join(msg["warnings"]))
-            # Phase B: refused notice
-            if msg.get("refused"):
-                st.info("ℹ️ Bot không đủ tự tin để trả lời câu hỏi này một cách chính xác.")
-            if msg.get("latency_ms"):
-                st.caption(f"⏱️ {msg['latency_ms']:.0f}ms | Pipeline: {msg.get('pipeline_used', 'naive')}")
             if msg.get("role") == "assistant":
+                _render_answer_extras(msg["content"], msg)
                 st.caption("⚠️ *Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.*")
 
     # --- Chat Input ---
@@ -125,6 +122,13 @@ def render_chat_page():
                 response_data = _stream_response(question, use_adaptive)
             else:
                 response_data = _get_response(question, use_adaptive)
+
+            # Render citations/confidence/warnings for THIS turn immediately —
+            # the history loop above already ran before this message existed
+            # in session_state, so without this the current turn's cards
+            # would only appear after the *next* rerun.
+            _render_answer_extras(response_data["answer"], response_data)
+            st.caption("⚠️ *Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.*")
 
             # Store in history
             st.session_state.messages.append({
@@ -247,9 +251,6 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
                         else:
                             answer_placeholder.markdown(_highlight_legal_refs(full_answer))
 
-                        if warnings:
-                            st.warning("\n".join(warnings))
-
         return {
             "answer": refusal_answer if (refused and refusal_answer) else full_answer,
             "original_answer": full_answer if (refused and refusal_answer) else None,
@@ -268,25 +269,86 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
         return {"answer": error_msg, "steps": steps, "citations": [], "confidence": "low"}
 
 
-def _render_citations(citations: List[Dict]):
-    """Render citation cards."""
+def _render_citation_card(cite: Dict):
+    """Render a single citation as an expander, labeled with its block_index
+    (the same 1-based number the answer's `[n]` markers refer to) so the
+    card is unambiguously identifiable from the answer text."""
+    idx = cite.get('block_index')
+    title = cite.get('document_title', 'Văn bản pháp luật')
+    article = cite.get('article', '')
+    header = f"**[{idx}]** 📘 **{title}**" if idx is not None else f"📘 **{title}**"
+    if article:
+        header += f" — {article}"
+
+    with st.expander(header):
+        excerpt = cite.get('chunk_text') or '...'
+        st.markdown(f"*{excerpt}*")
+        meta_bits = []
+        if cite.get('legal_type'):
+            meta_bits.append(cite['legal_type'])
+        if cite.get('score') is not None:
+            meta_bits.append(f"score={cite['score']}")
+        if meta_bits:
+            st.caption(" · ".join(meta_bits))
+        if cite.get('url'):
+            st.caption(f"🔗 {cite['url']}")
+
+
+def _render_citations(answer_text: str, citations: List[Dict]):
+    """Render citation cards.
+
+    Every card is tagged with `block_index` — the same 1-based number the
+    answer's `[n]` markers refer to (see orchestrator._build_citations /
+    _build_context). To avoid a wall of up to ~15-20 cards, only the blocks
+    ACTUALLY cited in `answer_text` are shown up front; the rest are tucked
+    under a collapsed "Xem tất cả nguồn" expander. If the answer carries no
+    `[n]` markers at all (refusal template, old-format answers), fall back
+    to showing everything flat.
+    """
     if not citations:
         return
+
+    cited_indices = _cited_block_indices(answer_text)
+    by_index = {c.get('block_index'): c for c in citations if c.get('block_index') is not None}
+
+    cited = [by_index[n] for n in sorted(cited_indices) if n in by_index]
+    others = [c for c in citations if c.get('block_index') not in cited_indices]
+
+    if not cited:
+        # Nothing parsed — degrade gracefully to the old flat rendering.
+        cited, others = citations, []
+
     st.divider()
     st.markdown("### 📚 Căn cứ pháp lý")
-    for i, cite in enumerate(citations, 1):
-        title = cite.get('document_title', 'Văn bản pháp luật')
-        article = cite.get('article', '')
-        clause = cite.get('clause', '')
-        header = f"📘 **{title}**"
-        if article:
-            header += f" — {article}"
-        if clause:
-            header += f", {clause}"
-            
-        with st.expander(header):
-            st.markdown(f"*{cite.get('excerpt', '...')}*")
-            st.caption(f"Độ liên quan: {cite.get('relevance', 'cao')}")
+    for cite in cited:
+        _render_citation_card(cite)
+
+    if others:
+        with st.expander(f"Xem tất cả nguồn ({len(others)} khối khác)"):
+            for cite in others:
+                _render_citation_card(cite)
+
+
+def _render_answer_extras(answer_text: str, data: dict):
+    """Render citations/confidence/warnings/latency for one assistant turn.
+
+    Shared between the history-replay loop (`msg` dict) and the just-answered
+    turn (`response_data` dict) — both use the same key names for these
+    fields, so one function keeps the two render paths from drifting apart.
+    """
+    if data.get("citations"):
+        _render_citations(answer_text, data["citations"])
+    if data.get("confidence"):
+        _render_confidence(data["confidence"])
+    conf_score = data.get("confidence_score")
+    if conf_score is not None:
+        _render_confidence_score(conf_score)
+    if data.get("warnings"):
+        st.warning("\n".join(data["warnings"]))
+    if data.get("refused"):
+        st.info("ℹ️ Bot không đủ tự tin để trả lời câu hỏi này một cách chính xác.")
+    if data.get("latency_ms"):
+        st.caption(f"⏱️ {data['latency_ms']:.0f}ms | Pipeline: {data.get('pipeline_used', 'naive')}")
 
 
 def _render_confidence(confidence: str):

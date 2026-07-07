@@ -201,11 +201,20 @@ class HallucinationVerifier:
         "Điều X" reference actually contains that article.
 
         Observability-only: does not affect `result.passed`.
+
+        Uses `_groundable_claims` (NOT `_split_claims`) — grounding is only
+        ever required of "### 📋 Chi tiết" bullets per SYSTEM_PROMPT, so
+        measuring it over the full `_split_claims` set (which also includes
+        the "Trả lời ngắn" summary and section-label lines that were never
+        asked to carry a `[n]`) unfairly deflates the ratio. `_split_claims`
+        itself is left untouched — it's still what Tier 2 NLI (`_verify_semantic`)
+        uses, and that claim set is load-bearing for the calibrated
+        REFUSAL_THRESHOLD (must not drift).
         """
         blocks = self._parse_context_blocks(context)
         k = len(blocks)
 
-        claims = self._split_claims(answer)
+        claims = self._groundable_claims(answer)
         if not claims:
             result.grounding_ratio = 0.0
             return
@@ -243,6 +252,91 @@ class HallucinationVerifier:
         total = len(claims)
         grounded_count = sum(1 for g in grounded_flags if g)
         result.grounding_ratio = grounded_count / total if total > 0 else 0.0
+
+    # Standalone section-header lines within a "### 📋 Chi tiết" block, e.g.
+    # "Trả lời ngắn" (shouldn't appear here, but defensively excluded) or a
+    # bold sub-heading like "**Phương thức thực hiện**:" that introduces a
+    # group of bullets but carries no claim content of its own.
+    _CHI_TIET_HEADER = re.compile(r'^\W*chi\s*tiết\W*$', re.IGNORECASE)
+    _TRA_LOI_NGAN_HEADER = re.compile(r'^\W*trả\s*lời\s*ngắn\W*$', re.IGNORECASE)
+    _CAU_HOI_HEADER = re.compile(r'^\W*câu\s*hỏi\s*liên\s*quan\W*$', re.IGNORECASE)
+    _LABEL_ONLY_LINE = re.compile(r'^\*\*[^*]+\*\*\s*:?\s*$')
+
+    def _groundable_claims(self, answer: str) -> List[str]:
+        """
+        Claim set used ONLY by `_verify_grounding` (Tier 1.5) — a SEPARATE
+        selector from `_split_claims`, which Tier 2 NLI (`_verify_semantic`)
+        still uses unchanged (that claim set feeds entailment_ratio, a
+        calibrated confidence signal — must not drift).
+
+        SYSTEM_PROMPT only requires a `[n]` block citation on each bullet
+        under "### 📋 Chi tiết". Measuring grounding over the wider
+        `_split_claims` set — which also includes the "Trả lời ngắn" summary
+        sentence and bare section-label lines — unfairly drags the ratio
+        down with text that was never asked to carry a citation. This
+        returns only the substantive "Chi tiết" bullets:
+          - excludes everything outside the "### 📋 Chi tiết" section
+            (the "Trả lời ngắn" summary before it, the "### 💡 Câu hỏi liên
+            quan" trailer after it — trailer detection reuses the same
+            standalone-header-line logic as `_split_claims`)
+          - excludes pure label lines: a bold header ending in ":" with no
+            further sentence content of its own (e.g.
+            "**Phương thức thực hiện**:")
+        """
+        if not answer:
+            return []
+
+        # Strip markdown heading hashes only (keep "**bold**" markers intact —
+        # they're needed to detect label-only lines below).
+        clean = re.sub(r'#+\s*', '', answer)
+
+        in_chi_tiet = False
+        claims: List[str] = []
+
+        for raw_line in clean.split('\n'):
+            line = raw_line.strip()
+            if not line:
+                continue
+
+            if self._CHI_TIET_HEADER.match(line):
+                in_chi_tiet = True
+                continue
+            if self._TRA_LOI_NGAN_HEADER.match(line):
+                in_chi_tiet = False
+                continue
+            if self._CAU_HOI_HEADER.match(line):
+                # Trailer is always last per the fixed prompt structure —
+                # stop entirely, same as `_split_claims`.
+                break
+
+            if not in_chi_tiet:
+                continue
+
+            bullet_match = re.match(r'^[\-\*\•]\s+(.*)', line)
+            if bullet_match:
+                item_text = bullet_match.group(1)
+            else:
+                num_match = re.match(r'^\d+[\.\)]\s+(.*)', line)
+                item_text = num_match.group(1) if num_match else line
+
+            item_text = item_text.strip()
+            if not item_text:
+                continue
+            if self._LABEL_ONLY_LINE.match(item_text):
+                continue  # bare "**Label**:" sub-heading — no claim content
+
+            claims.append(item_text)
+
+        # Deduplicate while preserving order, mirroring `_split_claims`.
+        seen = set()
+        unique_claims = []
+        for c in claims:
+            key = c.lower().strip()
+            if key not in seen:
+                seen.add(key)
+                unique_claims.append(c)
+
+        return unique_claims
 
     # ── Tier 2: Semantic NLI ────────────────────────────────────
 
