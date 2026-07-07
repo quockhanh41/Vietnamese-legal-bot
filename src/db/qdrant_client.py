@@ -25,6 +25,8 @@ from qdrant_client.models import (
     MatchValue,
 )
 
+from src.data.constants import DEFAULT_COLLECTION_NAME
+
 
 @dataclass
 class SearchResult:
@@ -52,7 +54,7 @@ class LegalVectorStore:
         self,
         url: Optional[str] = None,
         api_key: Optional[str] = None,
-        collection_name: str = "vietnamese_laws",
+        collection_name: str = DEFAULT_COLLECTION_NAME,
         timeout: int = 60,
     ):
         self.url = url or os.getenv("QDRANT_URL", "http://localhost:6333")
