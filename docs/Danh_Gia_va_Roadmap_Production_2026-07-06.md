@@ -110,7 +110,13 @@ Phát hiện kèm theo: (i) hybrid == dense trên bộ này — BGE-M3 sparse kh
 
 **→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) ~~citation-lookup route (mục 3.3)~~ ✅ ĐÃ XONG 2026-07-07; (2) ~~contextual retrieval (mục 3.1)~~ ✅ ĐÃ XONG 2026-07-07; (3) calibrate ngưỡng 0.70 — 🟡 TOOLING XONG, chờ dữ liệu (xem dưới). ~~Cải tiến nhỏ cho eval: lenient thành strict∨text~~ ✅ đã sửa.
 
-**🟡 Calibrate ngưỡng confidence (2026-07-07) — tooling xong, ngưỡng CHƯA đổi (thiếu dữ liệu phía refuse)**
+**✅ Calibrate ngưỡng confidence — HOÀN THÀNH 2026-07-07 (lần 2, đủ dữ liệu): REFUSAL_THRESHOLD 0.70 → 0.725**
+- Sau khi thêm GROQ_API_KEYS rotation (nhiều key, xoay khi rate-limit — `gateway.py`), Tier 2 full-run hoàn thành **70/70 câu, 0 lỗi** (34 answer + 36 refuse).
+- Sweep Youden-optimal: **t=0.725** (refusal recall 0.806→**0.889**, false-refusal giữ nguyên 0.147, Youden 0.742). 0.725 nằm giữa khe hở giữa refuse cao nhất dưới biên (0.7202) và answer thấp nhất trên biên (0.7303) — margin ~0.005 mỗi phía → **coi là tạm thời, recalibrate khi eval set lớn lên**. Override bằng env `CONFIDENCE_REFUSAL_THRESHOLD`.
+- Baseline chất lượng tại 0.70: refusal accuracy criminal 6/7, general 23/29; citation accuracy 0.711.
+- **Vấn đề còn lại lộ ra từ calibration** (không giải quyết được bằng threshold): 4 câu refuse có điểm cao vượt mọi ngưỡng hợp lý — gen-203 (0.8455!), gen-202, gen-301, gen-702 — đều là câu đất đai/dân sự/BHXH retrieval trả về chunk hình sự "có vẻ liên quan". Đây là bài toán **out-of-scope detection** (nhận diện câu hỏi ngoài phạm vi corpus TRƯỚC khi trả lời), không phải bài toán ngưỡng. Outlier phía ngược: crim-302 (answer, 0.435) — câu amendment 2025, đáng soi per-signal. Ứng viên việc tiếp theo.
+
+**🟡 Ghi chú lần chạy 1 (bị Groq daily cap chặn — đã giải quyết bằng key rotation)**
 - `scripts/calibrate_threshold.py` (sweep t∈[0.30,0.90], Youden index, histogram, outliers) + 18 tests (70 total pass).
 - Run Tier 2 bị **Groq daily token cap** chặn: criminal xong 31/41 (10 lỗi = 24.4%, vượt gate 20%), general chỉ chạy được ~8/29 rồi bị hủy. Chỉ có **1 câu refuse** hoàn thành → theo đúng decision rule, KHÔNG đổi ngưỡng trên dữ liệu này.
 - **Tín hiệu sơ bộ từ dữ liệu partial** (chưa hành động): 0.70 có vẻ hơi cao — tại t∈[0.575, 0.675] false-refusal giảm từ 10% xuống 3.3% mà vẫn giữ refusal recall 1.0 (n=1). Outliers cần soi per-signal ở run sau: crim-108 (0.5597), crim-116 (0.6797), crim-202 (0.6979) — các câu answer bị điểm thấp.

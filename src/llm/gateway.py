@@ -27,7 +27,13 @@ class LLMGateway:
     ]
 
     def __init__(self):
-        self.groq_key = os.getenv("GROQ_API_KEY", "")
+        # GROQ_API_KEYS: comma-separated list rotated on rate-limit errors
+        # (Groq caps tokens-per-day PER KEY — with one key a long eval run
+        # dies mid-flight; see docs/Danh_Gia_va_Roadmap §calibration 2026-07-07).
+        # Falls back to the single GROQ_API_KEY.
+        keys_raw = os.getenv("GROQ_API_KEYS", "") or os.getenv("GROQ_API_KEY", "")
+        self.groq_keys = [k.strip() for k in keys_raw.split(",") if k.strip()]
+        self.groq_key = self.groq_keys[0] if self.groq_keys else ""
         self.openai_key = os.getenv("OPENAI_API_KEY", "")
 
     def _is_thinking_model(self, model: str) -> bool:
@@ -42,6 +48,21 @@ class LLMGateway:
                 continue
             usable.append(m)
         return usable
+
+    def _keys_for(self, model: str) -> list:
+        """API keys to try for a model — all Groq keys (rotation), or the OpenAI key."""
+        if "openai" in model or "gpt" in model:
+            return [self.openai_key]
+        return self.groq_keys or [""]
+
+    @staticmethod
+    def _is_rate_limit(err: Exception) -> bool:
+        """Rate-limit / quota errors are worth retrying on ANOTHER KEY;
+        other errors mean the model itself failed — move to the next model."""
+        if isinstance(err, litellm.RateLimitError):
+            return True
+        msg = str(err).lower()
+        return "rate limit" in msg or "rate_limit" in msg or "429" in msg or "quota" in msg
 
     def generate(
         self,
@@ -86,36 +107,32 @@ class LLMGateway:
         else:
             extra_kwargs = {}
 
-        # Try each model in chain
+        # Try each model in chain; within a model, rotate API keys on rate-limit
         last_error = None
         for attempt_model in models_to_try:
-            try:
-                if "groq" in attempt_model:
-                    api_key = self.groq_key
-                elif "openai" in attempt_model or "gpt" in attempt_model:
-                    api_key = self.openai_key
-                else:
-                    api_key = self.groq_key  # default to groq
+            model_kwargs = dict(extra_kwargs)
+            if reasoning_effort is not None and self._is_thinking_model(attempt_model):
+                # reasoning_effort="none" disables Groq Qwen3 thinking entirely.
+                # (reasoning_format="hidden" only hides the <think> block — the
+                # model still burns the token budget thinking → empty output.)
+                model_kwargs["reasoning_effort"] = reasoning_effort
 
-                model_kwargs = dict(extra_kwargs)
-                if reasoning_effort is not None and self._is_thinking_model(attempt_model):
-                    # reasoning_effort="none" disables Groq Qwen3 thinking entirely.
-                    # (reasoning_format="hidden" only hides the <think> block — the
-                    # model still burns the token budget thinking → empty output.)
-                    model_kwargs["reasoning_effort"] = reasoning_effort
-
-                response = litellm.completion(
-                    model=attempt_model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    api_key=api_key,
-                    **model_kwargs,
-                )
-                return self._clean_thinking(response.choices[0].message.content)
-            except Exception as e:
-                last_error = e
-                continue
+            for api_key in self._keys_for(attempt_model):
+                try:
+                    response = litellm.completion(
+                        model=attempt_model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        api_key=api_key,
+                        **model_kwargs,
+                    )
+                    return self._clean_thinking(response.choices[0].message.content)
+                except Exception as e:
+                    last_error = e
+                    if self._is_rate_limit(e):
+                        continue  # rotate to the next key for the same model
+                    break  # non-rate-limit failure — try the next model
 
         raise RuntimeError(f"All models failed. Last error: {last_error}")
 
@@ -161,34 +178,37 @@ class LLMGateway:
             models_to_try = list(self.MODEL_CHAIN)
         models_to_try = self._usable_models(models_to_try)
 
-        # Try each model
+        # Try each model; within a model, rotate API keys on rate-limit
         for attempt_model in models_to_try:
-            try:
-                if "groq" in attempt_model:
-                    api_key = self.groq_key
-                elif "openai" in attempt_model or "gpt" in attempt_model:
-                    api_key = self.openai_key
-                else:
-                    api_key = self.groq_key  # default to groq
+            model_kwargs = {}
+            if reasoning_effort is not None and self._is_thinking_model(attempt_model):
+                model_kwargs["reasoning_effort"] = reasoning_effort
 
-                model_kwargs = {}
-                if reasoning_effort is not None and self._is_thinking_model(attempt_model):
-                    model_kwargs["reasoning_effort"] = reasoning_effort
-
-                response = litellm.completion(
-                    model=attempt_model,
-                    messages=messages,
-                    temperature=temperature,
-                    max_tokens=max_tokens,
-                    api_key=api_key,
-                    stream=True,
-                    **model_kwargs,
-                )
-                for chunk in response:
-                    if chunk.choices[0].delta.content:
-                        yield chunk.choices[0].delta.content
-                return
-            except Exception:
-                continue
+            for api_key in self._keys_for(attempt_model):
+                started = False
+                try:
+                    response = litellm.completion(
+                        model=attempt_model,
+                        messages=messages,
+                        temperature=temperature,
+                        max_tokens=max_tokens,
+                        api_key=api_key,
+                        stream=True,
+                        **model_kwargs,
+                    )
+                    for chunk in response:
+                        if chunk.choices[0].delta.content:
+                            started = True
+                            yield chunk.choices[0].delta.content
+                    return
+                except Exception as e:
+                    if started:
+                        # Mid-stream failure: tokens already reached the client —
+                        # retrying would duplicate output. Surface and stop.
+                        yield "\n\n[Lỗi] Kết nối bị gián đoạn giữa chừng. Vui lòng thử lại."
+                        return
+                    if self._is_rate_limit(e):
+                        continue  # rotate to the next key for the same model
+                    break  # non-rate-limit failure — try the next model
 
         yield "[Lỗi] Không thể kết nối đến LLM. Vui lòng thử lại sau."

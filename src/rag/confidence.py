@@ -19,6 +19,7 @@ Usage:
 
 from __future__ import annotations
 
+import os
 import re
 import statistics
 import logging
@@ -40,8 +41,15 @@ DEFAULT_WEIGHTS = {
     "entailment": 0.10,
 }
 
-# Threshold for refusal
-REFUSAL_THRESHOLD = 0.70
+# Threshold for refusal — calibrated 2026-07-07 on the full Tier-2 run
+# (70 questions, 0 errors: 34 answer + 36 refuse; reports
+# 20260707T012714Z/20260707T013433Z, analysis via scripts/calibrate_threshold.py).
+# Youden-optimal t=0.725: refusal_recall 0.889, false_refusal 0.147 (vs 0.806 /
+# 0.147 at the old 0.70). 0.725 sits mid-gap between the highest sub-threshold
+# refuse-score (0.7202) and the lowest supra-threshold answer-score (0.7303) —
+# margins ~0.005 each side, so treat as provisional and recalibrate as the
+# eval set grows. Override per-deployment with CONFIDENCE_REFUSAL_THRESHOLD.
+REFUSAL_THRESHOLD = float(os.getenv("CONFIDENCE_REFUSAL_THRESHOLD", "0.725"))
 
 REFUSAL_ANSWER = (
     "⚠️ **Tôi không tìm thấy đủ thông tin chính xác để trả lời câu hỏi này.**\n\n"
