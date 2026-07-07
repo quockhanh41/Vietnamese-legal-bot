@@ -234,3 +234,62 @@ Cho query lặp — Redis đã có trong compose, chỉ cần dùng.
 2. **Render 512MB không khả thi**: Mục tiêu chạy BGE-M3 + reranker + NLI + Qdrant trên Render 512MB là không thể (riêng BGE-M3 đã ~2GB RAM). Thực tế: nhắm HF Spaces/máy có GPU nhỏ, hoặc chuyển embedding sang API (ví dụ Cohere embed-multilingual) khi deploy.
 
 3. **Cấu trúc code lệch plan**: Plan định nghĩa `src/rag/{router,query_processing,retrieval,reranker,compression,generation,multi_hop,memory}.py` nhưng thực tế là orchestrator monolith 564 dòng + `src/pipeline/`. Nên tách dần theo plan khi refactor (đặc biệt khi dedupe code stream/non-stream).
+
+---
+
+## 6. Checklist scale corpus: 6 docs → toàn bộ dataset (~10-15K docs sau filter)
+
+> Viết 2026-07-07. Corpus hiện tại: 6 docs / 1670 chunks. Full corpus ước tính **500K–2M chunks** — nhiều quyết định đúng ở quy mô nhỏ sẽ sai ở quy mô lớn. Checklist chia theo giai đoạn, có gate đo lường giữa các bước.
+
+### 6.0. Nguyên tắc: scale theo bậc thang, không nhảy cóc
+
+`6 docs → ~100 docs (thêm 1-2 lĩnh vực: doanh nghiệp, lao động) → ~1.000 docs → toàn bộ`. Sau MỖI bậc: chạy `scripts/eval.py` Tier 1 + validate lại eval set. Nếu recall tụt >5 điểm so với bậc trước → dừng, tìm nguyên nhân trước khi lên tiếp. Bậc ~100 docs là bậc quan trọng nhất — nó kích hoạt `eval_set_general_v1` làm answer-test thật.
+
+### 6.1. BẮT BUỘC trước khi ingest lại (blocker — sai là phải re-embed từ đầu)
+
+| # | Việc | Vị trí | Lý do |
+|---|------|--------|-------|
+| 1 | **Point ID deterministic** — thay `uuid.uuid4()` bằng hash ổn định (vd `uuid5(NAMESPACE, f"{document_id}:{chunk_index}")`) | `src/db/qdrant_client.py:113` | uuid4 → re-run ingest tạo DUPLICATE point. Với 2M chunks, ingest phải resume được sau crash → upsert phải idempotent. Đây là bug tiềm ẩn ngay cả ở 6 docs. |
+| 2 | **Checkpoint/resume cho ingest** — ghi tiến độ (doc_id đã xong) ra file/SQLite, flag `--resume` | `scripts/ingest.py` | Embedding 2M chunks chạy nhiều giờ/ngày — chắc chắn sẽ bị gián đoạn (bài học: reindex 1670 chunks đã chết 2 lần). |
+| 3 | **Fix chunker metadata misalignment TRƯỚC** — chunk gắn nhãn "Điều 168" nhưng text là Điều 167 (đã phát hiện ở Tuần 2) | `src/data/chunker.py`, `chunking/` | Lỗi này nhân theo corpus. Đo bằng gap strict-vs-lenient trong Tier 1 sau khi fix; phải ≈ 0 trên 6 docs trước khi ingest thêm. |
+| 4 | **Ghi `article_number` (số hóa) vào payload lúc ingest** + tạo **payload index** cho `document_id`, `article_number`, `legal_type`, `issuance_date` | `scripts/ingest.py`, `qdrant_client.py` | Citation lookup hiện scroll toàn collection client-side (TODO đã ghi trong `citation_lookup.py`) — chết ở 100K+ chunks. Index xong thì chuyển sang server-side filter. |
+| 5 | **Embedding compute**: local CPU không khả thi (~2.5s/8 chunks → 2M chunks ≈ 7 ngày). Chạy trên Colab/Kaggle GPU T4 (script standalone đọc parquet → upsert thẳng Qdrant Cloud) hoặc thuê GPU spot | `scripts/reindex_contextual.py` làm mẫu | Máy local chỉ dùng cho query-time. |
+| 6 | **Qdrant dung lượng**: 2M chunks × 1024d fp32 ≈ 8GB — vượt xa free tier 1GB. Bật **scalar quantization int8** (giảm ~4x) + vectors on-disk, hoặc nâng plan trả phí. Quyết định TRƯỚC khi ingest vì đổi sau là re-index | Qdrant collection config | Tính cả sparse vectors + payload (~vài GB text). |
+
+### 6.2. Code phải sửa khi corpus lớn (không blocker ingest, nhưng blocker chất lượng/latency)
+
+| # | Việc | Vị trí | Lý do |
+|---|------|--------|-------|
+| 7 | **Citation lookup → server-side** (sau khi có index ở #4): filter `document_id + article_number` thay vì scroll cache | `src/rag/citation_lookup.py` | Cache client-side = tải cả collection vào RAM. |
+| 8 | **Doc-alias resolution nâng cấp**: hiện match substring title — với hàng nghìn luật trùng tên ("Luật sửa đổi...", luật cùng tên khác năm) cần: chuẩn hóa số hiệu văn bản (59/2020/QH14) làm khóa chính, bảng alias tên viết tắt mở rộng (BLDS, LDN, LĐĐ...), disambiguation theo năm/hiệu lực | `citation_lookup.py` `_DOC_HINT_PATTERNS`, `resolve_doc` | Pattern hiện tại hardcode cho hình sự (BLHS/TTHS). |
+| 9 | **Metadata store JSON → SQLite/Postgres**: `documents.json`/`graph.json`/`timelines.json` load toàn bộ vào RAM; enrichment + `EnhancedRetriever._enrich_result` loop O(N) qua all documents cho MỖI result | `src/data/metadata_store.py`, `src/pipeline/retriever.py:228` | O(N) × 15K docs × mỗi query = không dùng được. |
+| 10 | **Filter `is_in_effect` mặc định trong search**: corpus 6 docs toàn văn bản còn hiệu lực; full corpus chứa nhiều văn bản HẾT hiệu lực → mặc định chỉ search văn bản còn hiệu lực (payload filter), point-in-time là option | `qdrant_client.py` search + payload lúc ingest | Trả lời theo luật hết hiệu lực là lỗi nghiêm trọng nhất của legal bot. |
+| 11 | **Reranker thành bottleneck**: CPU cross-encode ~15 chunks/query đã chậm; corpus lớn → candidate pool lớn hơn. Chọn: GPU serving, giảm candidates (top-10), hoặc rerank API (Cohere rerank-multilingual) | `orchestrator.py _rerank_results` | Đo latency P95 ở bậc 1K docs để quyết. |
+| 12 | **Complexity classifier + prompts cập nhật đa lĩnh vực**: prompt hiện thiên ví dụ doanh nghiệp/hình sự; mở rộng `LEGAL_TYPES` (Nghị định, Thông tư) kéo theo hierarchy văn bản (luật > nghị định > thông tư) trong ranking/context | `src/llm/prompts.py`, `constants.py` | Thông tư hướng dẫn thường là câu trả lời thực tế cho câu hỏi thủ tục. |
+| 13 | **Enrichment pipeline (graph/timeline/amendment) chạy batch + incremental**: hiện `/api/pipeline/enrich` chạy đồng bộ 1 phát — với 15K docs phải là job offline có checkpoint, và chỉ enrich docs mới | `src/pipeline/enricher.py`, `api/main.py` | Endpoint sync sẽ timeout; cũng cần auth (đã ghi ở mục 2). |
+
+### 6.3. Eval & calibration phải làm lại (kết quả cũ không chuyển được)
+
+| # | Việc | Chi tiết |
+|---|------|----------|
+| 14 | **Kích hoạt `eval_set_general_v1` làm answer-test**: khi `required_laws` của câu nào đã ingest → flip refuse→answer. PHẢI chạy `scripts/validate_eval_set.py` mở rộng: verify `ground_truth_verified: false` với corpus thật (đối chiếu điều luật, điền `expected_articles` doc_id) trước khi tin số đo |
+| 15 | **Re-calibrate REFUSAL_THRESHOLD**: 0.725 calibrated trên corpus hình sự, margin chỉ ~0.005 — phân bố score chắc chắn đổi khi corpus lớn (nhiều distractor gần hơn → score cao hơn cho câu sai). Chạy lại Tier 2 + `scripts/calibrate_threshold.py` ở mỗi bậc scale |
+| 16 | **Mở rộng eval set theo lĩnh vực mới**: mỗi lĩnh vực ingest thêm cần ≥10 câu grounded (theo mẫu criminal set); giữ nhóm out-of-scope (câu ngoài pháp luật + Điều không tồn tại) vì vẫn cần đo refusal |
+| 17 | **Out-of-scope detection đổi bản chất**: corpus đa lĩnh vực → ít câu "ngoài corpus" hơn, nhưng vấn đề "retrieval trả về chunk có-vẻ-liên-quan cho câu ngoài phạm vi" (gen-203 conf 0.845) vẫn còn với câu hành chính/quốc tế/tư vấn cá nhân — làm ở bậc 100 docs khi còn đo được |
+| 18 | **CI eval**: Tier 1 với eval set lớn hơn vẫn OK (không LLM), nhưng thêm timeout + chạy theo shard nếu >200 câu; giữ Tier 2 ngoài CI |
+
+### 6.4. Infra/vận hành
+
+| # | Việc | Chi tiết |
+|---|------|----------|
+| 19 | **RAM query-time**: BGE-M3 (~2GB) + reranker (~2GB) + NLI (~1GB) — máy serve cần ≥8GB hoặc tách embedding/rerank thành service riêng (hoặc API hóa) — khớp với lưu ý Render 512MB ở mục 5.2 |
+| 20 | **Semantic cache (Redis) trở nên đáng làm**: corpus lớn → nhiều user → nhiều query lặp; cache theo embedding similarity của query |
+| 21 | **Observability trước khi scale user**: Langfuse trace per-stage — không có nó thì không debug được pipeline 6 bước trên corpus lớn |
+| 22 | **Backup/version collection**: đặt tên collection theo version (`luat_law_ctx_v2_YYYYMM`), giữ collection cũ đến khi eval xác nhận bậc mới ≥ bậc cũ (pattern đã dùng khi chuyển luat_law → luat_law_ctx) |
+
+### Thứ tự đề xuất
+
+1. **Trước tiên (trên 6 docs hiện tại)**: #1 point ID, #3 fix chunker (đo strict-lenient gap ≈ 0), #4 payload index + article_number → re-ingest 6 docs lần cuối để có nền sạch.
+2. **Bậc ~100 docs**: #2 checkpoint, #5 GPU embedding, #8 alias, #10 is_in_effect, #14-16 eval, #17 out-of-scope.
+3. **Bậc ~1K docs**: #6 quantization, #7 lookup server-side, #9 SQLite, #11 đo reranker, #15 re-calibrate.
+4. **Toàn bộ**: #12, #13, #18-22 + re-calibrate lần cuối.
