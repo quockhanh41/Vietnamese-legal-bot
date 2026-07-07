@@ -29,7 +29,10 @@ ALL_LEGAL_TYPES: list[str] = [
 MIN_CONTENT_LENGTH: int = 500  # characters — skip empty/short docs
 
 # --- Collection Defaults ---
-DEFAULT_COLLECTION_NAME: str = "luat_law"
+# "luat_law_ctx" = contextual retrieval collection (metadata header prepended
+# to the embedded text — see src/data/contextualizer.py). The original
+# "luat_law" collection is kept in Qdrant for before/after comparison.
+DEFAULT_COLLECTION_NAME: str = "luat_law_ctx"
 
 # --- Date Filter ---
 # No date restriction — we keep all years for temporal versioning and

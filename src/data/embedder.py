@@ -32,10 +32,16 @@ class BGEEmbedder:
             device: 'cpu', 'mps', or 'cuda'
         """
         self.device = device
+        if device == "cpu":
+            use_fp16 = False  # fp16 unsupported/slow on CPU (see docstring)
+        # NOTE: FlagEmbedding >= 1.3 takes `devices` (plural). Passing
+        # `device=` lands in **kwargs and is SILENTLY IGNORED — the model
+        # then auto-selects MPS on macOS, which OOMs (17GB Metal buffer)
+        # on very long chunks at max_length=8192.
         self.model = BGEM3FlagModel(
             model_name,
             use_fp16=use_fp16,
-            device=device,
+            devices=device,
         )
         self.dim = 1024  # BGE-M3 dense dimension
 

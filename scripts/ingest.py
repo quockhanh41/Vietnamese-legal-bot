@@ -24,6 +24,7 @@ load_dotenv()  # Load .env for Qdrant Cloud credentials
 
 from src.data.chunker import LegalDocumentChunker
 from src.data.chunking.article_level import ArticleLevelChunker
+from src.data.contextualizer import build_context_header, build_contextual_text
 from src.data.embedder import BGEEmbedder
 from src.db.qdrant_client import LegalVectorStore
 from src.data.constants import (
@@ -134,10 +135,14 @@ def ingest(
             chunks = active_chunker.chunk_document(row_dict)
             for chunk in chunks:
                 total_chunks += 1
-                embed_text_buffer.append(chunk.chunk_text)
                 meta = chunk.to_dict()
                 if is_amend:
                     meta["is_amendment_chunk"] = True
+                # Contextual retrieval (rule-based, no LLM — see
+                # src/data/contextualizer.py): embed a metadata header +
+                # chunk body, but keep the stored chunk_text unchanged.
+                meta["context_header"] = build_context_header(meta)
+                embed_text_buffer.append(build_contextual_text(meta))
                 chunk_buffer.append({
                     "text": chunk.chunk_text,
                     "metadata": meta,

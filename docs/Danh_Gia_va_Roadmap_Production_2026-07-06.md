@@ -108,7 +108,22 @@ Cả 6 bug đã được fix (sub-agent Sonnet 5 thực hiện, Fable 5 verify b
 
 Phát hiện kèm theo: (i) hybrid == dense trên bộ này — BGE-M3 sparse không cứu được citation-lookup vì chunk luật sửa đổi chứa rất nhiều số "Điều N" gây nhiễu; (ii) lenient (match theo text) = 0.0 < strict — tức **chunk_text thường thiếu header "Điều N."** (bắt đầu giữa điều luật); (iii) Tier 2 smoke: crim-001 bị false-refuse ở confidence 0.673 (ngưỡng 0.70).
 
-**→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) ~~citation-lookup route (mục 3.3)~~ ✅ ĐÃ XONG 2026-07-07; (2) contextual retrieval / prepend header vào chunk (mục 3.1) — giải quyết trực tiếp phát hiện (ii); (3) calibrate ngưỡng 0.70 bằng phân bố confidence từ Tier 2 full-run. ~~Cải tiến nhỏ cho eval: lenient thành strict∨text~~ ✅ đã sửa.
+**→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) ~~citation-lookup route (mục 3.3)~~ ✅ ĐÃ XONG 2026-07-07; (2) ~~contextual retrieval (mục 3.1)~~ ✅ ĐÃ XONG 2026-07-07; (3) calibrate ngưỡng 0.70 bằng phân bố confidence từ Tier 2 full-run. ~~Cải tiến nhỏ cho eval: lenient thành strict∨text~~ ✅ đã sửa.
+
+**✅ Contextual Retrieval rule-based (2026-07-07)** — `src/data/contextualizer.py`: prepend header metadata (`Bộ luật hình sự 2015 (Luật 100/2015/QH13) | Chương | Điều N. tiêu đề | Khoản n`) vào text TRƯỚC KHI EMBED (chunk_text hiển thị giữ nguyên; không tốn LLM call nào); re-embed 1670 chunks vào collection `luat_law_ctx` (script `scripts/reindex_contextual.py`, collection cũ giữ để so sánh); `scripts/ingest.py` áp dụng cho ingest tương lai. `DEFAULT_COLLECTION_NAME` đã chuyển sang `luat_law_ctx`. Kèm bug fix quan trọng: `embedder.py` truyền `device=` bị FlagEmbedding ≥1.3 âm thầm bỏ qua (đúng tên là `devices=`) → model tự chạy MPS và OOM 17GB với chunk dài.
+
+Kết quả (34 câu, strict, mode routed = production path):
+
+| Metric | luat_law (cũ) | luat_law_ctx (mới) |
+|---|---|---|
+| recall@5 | 0.794 | **0.922** |
+| recall@10 | 0.922 | **0.976** |
+| MRR | 0.703 | **0.863** |
+| single-hop r@5 | 0.882 | **1.0** |
+| amendment r@5 | 0.467 | **0.80** |
+| comparison r@5 | 0.25 | **0.75** |
+
+Riêng hybrid thuần (không route): citation-lookup r@5 0.125 → 0.625 — chứng tỏ contextual embedding tự nó cũng cứu được phần lớn citation query (route lookup vẫn cần để đạt 1.0). Lưu ý nhỏ: multi-hop r@5 giảm 0.583→0.417 trên mẫu n=2 (r@10 và MRR không đổi) — nhiễu mẫu nhỏ, theo dõi khi mở rộng eval set.
 
 **✅ Citation-lookup route (2026-07-07)** — `src/rag/citation_lookup.py`: parse "Điều N + tên luật + năm" → tra trực tiếp metadata trong Qdrant, tích hợp vào AdaptiveRAGPipeline (route "lookup" đi trước classifier, tiết kiệm 1 LLM call; Điều không tồn tại → KHÔNG fallback vector search, để refusal gate xử lý). Kết quả đo trên toàn bộ 34 câu (mode "routed" trong Tier 1):
 
