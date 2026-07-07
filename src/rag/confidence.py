@@ -41,14 +41,35 @@ DEFAULT_WEIGHTS = {
     "entailment": 0.10,
 }
 
-# Threshold for refusal — calibrated 2026-07-07 on the full Tier-2 run
-# (70 questions, 0 errors: 34 answer + 36 refuse; reports
-# 20260707T012714Z/20260707T013433Z, analysis via scripts/calibrate_threshold.py).
-# Youden-optimal t=0.725: refusal_recall 0.889, false_refusal 0.147 (vs 0.806 /
-# 0.147 at the old 0.70). 0.725 sits mid-gap between the highest sub-threshold
-# refuse-score (0.7202) and the lowest supra-threshold answer-score (0.7303) —
-# margins ~0.005 each side, so treat as provisional and recalibrate as the
-# eval set grows. Override per-deployment with CONFIDENCE_REFUSAL_THRESHOLD.
+# Threshold for refusal — RE-VALIDATED 2026-07-07 WITH THE LIVE BGE RERANKER
+# (transformers<5 pin, commit 958a777). The 0.725 value was originally picked
+# while the 0.20-weight reranker signal was silently renormalized away (reranker
+# crashed on every medium/complex query); this re-run confirms it holds now that
+# the signal is real. Fresh Tier-2, 70 questions, 0 errors: 34 answer + 36 refuse
+# (reports 20260707T110621Z criminal + 20260707T111111Z general, analysis
+# 20260707T111144Z_calibration via scripts/calibrate_threshold.py).
+#
+# Grid Youden-optimal is t=0.675 (youden 0.9428, refusal_recall 0.9722,
+# false_refusal 0.0294) — but 0.675 LEAKS the one genuine out-of-scope refuse
+# question that clears the scope gate, gen-802 (land-dispute, score 0.7045):
+# refusal_recall drops from 1.0 to 0.9722. For a legal bot, answering an
+# out-of-scope question is worse than a conservative false-refusal, so we keep
+# the threshold in the leak-safe band (t > 0.7045). 0.725 is the lowest sweep
+# grid point that still refuses gen-802: refusal_recall 1.0, false_refusal
+# 0.0588 (crim-203 + crim-201), youden 0.9412 — within 0.0016 of the grid
+# optimum. New margin: the clean separation gap is now gen-802 (0.7045, top
+# refuse) → crim-104 (0.7291, lowest robustly-answered) = 0.0246 wide; 0.725
+# sits 0.0205 above gen-802 (fat leak-side cushion) and 0.0041 below crim-104
+# (thin, benign false-refuse side). The reranker did NOT collapse the answer
+# distribution (answer mean 0.8301); its only boundary effect is pushing
+# comparison-type crim-203 to ~0.53-0.57 (verified: retrieval succeeds — both
+# ground-truth murder articles present at top cosine 0.8333 — but the
+# cross-encoder scores every single chunk low (max 0.2015) because a comparison
+# answer synthesizes 2+ articles; stacked with a harsh self-eval draw + the
+# NLI-NEUTRAL-on-short-Vietnamese-claims weakness). crim-203 is a flagged
+# per-signal follow-up, not a threshold problem — rescuing it would need t<0.57
+# and leak every refuse question. Still provisional at 6-doc corpus; recalibrate
+# as the eval set grows. Override per-deployment with CONFIDENCE_REFUSAL_THRESHOLD.
 REFUSAL_THRESHOLD = float(os.getenv("CONFIDENCE_REFUSAL_THRESHOLD", "0.725"))
 
 REFUSAL_ANSWER = (
