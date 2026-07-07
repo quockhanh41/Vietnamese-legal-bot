@@ -110,11 +110,25 @@ Phát hiện kèm theo: (i) hybrid == dense trên bộ này — BGE-M3 sparse kh
 
 **→ Ưu tiên Tuần 3-4 giờ có số chứng minh:** (1) ~~citation-lookup route (mục 3.3)~~ ✅ ĐÃ XONG 2026-07-07; (2) ~~contextual retrieval (mục 3.1)~~ ✅ ĐÃ XONG 2026-07-07; (3) calibrate ngưỡng 0.70 — 🟡 TOOLING XONG, chờ dữ liệu (xem dưới). ~~Cải tiến nhỏ cho eval: lenient thành strict∨text~~ ✅ đã sửa.
 
+**✅ Out-of-scope detection — HOÀN THÀNH 2026-07-07** — SCOPE gate gộp vào chính LLM call của complexity classifier (1 call làm 2 việc, không thêm latency/cost): prompt mới `COMPLEXITY_CLASSIFIER_PROMPT` nhận `{corpus_summary}` sinh động từ alias index (`CitationLookup.corpus_summary()` — corpus lớn lên không phải sửa prompt), trả `SCOPE: IN|OUT` + `CLASS:`. Nuance được encode bằng 4 few-shot: câu hỏi **trách nhiệm hình sự** cho hành vi thuộc lĩnh vực khác (đất đai, thuế...) vẫn IN scope; câu **thủ tục hành chính/chuyên ngành** là OUT. Câu OUT → refuse ngay TRƯỚC retrieval (`pipeline_used="out-of-scope"`, conf 0.0, ~200-650ms, template liệt kê đúng các văn bản hiện có); parse hỏng → fail-open về pipeline thường (không bao giờ refuse nhầm vì lỗi parse). Cả `query()` lẫn `query_stream()` (UI nhận `__VERIFICATION__` với `reason: "out_of_scope"`). Citation-lookup route vẫn chạy trước gate (Điều N có thật ⇒ in-scope by construction). 15 tests mới (`tests/test_scope_gate.py`, 82 total).
+
+Kết quả (Tier 2, reports `20260707T015439Z` general + `20260707T020605Z` criminal, 0 lỗi):
+
+| Metric | Trước (chỉ threshold 0.725) | Sau (scope gate) |
+|---|---|---|
+| General refusal accuracy | 23/29 | **28/29** (0.9655) |
+| 4 outlier "điểm cao vượt ngưỡng" (gen-203 0.8455...) | lọt hết | **chặn hết** tại gate, conf 0.0 |
+| Criminal false-refusal | 5/34 | **4/34** (0 câu answer bị gate chặn nhầm) |
+| Criminal refusal accuracy | 6/7 | **7/7** |
+| Citation accuracy | 0.711 | **0.8529** |
+
+Còn lại: (i) **gen-802 leak** (tranh chấp đất đai dân sự → classifier cho IN vì dính chữ "đất đai" + nuance hình sự, answered 0.7625) — đúng vùng biên của nuance, chấp nhận được ở corpus 6 docs, theo dõi khi mở rộng; (ii) 4 false-refusal còn lại (crim-109/201/202/302, điểm 0.67-0.70) là việc của confidence gate chứ không phải scope gate — trùng việc "soi per-signal crim-302" đã ghi ở dưới. Fable verify độc lập: đọc diff, chạy lại 82 tests, đối chiếu từng row trong 2 report, live-test format output classifier trên Groq (model lặp nhãn `SCOPE:` đúng định dạng cả 2 chiều IN/OUT).
+
 **✅ Calibrate ngưỡng confidence — HOÀN THÀNH 2026-07-07 (lần 2, đủ dữ liệu): REFUSAL_THRESHOLD 0.70 → 0.725**
 - Sau khi thêm GROQ_API_KEYS rotation (nhiều key, xoay khi rate-limit — `gateway.py`), Tier 2 full-run hoàn thành **70/70 câu, 0 lỗi** (34 answer + 36 refuse).
 - Sweep Youden-optimal: **t=0.725** (refusal recall 0.806→**0.889**, false-refusal giữ nguyên 0.147, Youden 0.742). 0.725 nằm giữa khe hở giữa refuse cao nhất dưới biên (0.7202) và answer thấp nhất trên biên (0.7303) — margin ~0.005 mỗi phía → **coi là tạm thời, recalibrate khi eval set lớn lên**. Override bằng env `CONFIDENCE_REFUSAL_THRESHOLD`.
 - Baseline chất lượng tại 0.70: refusal accuracy criminal 6/7, general 23/29; citation accuracy 0.711.
-- **Vấn đề còn lại lộ ra từ calibration** (không giải quyết được bằng threshold): 4 câu refuse có điểm cao vượt mọi ngưỡng hợp lý — gen-203 (0.8455!), gen-202, gen-301, gen-702 — đều là câu đất đai/dân sự/BHXH retrieval trả về chunk hình sự "có vẻ liên quan". Đây là bài toán **out-of-scope detection** (nhận diện câu hỏi ngoài phạm vi corpus TRƯỚC khi trả lời), không phải bài toán ngưỡng. Outlier phía ngược: crim-302 (answer, 0.435) — câu amendment 2025, đáng soi per-signal. Ứng viên việc tiếp theo.
+- **Vấn đề còn lại lộ ra từ calibration** (không giải quyết được bằng threshold): 4 câu refuse có điểm cao vượt mọi ngưỡng hợp lý — gen-203 (0.8455!), gen-202, gen-301, gen-702 — đều là câu đất đai/dân sự/BHXH retrieval trả về chunk hình sự "có vẻ liên quan". Đây là bài toán **out-of-scope detection** (nhận diện câu hỏi ngoài phạm vi corpus TRƯỚC khi trả lời), không phải bài toán ngưỡng — ✅ ĐÃ GIẢI QUYẾT 2026-07-07, xem block phía trên. Outlier phía ngược: crim-302 (answer, 0.435) — câu amendment 2025, đáng soi per-signal. Ứng viên việc tiếp theo.
 
 **🟡 Ghi chú lần chạy 1 (bị Groq daily cap chặn — đã giải quyết bằng key rotation)**
 - `scripts/calibrate_threshold.py` (sweep t∈[0.30,0.90], Youden index, histogram, outliers) + 18 tests (70 total pass).

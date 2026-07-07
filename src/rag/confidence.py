@@ -61,6 +61,23 @@ REFUSAL_ANSWER = (
     "- Tham khảo ý kiến luật sư để được tư vấn chính xác"
 )
 
+# Out-of-scope refusal — distinct from REFUSAL_ANSWER (which fires AFTER
+# retrieval+generation when the confidence gate isn't satisfied). This one
+# fires BEFORE any retrieval/generation, when the SCOPE gate (merged into the
+# complexity-classifier LLM call — see src/llm/prompts.py
+# COMPLEXITY_CLASSIFIER_PROMPT) decides the question cannot be answered from
+# this corpus at all — no confidence score involved, since retrieval was
+# never even run. `{corpus_summary}` is interpolated with the actual document
+# titles (CitationLookup.corpus_summary()) so the message is never generic.
+OUT_OF_SCOPE_ANSWER_TEMPLATE = (
+    "⚠️ **Câu hỏi này nằm ngoài phạm vi dữ liệu hiện có của tôi.**\n\n"
+    "Cơ sở dữ liệu hiện tại chỉ bao gồm các văn bản pháp luật sau:\n\n"
+    "{corpus_summary}\n\n"
+    "💡 **Gợi ý:**\n"
+    "- Hãy đặt câu hỏi trong phạm vi các văn bản nêu trên (ví dụ: về trách nhiệm hình sự, tội danh, hình phạt)\n"
+    "- Tham khảo ý kiến luật sư hoặc cơ quan chuyên môn để được tư vấn chính xác về lĩnh vực này"
+)
+
 
 @dataclass
 class ConfidenceResult:

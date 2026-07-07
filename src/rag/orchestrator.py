@@ -28,7 +28,7 @@ from src.llm.prompts import (
     COMPLEXITY_CLASSIFIER_PROMPT,
 )
 
-from src.rag.confidence import ConfidenceScorer, REFUSAL_ANSWER
+from src.rag.confidence import ConfidenceScorer, REFUSAL_ANSWER, OUT_OF_SCOPE_ANSWER_TEMPLATE
 from src.rag.verifier import HallucinationVerifier
 from src.rag.citation_lookup import parse_citation, CitationLookup, retrieve_routed
 
@@ -261,8 +261,14 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         if parsed_citation is not None:
             return self._lookup_pipeline(question, start_time)
 
-        # Step 1: Classify query complexity
-        complexity = self._classify(question)
+        # Step 1: Classify query complexity + scope gate (merged into a
+        # single LLM call — see COMPLEXITY_CLASSIFIER_PROMPT). A question
+        # that resolves to real articles via the citation route above is
+        # in-scope by construction and never reaches this gate.
+        complexity, in_scope = self._classify_and_scope(question)
+
+        if not in_scope:
+            return self._out_of_scope_response(question, start_time)
 
         # Step 2-6: Route to appropriate pipeline
         if complexity == "simple":
@@ -271,6 +277,23 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             return self._medium_pipeline(question, start_time)
         else:
             return self._complex_pipeline(question, start_time)
+
+    def _out_of_scope_response(self, question: str, start_time: float) -> RAGResponse:
+        """Refuse immediately, WITHOUT retrieval/generation — the SCOPE gate
+        already determined this corpus cannot answer the question at all."""
+        corpus_summary = self._get_citation_lookup().corpus_summary()
+        answer = OUT_OF_SCOPE_ANSWER_TEMPLATE.format(corpus_summary=corpus_summary)
+        return RAGResponse(
+            answer=answer,
+            citations=[],
+            confidence="low",
+            disclaimer="⚠️ Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.",
+            latency_ms=(time.time() - start_time) * 1000,
+            pipeline_used="out-of-scope",
+            related_questions=[],
+            confidence_score=0.0,
+            refused=True,
+        )
 
     def _lookup_pipeline(self, question: str, start_time: float) -> RAGResponse:
         """LOOKUP: direct metadata lookup for 'Điều N' citations (+ dense fill) → generate.
@@ -301,19 +324,38 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         parsed = self._enrich_response(parsed, conf_result, ver_result)
         return parsed
 
-    def _classify(self, question: str) -> str:
-        """Classify query complexity: simple/medium/complex."""
-        prompt = COMPLEXITY_CLASSIFIER_PROMPT.format(question=question)
+    def _classify_and_scope(self, question: str) -> Tuple[str, bool]:
+        """
+        Combined SCOPE + complexity classification — ONE LLM call (zero added
+        latency/cost vs. the old complexity-only classifier).
+
+        Returns (complexity, in_scope):
+            complexity: "simple" | "medium" | "complex"
+            in_scope: whether the question can be answered from this corpus
+                (see COMPLEXITY_CLASSIFIER_PROMPT for the SCOPE rules).
+
+        Parsing is deliberately lenient: regex-search for SCOPE:/CLASS:
+        rather than exact-match, since the (thinking) model may wrap labels
+        in extra text even after <think> stripping. An unparseable response
+        NEVER blocks the pipeline — it defaults to in_scope=True (fail open)
+        + complexity="medium", so a classifier hiccup degrades to "normal
+        pipeline, maybe wrong route" instead of wrongly refusing a real
+        question outright.
+        """
+        corpus_summary = self._get_citation_lookup().corpus_summary()
+        prompt = COMPLEXITY_CLASSIFIER_PROMPT.format(corpus_summary=corpus_summary, question=question)
         result = self.llm.generate(
-            prompt=prompt, temperature=0, max_tokens=100, reasoning_effort="none",
+            prompt=prompt, temperature=0, max_tokens=150, reasoning_effort="none",
         )
         result = result.strip().upper()
-        # Search rather than exact-match: the (thinking) model may wrap the
-        # label in extra text even after <think> stripping.
-        m = re.search(r'\b(SIMPLE|MEDIUM|COMPLEX)\b', result)
-        if m:
-            return m.group(1).lower()
-        return "medium"  # Safe default
+
+        scope_m = re.search(r'SCOPE\s*:\s*(IN|OUT)\b', result, re.IGNORECASE)
+        class_m = re.search(r'\b(SIMPLE|MEDIUM|COMPLEX)\b', result, re.IGNORECASE)
+
+        in_scope = scope_m.group(1).upper() == "IN" if scope_m else True  # fail open
+        complexity = class_m.group(1).lower() if class_m else "medium"  # safe default
+
+        return complexity, in_scope
 
     def _post_process(self, question: str, answer: str, results: List[SearchResult],
                       context: str, rerank_scores: Optional[List[float]] = None) -> tuple:
@@ -566,9 +608,29 @@ Các câu liên quan (giữ nguyên văn):"""
             resolved_str = ", ".join(resolved_titles) if resolved_titles else "(ambiguous — searched all documents)"
             yield f'__STEP__{json.dumps({"step": "Citation Lookup", "result": f"{article_label} — resolved: {resolved_str}"})}'
         else:
-            # Step 1: Classify query complexity
-            complexity = self._classify(question)
-            yield f'__STEP__{json.dumps({"step": "Classification", "result": complexity.upper()})}'
+            # Step 1: Classify query complexity + scope gate (merged into a
+            # single LLM call — see AdaptiveRAGPipeline._classify_and_scope).
+            complexity, in_scope = self._classify_and_scope(question)
+            scope_label = "IN" if in_scope else "OUT"
+            yield f'__STEP__{json.dumps({"step": "Classification", "result": f"{complexity.upper()} (scope={scope_label})"})}'
+
+            if not in_scope:
+                corpus_summary = self._get_citation_lookup().corpus_summary()
+                answer = OUT_OF_SCOPE_ANSWER_TEMPLATE.format(corpus_summary=corpus_summary)
+                yield f'__STEP__{json.dumps({"step": "Routing", "result": "Out of Scope — refused before retrieval/generation"})}'
+                # Yield the refusal text as normal tokens so the UI displays
+                # it exactly like any other answer (no retrieval/_post_process
+                # ran, so there is nothing else to stream).
+                yield answer
+                verification_payload = {
+                    "confidence_score": 0.0,
+                    "confidence": "low",
+                    "refused": True,
+                    "warnings": [],
+                    "reason": "out_of_scope",
+                }
+                yield f'__VERIFICATION__{json.dumps(verification_payload, ensure_ascii=False)}'
+                return
 
         if complexity == "lookup":
             results, route, _ = retrieve_routed(

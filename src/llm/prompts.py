@@ -66,22 +66,68 @@ Câu hỏi: {question}
 Đoạn mô tả:"""
 
 
-COMPLEXITY_CLASSIFIER_PROMPT = """Phân loại câu hỏi pháp lý tiếng Việt sau vào 1 trong 3 mức:
+# Combined SCOPE + complexity classifier — merged into a single LLM call so
+# out-of-scope detection costs zero added latency/cost (see
+# docs/Danh_Gia_va_Roadmap_Production_2026-07-06.md, "Calibrate ngưỡng
+# confidence": 4 out-of-scope questions scored ABOVE every reasonable
+# confidence threshold because retrieval returns criminal-law chunks that
+# *look* relevant to an out-of-domain question — no confidence signal catches
+# that. A dedicated SCOPE gate, run before retrieval, is the fix; a threshold
+# tweak is not.
+COMPLEXITY_CLASSIFIER_PROMPT = """Bạn nhận một câu hỏi pháp lý tiếng Việt. Nhiệm vụ có 2 phần:
+(1) SCOPE — câu hỏi này có thể trả lời được từ NỘI DUNG các văn bản pháp luật
+liệt kê dưới đây không?
+(2) CLASS — phân loại độ phức tạp của câu hỏi.
 
+CÁC VĂN BẢN PHÁP LUẬT HIỆN CÓ TRONG CƠ SỞ DỮ LIỆU:
+{corpus_summary}
+
+QUY TẮC XÁC ĐỊNH SCOPE (đọc kỹ, có điểm dễ nhầm):
+- Cơ sở dữ liệu chủ yếu là LUẬT HÌNH SỰ, nhưng các bộ luật hình sự chứa nhiều
+  tội danh về hành vi vi phạm trong CÁC LĨNH VỰC KHÁC (đất đai, thuế, môi
+  trường, giao thông...). Vì vậy câu hỏi về TRÁCH NHIỆM HÌNH SỰ / có bị xử lý
+  hình sự / có bị đi tù hay không cho một hành vi — dù hành vi đó thuộc lĩnh
+  vực khác — vẫn là IN scope, vì Bộ luật Hình sự có thể có điều khoản tương ứng.
+- Ngược lại, câu hỏi về THỦ TỤC HÀNH CHÍNH, quy trình xin cấp giấy tờ, hoặc
+  quy định CHUYÊN NGÀNH không liên quan trách nhiệm hình sự — thuộc lĩnh vực
+  KHÔNG có trong danh sách văn bản trên — là OUT of scope, kể cả khi chủ đề
+  nghe "gần" với hình sự.
+- Câu hỏi hoàn toàn không liên quan pháp luật cũng là OUT of scope.
+
+VÍ DỤ (không liên quan câu hỏi thực tế bên dưới, chỉ minh hoạ quy tắc):
+
+Câu hỏi: "Khai thác khoáng sản trái phép có thể bị truy cứu trách nhiệm hình sự không?"
+SCOPE: IN
+CLASS: SIMPLE
+(Hỏi về trách nhiệm HÌNH SỰ cho một hành vi thuộc lĩnh vực khác — Bộ luật Hình sự có tội danh tương ứng nên vẫn IN scope.)
+
+Câu hỏi: "Hồ sơ xin cấp giấy phép khai thác khoáng sản gồm những gì?"
+SCOPE: OUT
+CLASS: SIMPLE
+(Đây là thủ tục hành chính chuyên ngành, không liên quan trách nhiệm hình sự — không văn bản nào trong corpus quy định thủ tục này.)
+
+Câu hỏi: "Đánh người gây thương tích nặng thì bị xử phạt tù bao nhiêu năm?"
+SCOPE: IN
+CLASS: SIMPLE
+(Câu hỏi hình sự thuần túy, nằm trong Bộ luật Hình sự.)
+
+Câu hỏi: "Cuối tuần này có nên đi biển không?"
+SCOPE: OUT
+CLASS: SIMPLE
+(Không liên quan pháp luật.)
+
+ĐỊNH NGHĨA CLASS:
 SIMPLE: hỏi định nghĩa, khái niệm đơn lẻ, yes/no, tra cứu 1 thông tin.
-  VD: "Công ty TNHH là gì?", "Luật hôn nhân gia đình có hiệu lực từ năm nào?"
-
 MEDIUM: so sánh, câu hỏi có điều kiện, tra cứu nhiều khía cạnh nhưng trong cùng 1 văn bản.
-  VD: "Điều kiện ly hôn đơn phương là gì?", "Thủ tục đăng ký kết hôn cần những giấy tờ gì?"
-
 COMPLEX: suy luận nhiều bước, tình huống giả định, cần thông tin từ nhiều văn bản khác nhau.
-  VD: "Tôi muốn mua đất và xây nhà, cần tuân thủ những quy định gì về đất đai và xây dựng?",
-  "Nếu ly hôn và có con dưới 3 tuổi, quyền nuôi con thuộc về ai và thủ tục thế nào?"
 
-Chỉ trả lời 1 từ: SIMPLE, MEDIUM, hoặc COMPLEX.
+Bây giờ hãy trả lời cho câu hỏi thực tế bên dưới. CHỈ trả về đúng 2 dòng theo định dạng
+(luôn điền cả 2 dòng, kể cả khi SCOPE là OUT):
+SCOPE: IN hoặc OUT
+CLASS: SIMPLE, MEDIUM, hoặc COMPLEX
 
 Câu hỏi: {question}
-Phân loại:"""
+SCOPE:"""
 
 
 CONFIDENCE_EVAL_PROMPT = """Đánh giá độ tin cậy của câu trả lời dựa trên tài liệu tham khảo.

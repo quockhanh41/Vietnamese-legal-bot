@@ -144,6 +144,7 @@ class CitationLookup:
         self.vector_store = vector_store
         self._alias_index: Optional[Dict[int, str]] = None
         self._chunks_by_doc: Optional[Dict[int, List]] = None
+        self._corpus_summary: Optional[str] = None
 
     # ── Alias index + chunk cache ───────────────────────────────────
     #
@@ -202,6 +203,20 @@ class CitationLookup:
                 break
         self._alias_index = aliases
         self._chunks_by_doc = chunks_by_doc
+
+    def corpus_summary(self) -> str:
+        """
+        Bullet list of document titles currently in the collection, for use
+        in the SCOPE-gate prompt (src/llm/prompts.py COMPLEXITY_CLASSIFIER_PROMPT)
+        so it never hardcodes doc titles — the corpus can grow without a
+        prompt edit. Built once from the alias index (same source as
+        citation-lookup doc resolution) and cached on the instance.
+        """
+        if self._corpus_summary is None:
+            aliases = self._get_alias_index()
+            titles = sorted({t for t in aliases.values() if t})
+            self._corpus_summary = "\n".join(f"- {t}" for t in titles) if titles else "(không có văn bản nào)"
+        return self._corpus_summary
 
     # ── Doc resolution ─────────────────────────────────────────────
 
