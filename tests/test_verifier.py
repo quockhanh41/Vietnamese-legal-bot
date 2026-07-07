@@ -89,3 +89,117 @@ def test_split_claims_empty_text():
     verifier = HallucinationVerifier()
     assert verifier._split_claims("") == []
     assert verifier._split_claims(None) == []
+
+
+# ── Tier 1.5: Grounding (`[n]` block citations) ──────────────────────────
+#
+# Regression coverage for the "quote-then-answer" grounding feature (roadmap
+# §3.2): SYSTEM_PROMPT now asks the model to cite the numbered context block
+# `[n]` at the end of each "Chi tiết" bullet. `_verify_grounding` checks that
+# (a) every claim's `[n]` actually falls within the retrieved block range,
+# and (b) an "Điều X" mentioned alongside `[n]` is actually present in that
+# block's text. This is an observability signal only — it must never affect
+# `result.passed` (which stays governed solely by contradiction).
+
+CONTEXT_2_BLOCKS = (
+    "[1] Bộ luật Hình sự 2015 — Điều 17 (Chương IV)\n"
+    "Đồng phạm là trường hợp có hai người trở lên cố ý cùng thực hiện tội phạm."
+    "\n\n---\n\n"
+    "[2] Bộ luật Hình sự 2015 — Điều 20 (Chương IV)\n"
+    "Người tổ chức, người thực hành, người xúi giục, người giúp sức đều là đồng phạm."
+)
+
+
+def test_grounding_well_grounded_answer():
+    verifier = HallucinationVerifier()
+    answer = """### 📋 Chi tiết
+- Đồng phạm là trường hợp có từ hai người trở lên cùng cố ý thực hiện tội phạm (Điều 17 BLHS 2015) [1].
+- Người tổ chức, người thực hành đều được coi là đồng phạm (Điều 20 BLHS 2015) [2]."""
+
+    result = _run_grounding(verifier, answer, CONTEXT_2_BLOCKS)
+
+    assert result.grounding_ratio == 1.0
+    assert result.invalid_block_refs == []
+    assert result.ungrounded_article_citations == []
+    assert all(result.grounded_claims)
+
+
+def test_grounding_invalid_block_ref_out_of_range():
+    verifier = HallucinationVerifier()
+    answer = """### 📋 Chi tiết
+- Đồng phạm là trường hợp có từ hai người trở lên cùng cố ý thực hiện tội phạm (Điều 17 BLHS 2015) [1].
+- Một nội dung không có thật được trích dẫn từ nguồn không tồn tại [5]."""
+
+    result = _run_grounding(verifier, answer, CONTEXT_2_BLOCKS)
+
+    assert 5 in result.invalid_block_refs
+    # The claim citing only [5] (out of range for a 2-block context) must not
+    # be counted as grounded.
+    assert result.grounded_claims[1] is False
+    assert result.grounded_claims[0] is True
+
+
+def test_grounding_article_not_in_cited_block():
+    verifier = HallucinationVerifier()
+    # Cites block [1] but references Điều 99, which only exists in block [2]
+    # in this fabricated context (used purely to exercise the mismatch path).
+    context = (
+        "[1] Bộ luật Hình sự 2015 — Điều 17 (Chương IV)\n"
+        "Đồng phạm là trường hợp có hai người trở lên cố ý cùng thực hiện tội phạm."
+        "\n\n---\n\n"
+        "[2] Bộ luật Hình sự 2015 — Điều 99 (Chương IV)\n"
+        "Một quy định khác không liên quan đến đồng phạm."
+    )
+    answer = """### 📋 Chi tiết
+- Đồng phạm còn được quy định tại Điều 99 Bộ luật Hình sự 2015 [1]."""
+
+    result = _run_grounding(verifier, answer, context)
+
+    assert "Điều 99" in result.ungrounded_article_citations
+
+
+def test_grounding_no_block_refs_at_all_backward_compat():
+    """Old-style answers (or the refusal template) carry no `[n]` markers at
+    all — grounding must degrade gracefully, not crash or spuriously warn."""
+    verifier = HallucinationVerifier()
+    answer = """### 📋 Chi tiết
+- Đồng phạm là trường hợp có hai người trở lên cố ý cùng thực hiện tội phạm (Điều 17 BLHS 2015).
+- Người tổ chức là người chủ mưu, cầm đầu việc thực hiện tội phạm."""
+
+    result = _run_grounding(verifier, answer, CONTEXT_2_BLOCKS)
+
+    assert result.grounding_ratio == 0.0
+    assert result.invalid_block_refs == []
+    assert result.ungrounded_article_citations == []
+    assert all(g is False for g in result.grounded_claims)
+
+
+def test_grounding_questions_trailer_never_counted():
+    """The '### Câu hỏi liên quan' trailer must never be treated as a claim,
+    grounded or otherwise — even if it (incorrectly) contained `[n]` markers."""
+    verifier = HallucinationVerifier()
+    answer = """### 📋 Chi tiết
+- Đồng phạm là trường hợp có hai người trở lên cố ý cùng thực hiện tội phạm (Điều 17 BLHS 2015) [1].
+
+### 💡 Câu hỏi liên quan
+- Trách nhiệm hình sự của đồng phạm được quy định như thế nào? [1]
+- Có phân biệt mức hình phạt giữa các loại đồng phạm không? [99]"""
+
+    result = _run_grounding(verifier, answer, CONTEXT_2_BLOCKS)
+
+    # Only the single real "Chi tiết" bullet should be counted as a claim.
+    assert len(result.grounded_claims) == 1
+    assert result.grounding_ratio == 1.0
+    # The bogus [99] ref lives only in the trailer, which must be excluded —
+    # so it must never surface as an invalid ref.
+    assert 99 not in result.invalid_block_refs
+
+
+def _run_grounding(verifier, answer, context):
+    """Helper: exercise `_verify_grounding` directly (pure string logic, no
+    model load) via a fresh VerificationResult, mirroring how `verify()`
+    wires it in."""
+    from src.rag.verifier import VerificationResult
+    result = VerificationResult()
+    verifier._verify_grounding(answer, context, result)
+    return result

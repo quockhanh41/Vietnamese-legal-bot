@@ -32,6 +32,13 @@ class VerificationResult:
     all_citations_valid: bool = False
     invalid_citations: List[str] = field(default_factory=list)
 
+    # Tier 1.5: Grounding — each detail-claim cites a numbered context block [n],
+    # and the cited block actually contains what the claim attributes to it.
+    grounded_claims: List[bool] = field(default_factory=list)
+    grounding_ratio: float = 0.0
+    invalid_block_refs: List[int] = field(default_factory=list)
+    ungrounded_article_citations: List[str] = field(default_factory=list)
+
     # Tier 2: Semantic
     claims: List[str] = field(default_factory=list)
     entailment_labels: List[str] = field(default_factory=list)  # ENTAILMENT/CONTRADICTION/NEUTRAL
@@ -85,6 +92,10 @@ class HallucinationVerifier:
         # since it's built from the same retrieval results as context and would be vacuous).
         self._verify_citations(answer, context, result)
 
+        # Tier 1.5: Grounding — does each claim point at a specific, valid
+        # context block, and does that block actually back the claim?
+        self._verify_grounding(answer, context, result)
+
         # Tier 2: Semantic NLI verification
         self._verify_semantic(answer, context, result)
 
@@ -98,7 +109,18 @@ class HallucinationVerifier:
             result.warnings.append(
                 f"⚠️ {len(result.invalid_citations)} citation(s) not found in retrieved context."
             )
+        if result.invalid_block_refs:
+            result.warnings.append(
+                f"⚠️ {len(result.invalid_block_refs)} trích dẫn nguồn [n] không hợp lệ."
+            )
+        if result.ungrounded_article_citations:
+            result.warnings.append(
+                f"⚠️ {len(result.ungrounded_article_citations)} trích dẫn Điều không khớp với khối nguồn đã dẫn."
+            )
 
+        # Grounding is an observability/quality signal only — it must NOT
+        # change `passed`, which stays governed solely by contradiction (the
+        # calibrated refusal-confidence pipeline depends on that behavior).
         result.passed = not result.has_contradiction
         return result
 
@@ -137,6 +159,90 @@ class HallucinationVerifier:
         # Pattern: "Điều 3." or "Điều 3 " or "Điều 3:" etc.
         pattern = rf'Điều\s+{re.escape(article_num)}\s*[\.:\)\s]'
         return bool(re.search(pattern, context, re.IGNORECASE))
+
+    def _article_in_text(self, article_num: str, text: str) -> bool:
+        """Same check as `_article_in_context` but scoped to an arbitrary
+        text snippet (used to check a single context block)."""
+        return self._article_in_context(article_num, text)
+
+    # ── Tier 1.5: Grounding ─────────────────────────────────────
+
+    # Matches a block header line like "[1] Bộ luật Hình sự 2015 — Điều 17 (...)"
+    # at the start of each `_build_context()` block (src/rag/orchestrator.py).
+    BLOCK_HEADER_PATTERN = re.compile(r'^\[(\d+)\]')
+    BLOCK_REF_PATTERN = re.compile(r'\[(\d+)\]')
+
+    def _parse_context_blocks(self, context: str) -> Dict[int, str]:
+        """
+        Parse the `_build_context()` output — blocks numbered "[i] ..." joined
+        by "\n\n---\n\n" — into an {index: block_text} dict. Derives the block
+        count from what's actually parsed, not from an assumed format.
+        """
+        blocks: Dict[int, str] = {}
+        if not context:
+            return blocks
+
+        for raw_block in context.split('\n\n---\n\n'):
+            raw_block = raw_block.strip()
+            if not raw_block:
+                continue
+            match = self.BLOCK_HEADER_PATTERN.match(raw_block)
+            if not match:
+                continue
+            idx = int(match.group(1))
+            blocks[idx] = raw_block
+
+        return blocks
+
+    def _verify_grounding(self, answer: str, context: str, result: VerificationResult):
+        """
+        Tier 1.5: check that each detail-claim in the answer cites a valid
+        numbered context block [n], and that a block cited alongside an
+        "Điều X" reference actually contains that article.
+
+        Observability-only: does not affect `result.passed`.
+        """
+        blocks = self._parse_context_blocks(context)
+        k = len(blocks)
+
+        claims = self._split_claims(answer)
+        if not claims:
+            result.grounding_ratio = 0.0
+            return
+
+        invalid_refs_seen = set()
+        ungrounded_articles: List[str] = []
+        grounded_flags: List[bool] = []
+
+        for claim in claims:
+            refs = [int(n) for n in self.BLOCK_REF_PATTERN.findall(claim)]
+            valid_refs = [n for n in refs if 1 <= n <= k]
+            invalid_refs = [n for n in refs if not (1 <= n <= k)]
+            invalid_refs_seen.update(invalid_refs)
+
+            is_grounded = len(valid_refs) > 0
+            grounded_flags.append(is_grounded)
+
+            # For each article cited in this claim, verify it's actually
+            # present in (at least one of) the claim's cited block(s).
+            article_nums = self.ARTICLE_PATTERN.findall(claim)
+            if article_nums and valid_refs:
+                for article_num in article_nums:
+                    found_in_any = any(
+                        self._article_in_text(article_num, blocks[n])
+                        for n in valid_refs
+                    )
+                    if not found_in_any:
+                        article_label = f"Điều {article_num}"
+                        if article_label not in ungrounded_articles:
+                            ungrounded_articles.append(article_label)
+
+        result.grounded_claims = grounded_flags
+        result.invalid_block_refs = sorted(invalid_refs_seen)
+        result.ungrounded_article_citations = ungrounded_articles
+        total = len(claims)
+        grounded_count = sum(1 for g in grounded_flags if g)
+        result.grounding_ratio = grounded_count / total if total > 0 else 0.0
 
     # ── Tier 2: Semantic NLI ────────────────────────────────────
 

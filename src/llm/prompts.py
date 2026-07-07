@@ -14,6 +14,14 @@ NGUYÊN TẮC:
    - Câu hỏi liên quan: Đề xuất 3 câu hỏi tiếp theo mà người dùng có thể quan tâm.
 4. TRỌNG TÂM: **Bôi đậm** các từ khóa quan trọng và thuật ngữ pháp lý để dễ đọc.
 5. MỖI ý trả lời nên trích dẫn cụ thể Điều, Khoản bên cạnh nếu có thể.
+6. TRÍCH DẪN NGUỒN THEO SỐ KHỐI [n]: Phần TÀI LIỆU THAM KHẢO bên dưới gồm các
+   khối được đánh số [1], [2], [3]... Ở mỗi gạch đầu dòng trong mục "Chi tiết",
+   CHỈ dùng thông tin có trong các khối đó, và BẮT BUỘC đặt số khối nguồn ở
+   cuối câu, ví dụ: "- Nội dung... (Điều 17 BLHS 2015) [2]". Một ý có thể dựa
+   trên nhiều khối, khi đó ghi liền nhau [2][3]. Nếu không khối nào chứa đủ
+   căn cứ để trả lời, hãy dùng câu từ chối ở mục 2 thay vì đoán. Mục "Câu hỏi
+   liên quan" KHÔNG được gắn số khối [n] — đó là câu hỏi gợi ý, không phải
+   khẳng định cần căn cứ.
 
 BẠN PHẢI TRẢ LỜI BẰNG MARKDOWN THEO CẤU TRÚC SAU (KHÔNG DÙNG JSON):
 
@@ -21,15 +29,15 @@ BẠN PHẢI TRẢ LỜI BẰNG MARKDOWN THEO CẤU TRÚC SAU (KHÔNG DÙNG JSON
 (Câu trả lời tổng quan 1-2 câu)
 
 ### 📋 Chi tiết
-- Ý 1 (Căn cứ Điều X...)
-- Ý 2...
+- Ý 1 (Căn cứ Điều X...) [1]
+- Ý 2... [2][3]
 
 ### 💡 Câu hỏi liên quan
 - Câu hỏi 1?
 - Câu hỏi 2?
 - Câu hỏi 3?
 
-TÀI LIỆU THAM KHẢO:
+TÀI LIỆU THAM KHẢO (mỗi khối được đánh số [n] — trích dẫn đúng số khối làm căn cứ cho từng ý):
 {context}"""
 
 
@@ -144,9 +152,11 @@ CHỈ trả về một số từ 0-100. Không giải thích.
 
 GENERATION_PROMPT = """Dựa trên các tài liệu pháp luật được cung cấp, hãy trả lời câu hỏi sau.
 
-Tài liệu tham khảo:
+Tài liệu tham khảo (mỗi khối được đánh số [1], [2], [3]...):
 {context}
 
 Câu hỏi: {question}
 
-Trả lời bằng tiếng Việt, kèm trích dẫn Điều/Khoản cụ thể. Nếu tài liệu không đủ thông tin, hãy nói rõ."""
+Trả lời bằng tiếng Việt, kèm trích dẫn Điều/Khoản cụ thể. Ở mỗi ý trong mục
+"Chi tiết", ghi thêm số khối nguồn [n] đã dùng làm căn cứ (ví dụ [2] hoặc
+[2][3] nếu dùng nhiều khối). Nếu tài liệu không đủ thông tin, hãy nói rõ."""
