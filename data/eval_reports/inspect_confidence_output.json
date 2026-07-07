@@ -101,28 +101,27 @@
       }
     ],
     "rerank_scores": null,
-    "raw_answer": "### 💬 Trả lời ngắn  \n**Đồng phạm** là những người tham gia cùng nhau thực hiện tội phạm, bao gồm người tổ chức, người thực hành, người xúi giục và người giúp sức.  \n\n### 📋 Chi tiết  \n- **Điều 20 Bộ Luật Hình sự 1999**:  \n  - Đồng phạm bao gồm **người tổ chức**, **người thực hành**, **người xúi giục**, **người giúp sức**.  \n  - **Người thực hành** là người trực tiếp thực hiện tội phạm.  \n  - **Người tổ chức** là người chủ mưu, cầm đầu, chỉ huy việc thực hiện tội phạm.  \n  - **Người xúi giục** là người kích động, dụ dỗ, thúc đẩy người khác thực hiện tội phạm.  \n  - **Người giúp sức** là người tạo điều kiện tinh thần hoặc vật chất cho việc thực hiện tội phạm.  \n\n- **Điều 17.3 Bộ luật hình sự 2015**:  \n  - Xác định rõ các loại đồng phạm tương tự như quy định tại Bộ Luật Hình sự 1999.  \n\n### 💡 Câu hỏi liên quan  \n- Người giúp sức trong đồng phạm có bị xử lý như thế nào?  \n- Đồng phạm có phải chịu trách nhiệm hình sự như nhau không?  \n- Trường hợp người tự ý chấm dứt việc phạm tội trong đồng phạm được xử lý thế nào?",
-    "final_answer": "### 💬 Trả lời ngắn  \n**Đồng phạm** là những người tham gia cùng nhau thực hiện tội phạm, bao gồm người tổ chức, người thực hành, người xúi giục và người giúp sức.  \n\n### 📋 Chi tiết  \n- **Điều 20 Bộ Luật Hình sự 1999**:  \n  - Đồng phạm bao gồm **người tổ chức**, **người thực hành**, **người xúi giục**, **người giúp sức**.  \n  - **Người thực hành** là người trực tiếp thực hiện tội phạm.  \n  - **Người tổ chức** là người chủ mưu, cầm đầu, chỉ huy việc thực hiện tội phạm.  \n  - **Người xúi giục** là người kích động, dụ dỗ, thúc đẩy người khác thực hiện tội phạm.  \n  - **Người giúp sức** là người tạo điều kiện tinh thần hoặc vật chất cho việc thực hiện tội phạm.  \n\n- **Điều 17.3 Bộ luật hình sự 2015**:  \n  - Xác định rõ các loại đồng phạm tương tự như quy định tại Bộ Luật Hình sự 1999.  \n\n### 💡 Câu hỏi liên quan  \n- Người giúp sức trong đồng phạm có bị xử lý như thế nào?  \n- Đồng phạm có phải chịu trách nhiệm hình sự như nhau không?  \n- Trường hợp người tự ý chấm dứt việc phạm tội trong đồng phạm được xử lý thế nào?",
+    "raw_answer": "### 💬 Trả lời ngắn\n**Đồng phạm** là những người tham gia cùng nhau thực hiện tội phạm, bao gồm **người tổ chức, người thực hành, người xúi giục, người giúp sức**, được quy định tại **Điều 18 Bộ luật Hình sự 2015** và **Điều 20 Bộ luật Hình sự 1999**.\n\n### 📋 Chi tiết\n- **Người tổ chức**: Là người chủ mưu, cầm đầu, chỉ huy việc thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Người thực hành**: Là người trực tiếp thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Người xúi giục**: Là người kích động, dụ dỗ, thúc đẩy người khác thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Người giúp sức**: Là người tạo điều kiện tinh thần hoặc vật chất cho việc thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Căn cứ pháp lý**:  \n  - **Điều 18 BLHS 2015** (che giấu tội phạm) và **Điều 20 BLHS 1999** (đồng phạm) đều quy định rõ các loại hình đồng phạm.  \n  - **Điều 53 BLHS 1999** hướng dẫn về việc quyết định hình phạt đối với đồng phạm, dựa trên vai trò và mức độ tham gia.\n\n### 💡 Câu hỏi liên quan\n- Vai trò của từng loại đồng phạm (tổ chức, xúi giục, giúp sức) được phân biệt như thế nào?  \n- Đồng phạm có phải chịu trách nhiệm hình sự như nhau không?  \n- Trường hợp người đồng phạm tự thú hoặc đầu thú được xử lý thế nào theo pháp luật?",
+    "final_answer": "### 💬 Trả lời ngắn\n**Đồng phạm** là những người tham gia cùng nhau thực hiện tội phạm, bao gồm **người tổ chức, người thực hành, người xúi giục, người giúp sức**, được quy định tại **Điều 18 Bộ luật Hình sự 2015** và **Điều 20 Bộ luật Hình sự 1999**.\n\n### 📋 Chi tiết\n- **Người tổ chức**: Là người chủ mưu, cầm đầu, chỉ huy việc thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Người thực hành**: Là người trực tiếp thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Người xúi giục**: Là người kích động, dụ dỗ, thúc đẩy người khác thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Người giúp sức**: Là người tạo điều kiện tinh thần hoặc vật chất cho việc thực hiện tội phạm (Điều 18 BLHS 2015).  \n- **Căn cứ pháp lý**:  \n  - **Điều 18 BLHS 2015** (che giấu tội phạm) và **Điều 20 BLHS 1999** (đồng phạm) đều quy định rõ các loại hình đồng phạm.  \n  - **Điều 53 BLHS 1999** hướng dẫn về việc quyết định hình phạt đối với đồng phạm, dựa trên vai trò và mức độ tham gia.\n\n### 💡 Câu hỏi liên quan\n- Vai trò của từng loại đồng phạm (tổ chức, xúi giục, giúp sức) được phân biệt như thế nào?  \n- Đồng phạm có phải chịu trách nhiệm hình sự như nhau không?  \n- Trường hợp người đồng phạm tự thú hoặc đầu thú được xử lý thế nào theo pháp luật?",
     "refused": false,
     "verifier": {
       "citation_validity": [
+        true,
         true,
         true
       ],
       "invalid_citations": [],
       "claims": [
-        "Đồng phạm là những người tham gia cùng nhau thực hiện tội phạm, bao gồm người tổ chức, người thực hành, người xúi giục và người giúp sức.",
-        "Điều 20 Bộ Luật Hình sự 1999:",
-        "Đồng phạm bao gồm người tổ chức, người thực hành, người xúi giục, người giúp sức.",
-        "Người thực hành là người trực tiếp thực hiện tội phạm.",
-        "Người tổ chức là người chủ mưu, cầm đầu, chỉ huy việc thực hiện tội phạm.",
-        "Người xúi giục là người kích động, dụ dỗ, thúc đẩy người khác thực hiện tội phạm.",
-        "Người giúp sức là người tạo điều kiện tinh thần hoặc vật chất cho việc thực hiện tội phạm.",
-        "Điều 17.3 Bộ luật hình sự 2015:",
-        "Xác định rõ các loại đồng phạm tương tự như quy định tại Bộ Luật Hình sự 1999."
+        "Đồng phạm là những người tham gia cùng nhau thực hiện tội phạm, bao gồm người tổ chức, người thực hành, người xúi giục, người giúp sức, được quy định tại Điều 18 Bộ luật Hình sự 2015 và Điều 20 Bộ luật Hình sự 1999.",
+        "Người tổ chức: Là người chủ mưu, cầm đầu, chỉ huy việc thực hiện tội phạm (Điều 18 BLHS 2015).",
+        "Người thực hành: Là người trực tiếp thực hiện tội phạm (Điều 18 BLHS 2015).",
+        "Người xúi giục: Là người kích động, dụ dỗ, thúc đẩy người khác thực hiện tội phạm (Điều 18 BLHS 2015).",
+        "Người giúp sức: Là người tạo điều kiện tinh thần hoặc vật chất cho việc thực hiện tội phạm (Điều 18 BLHS 2015).",
+        "Căn cứ pháp lý:",
+        "Điều 18 BLHS 2015 (che giấu tội phạm) và Điều 20 BLHS 1999 (đồng phạm) đều quy định rõ các loại hình đồng phạm.",
+        "Điều 53 BLHS 1999 hướng dẫn về việc quyết định hình phạt đối với đồng phạm, dựa trên vai trò và mức độ tham gia."
       ],
       "entailment_labels": [
-        "NEUTRAL",
         "NEUTRAL",
         "NEUTRAL",
         "NEUTRAL",
@@ -256,9 +255,9 @@
       }
     ],
     "rerank_scores": null,
-    "raw_answer": "### 💬 Trả lời ngắn\nNgười 15 tuổi trộm cắp tài sản trị giá 60 triệu đồng **không bị truy cứu trách nhiệm hình sự** vì tội trộm cắp tài sản không thuộc danh sách tội phạm mà người từ đủ 14 tuổi đến dưới 16 tuổi phải chịu trách nhiệm hình sự theo **Điều 12.2 Bộ luật Hình sự 2015**.\n\n### 📋 Chi tiết\n- **Điều 12.2 Bộ luật Hình sự 2015** quy định người từ đủ 14 tuổi đến dưới 16 tuổi chỉ chịu trách nhiệm hình sự về một số tội danh cụ thể, **không bao gồm tội trộm cắp tài sản** (trích tài liệu [5]).  \n- **Điều 91.3 Bộ luật Hình sự 2015** (tài liệu [10]) nêu rõ việc truy cứu trách nhiệm hình sự đối với người dưới 18 tuổi chỉ được thực hiện khi cần thiết, nhưng **tội trộm cắp tài sản không thuộc phạm vi trách nhiệm hình sự của người 15 tuổi** theo quy định hiện hành.  \n- **Điều 173 Bộ luật Hình sự 2015** (tài liệu [1]-[9]) quy định mức hình phạt cho tội trộm cắp tài sản, nhưng **không áp dụng cho người dưới 16 tuổi** nếu không thuộc trường hợp được quy định tại Điều 12.2.\n\n### 💡 Câu hỏi liên quan\n- Người 15 tuổi phạm tội cướp tài sản có bị truy cứu trách nhiệm hình sự không?  \n- Điều kiện nào để miễn trách nhiệm hình sự cho người dưới 18 tuổi phạm tội?  \n- Mức xử phạt hành chính đối với người dưới 16 tuổi trộm cắp tài sản là gì?",
-    "final_answer": "### 💬 Trả lời ngắn\nNgười 15 tuổi trộm cắp tài sản trị giá 60 triệu đồng **không bị truy cứu trách nhiệm hình sự** vì tội trộm cắp tài sản không thuộc danh sách tội phạm mà người từ đủ 14 tuổi đến dưới 16 tuổi phải chịu trách nhiệm hình sự theo **Điều 12.2 Bộ luật Hình sự 2015**.\n\n### 📋 Chi tiết\n- **Điều 12.2 Bộ luật Hình sự 2015** quy định người từ đủ 14 tuổi đến dưới 16 tuổi chỉ chịu trách nhiệm hình sự về một số tội danh cụ thể, **không bao gồm tội trộm cắp tài sản** (trích tài liệu [5]).  \n- **Điều 91.3 Bộ luật Hình sự 2015** (tài liệu [10]) nêu rõ việc truy cứu trách nhiệm hình sự đối với người dưới 18 tuổi chỉ được thực hiện khi cần thiết, nhưng **tội trộm cắp tài sản không thuộc phạm vi trách nhiệm hình sự của người 15 tuổi** theo quy định hiện hành.  \n- **Điều 173 Bộ luật Hình sự 2015** (tài liệu [1]-[9]) quy định mức hình phạt cho tội trộm cắp tài sản, nhưng **không áp dụng cho người dưới 16 tuổi** nếu không thuộc trường hợp được quy định tại Điều 12.2.\n\n### 💡 Câu hỏi liên quan\n- Người 15 tuổi phạm tội cướp tài sản có bị truy cứu trách nhiệm hình sự không?  \n- Điều kiện nào để miễn trách nhiệm hình sự cho người dưới 18 tuổi phạm tội?  \n- Mức xử phạt hành chính đối với người dưới 16 tuổi trộm cắp tài sản là gì?",
-    "refused": false,
+    "raw_answer": "### 💬 Trả lời ngắn  \nNgười 15 tuổi trộm cắp tài sản trị giá 60 triệu đồng **có thể bị truy cứu trách nhiệm hình sự** theo quy định tại **Điều 12.2 và Điều 173.2 Bộ luật Hình sự 2015**, nhưng việc xử lý sẽ tuân thủ nguyên tắc giáo dục, bảo đảm lợi ích tốt nhất cho người dưới 18 tuổi.\n\n---\n\n### 📋 Chi tiết  \n- **Tuổi chịu trách nhiệm hình sự**: Người từ đủ 14 tuổi đến dưới 16 tuổi chỉ chịu trách nhiệm hình sự về **tội trộm cắp tài sản** nếu hành vi phạm tội thuộc trường hợp quy định tại **Điều 12.2 Bộ luật Hình sự 2015**.  \n- **Giá trị tài sản**: Trộm cắp tài sản trị giá **60 triệu đồng** thuộc trường hợp **\"chiếm đoạt tài sản trị giá từ 50.000.000 đồng đến dưới 200.000.000 đồng\"** quy định tại **Điều 173.2**.  \n- **Hình phạt**: Phạm tội thuộc trường hợp này bị phạt **tù từ 02 năm đến 07 năm**.  \n- **Nguyên tắc xử lý người dưới 18 tuổi**:  \n  - Việc truy cứu trách nhiệm hình sự chỉ được thực hiện **\"trong trường hợp cần thiết\"** và phải căn cứ vào nhân thân, tính chất hành vi, yêu cầu phòng ngừa tội phạm (**Điều 91.3**).  \n  - Có thể áp dụng biện pháp giáo dục thay vì hình phạt nếu người phạm tội có nhiều tình tiết giảm nhẹ, tự nguyện khắc phục hậu quả (**Điều 91.2**).  \n\n---\n\n### 💡 Câu hỏi liên quan  \n- Người dưới 16 tuổi phạm tội trộm cắp tài sản có thể bị phạt tiền thay vì phạt tù không?  \n- Giá trị tài sản nào được coi là \"rất nghiêm trọng\" để áp dụng hình phạt cao hơn?  \n- Có thể áp dụng biện pháp hòa giải tại cộng đồng thay vì truy cứu trách nhiệm hình sự với người dưới 18 tuổi không?",
+    "final_answer": "⚠️ **Tôi không tìm thấy đủ thông tin chính xác để trả lời câu hỏi này.**\n\nMặc dù tôi đã tìm kiếm trong cơ sở dữ liệu, nhưng thông tin tìm được không đủ độ tin cậy để đưa ra câu trả lời chính xác.\n\n💡 **Gợi ý:**\n- Hãy thử diễn đạt lại câu hỏi của bạn\n- Đề cập cụ thể tên văn bản pháp luật hoặc điều khoản\n- Tham khảo ý kiến luật sư để được tư vấn chính xác",
+    "refused": true,
     "verifier": {
       "citation_validity": [
         true,
@@ -267,31 +266,35 @@
       ],
       "invalid_citations": [],
       "claims": [
-        "Người 15 tuổi trộm cắp tài sản trị giá 60 triệu đồng không bị truy cứu trách nhiệm hình sự vì tội trộm cắp tài sản không thuộc danh sách tội phạm mà người từ đủ 14 tuổi đến dưới 16 tuổi phải chịu trách nhiệm hình sự theo Điều 12.2 Bộ luật Hình sự 2015.",
-        "Điều 12.2 Bộ luật Hình sự 2015 quy định người từ đủ 14 tuổi đến dưới 16 tuổi chỉ chịu trách nhiệm hình sự về một số tội danh cụ thể, không bao gồm tội trộm cắp tài sản (trích tài liệu [5]).",
-        "Điều 91.3 Bộ luật Hình sự 2015 (tài liệu [10]) nêu rõ việc truy cứu trách nhiệm hình sự đối với người dưới 18 tuổi chỉ được thực hiện khi cần thiết, nhưng tội trộm cắp tài sản không thuộc phạm vi trách nhiệm hình sự của người 15 tuổi theo quy định hiện hành.",
-        "Điều 173 Bộ luật Hình sự 2015 (tài liệu [1]-[9]) quy định mức hình phạt cho tội trộm cắp tài sản, nhưng không áp dụng cho người dưới 16 tuổi nếu không thuộc trường hợp được quy định tại Điều 12.2."
+        "Người 15 tuổi trộm cắp tài sản trị giá 60 triệu đồng có thể bị truy cứu trách nhiệm hình sự theo quy định tại Điều 12.2 và Điều 173.2 Bộ luật Hình sự 2015, nhưng việc xử lý sẽ tuân thủ nguyên tắc giáo dục, bảo đảm lợi ích tốt nhất cho người dưới 18 tuổi.",
+        "Tuổi chịu trách nhiệm hình sự: Người từ đủ 14 tuổi đến dưới 16 tuổi chỉ chịu trách nhiệm hình sự về tội trộm cắp tài sản nếu hành vi phạm tội thuộc trường hợp quy định tại Điều 12.2 Bộ luật Hình sự 2015.",
+        "Giá trị tài sản: Trộm cắp tài sản trị giá 60 triệu đồng thuộc trường hợp \"chiếm đoạt tài sản trị giá từ 50.000.000 đồng đến dưới 200.000.000 đồng\" quy định tại Điều 173.2.",
+        "Hình phạt: Phạm tội thuộc trường hợp này bị phạt tù từ 02 năm đến 07 năm.",
+        "Nguyên tắc xử lý người dưới 18 tuổi:",
+        "Việc truy cứu trách nhiệm hình sự chỉ được thực hiện \"trong trường hợp cần thiết\" và phải căn cứ vào nhân thân, tính chất hành vi, yêu cầu phòng ngừa tội phạm (Điều 91.3).",
+        "Có thể áp dụng biện pháp giáo dục thay vì hình phạt nếu người phạm tội có nhiều tình tiết giảm nhẹ, tự nguyện khắc phục hậu quả (Điều 91.2)."
       ],
       "entailment_labels": [
-        "CONTRADICTION",
-        "CONTRADICTION",
-        "CONTRADICTION",
+        "NEUTRAL",
+        "NEUTRAL",
+        "NEUTRAL",
+        "ENTAILMENT",
+        "NEUTRAL",
+        "NEUTRAL",
         "NEUTRAL"
       ],
-      "entailment_ratio": 0.0,
-      "contradiction_ratio": 0.75,
-      "warnings": [
-        "⚠️ 75% of claims contradicted by source documents."
-      ]
+      "entailment_ratio": 0.14285714285714285,
+      "contradiction_ratio": 0.0,
+      "warnings": []
     },
     "confidence": {
       "retriever_score": 0.64623713,
       "reranker_score": 0.0,
-      "llm_self_eval_score": 1.0,
-      "context_overlap_score": 0.9230769230769231,
-      "entailment_score": 0.0,
-      "score": 0.7500260262019232,
-      "refused": false
+      "llm_self_eval_score": 0.85,
+      "context_overlap_score": 0.9411764705882353,
+      "entailment_score": 0.14285714285714285,
+      "score": 0.7150268342174368,
+      "refused": true
     }
   },
   "crim-202": {
@@ -309,48 +312,6 @@
     ],
     "retrieved": [
       {
-        "document_id": 46056,
-        "document_title": "Bộ Luật Hình sự 1999",
-        "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
-        "score": 0.8333
-      },
-      {
-        "document_id": 46056,
-        "document_title": "Bộ Luật Hình sự 1999",
-        "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
-        "score": 0.8333
-      },
-      {
-        "document_id": 296661,
-        "document_title": "Bộ luật hình sự 2015",
-        "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
-        "score": 0.4167
-      },
-      {
-        "document_id": 296661,
-        "document_title": "Bộ luật hình sự 2015",
-        "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
-        "score": 0.4
-      },
-      {
-        "document_id": 296661,
-        "document_title": "Bộ luật hình sự 2015",
-        "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
-        "score": 0.3929
-      },
-      {
-        "document_id": 46056,
-        "document_title": "Bộ Luật Hình sự 1999",
-        "article": "Điều 138. Tội trộm cắp tài sản",
-        "score": 0.2917
-      },
-      {
-        "document_id": 46056,
-        "document_title": "Bộ Luật Hình sự 1999",
-        "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
-        "score": 0.2679
-      },
-      {
         "document_id": 296661,
         "document_title": "Bộ luật hình sự 2015",
         "article": "Điều 389. Tội che giấu tội phạm",
@@ -360,13 +321,13 @@
         "document_id": 296661,
         "document_title": "Bộ luật hình sự 2015",
         "article": "Điều 173. Tội trộm cắp tài sản",
-        "score": 0.2
+        "score": 0.1944
       },
       {
-        "document_id": 296661,
-        "document_title": "Bộ luật hình sự 2015",
-        "article": "Điều 173. Tội trộm cắp tài sản",
-        "score": 0.1944
+        "document_id": 46056,
+        "document_title": "Bộ Luật Hình sự 1999",
+        "article": "Điều 138. Tội trộm cắp tài sản",
+        "score": 0.2917
       },
       {
         "document_id": 296661,
@@ -377,14 +338,32 @@
       {
         "document_id": 46056,
         "document_title": "Bộ Luật Hình sự 1999",
-        "article": "Điều 278. Tội tham ô tài sản",
-        "score": 0.1245
+        "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+        "score": 0.8333
+      },
+      {
+        "document_id": 296661,
+        "document_title": "Bộ luật hình sự 2015",
+        "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+        "score": 0.3929
+      },
+      {
+        "document_id": 296661,
+        "document_title": "Bộ luật hình sự 2015",
+        "article": "Điều 173. Tội trộm cắp tài sản",
+        "score": 0.2
       },
       {
         "document_id": 46056,
         "document_title": "Bộ Luật Hình sự 1999",
         "article": "Điều 140. Tội lạm dụng tín nhiệm chiếm đoạt tài sản",
         "score": 0.1222
+      },
+      {
+        "document_id": 296661,
+        "document_title": "Bộ luật hình sự 2015",
+        "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+        "score": 0.4167
       },
       {
         "document_id": 46056,
@@ -397,10 +376,50 @@
         "document_title": "Bộ luật hình sự 2015",
         "article": "Điều 170. Tội cưỡng đoạt tài sản",
         "score": 0.1063
+      },
+      {
+        "document_id": 296661,
+        "document_title": "Bộ luật hình sự 2015",
+        "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+        "score": 0.4
+      },
+      {
+        "document_id": 46056,
+        "document_title": "Bộ Luật Hình sự 1999",
+        "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+        "score": 0.8333
+      },
+      {
+        "document_id": 46056,
+        "document_title": "Bộ Luật Hình sự 1999",
+        "article": "Điều 278. Tội tham ô tài sản",
+        "score": 0.1245
+      },
+      {
+        "document_id": 46056,
+        "document_title": "Bộ Luật Hình sự 1999",
+        "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+        "score": 0.2679
       }
     ],
-    "rerank_scores": null,
-    "raw_answer": "### 💬 Trả lời ngắn  \n**Tội trộm cắp tài sản** và **tội lừa đảo chiếm đoạt tài sản** khác nhau về **phương thức thực hiện**, **đặc điểm pháp lý**, và **hệ quả pháp lý**. Cụ thể, trộm cắp là chiếm đoạt tài sản **bằng thủ đoạn bí mật**, còn lừa đảo là chiếm đoạt **bằng thủ đoạn gian dối**.\n\n---\n\n### 📋 Chi tiết  \n- **Phương thức thực hiện**:  \n  - **Trộm cắp**: Được quy định tại **Điều 173 BLHS 2015**, nhấn mạnh việc chiếm đoạt tài sản **bằng thủ đoạn bí mật** (ví dụ: lấy tài sản khi người khác không biết).  \n  - **Lừa đảo**: Theo **Điều 174 BLHS 2015**, yêu cầu **thủ đoạn gian dối** (ví dụ: giả danh, tạo tình huống giả để chiếm đoạt tài sản).  \n\n- **Đặc điểm pháp lý**:  \n  - **Trộm cắp**: Không cần yếu tố \"định trước\" chiếm đoạt, chỉ cần hành vi bí mật.  \n  - **Lừa đảo**: Phải có **ý định chiếm đoạt từ trước** và sử dụng **thủ đoạn gian dối** để lừa người khác giao tài sản.  \n\n- **Hệ quả pháp lý**:  \n  - **Trộm cắp**:  \n    - Khoản 2 Điều 173: Phạm tội có tổ chức hoặc dùng thủ đoạn xảo quyệt bị phạt **2–7 năm**.  \n    - Khoản 4 Điều 173: Chiếm đoạt tài sản trị giá **500 triệu đồng trở lên** bị phạt **12–20 năm hoặc tù chung thân**.  \n  - **Lừa đảo**:  \n    - Khoản 2 Điều 174: Chiếm đoạt tài sản trị giá **50–200 triệu đồng** hoặc có tổ chức bị phạt **2–7 năm**.  \n    - Khoản 4 Điều 174: Chiếm đoạt tài sản **500 triệu đồng trở lên** bị phạt **12–20 năm hoặc tù chung thân**.  \n\n- **Các tình tiết tăng nặng đặc biệt**:  \n  - **Trộm cắp**: Hành hung để tẩu thoát (Điều 173.2).  \n  - **Lừa đảo**: Lợi dụng chức vụ, quyền hạn (Điều 174.2) hoặc gây hậu quả đặc biệt nghiêm trọng (Điều 174.4).  \n\n---\n\n### 💡 Câu hỏi liên quan  \n- Tội lừa đảo chiếm đoạt tài sản có bị xử lý nghiêm hơn nếu lợi dụng chức vụ không?  \n- Mức phạt cho tội trộm cắp tài sản trị giá dưới 2 triệu đồng được quy định như thế nào?  \n- Có phân biệt tội lừa đảo và tội lạm dụng tín nhiệm chiếm đoạt tài sản không?  \n\n--- \n\n**Lưu ý**: Các quy định cụ thể được trích dẫn từ **Bộ luật Hình sự 2015** (Điều 173 và 174). Nếu cần so sánh với Bộ luật 1999, vui lòng cung cấp thêm yêu cầu.",
+    "rerank_scores": [
+      0.8082186275507353,
+      0.3005402500874359,
+      0.29492522086902917,
+      0.256459376834781,
+      0.25036253776641,
+      0.15947904162777593,
+      0.0968765405938641,
+      0.06608537866754877,
+      0.056966382144208905,
+      0.0499585240665846,
+      0.03628829766475822,
+      0.03608394261296688,
+      0.030100337240429473,
+      0.0162774609127135,
+      0.0033244368916556374
+    ],
+    "raw_answer": "### 💬 Trả lời ngắn\n**Tội trộm cắp tài sản** (Điều 173 BLHS 2015) và **tội lừa đảo chiếm đoạt tài sản** (Điều 174 BLHS 2015) khác nhau về **phương thức thực hiện**, **điều kiện định tội**, và **hình phạt**. Cụ thể:\n\n### 📋 Chi tiết\n- **Phương thức thực hiện**:\n  - **Trộm cắp**: Lấy tài sản của người khác **bằng thủ đoạn tinh vi, bí mật** (ví dụ: trộm đồ khi người khác không để ý) (Điều 173 Khoản 1).\n  - **Lừa đảo**: Sử dụng **thủ đoạn gian dối** (ví dụ: giả danh, lừa đảo qua mạng) để chiếm đoạt tài sản (Điều 174 Khoản 1).\n  \n- **Điều kiện định tội**:\n  - **Trộm cắp**: Áp dụng khi tài sản trị giá **từ 2.000.000 đồng trở lên** hoặc dưới ngưỡng này nhưng có tình tiết đặc biệt (Điều 173 Khoản 1).\n  - **Lừa đảo**: Áp dụng khi tài sản trị giá **từ 2.000.000 đồng trở lên** hoặc dưới ngưỡng này nhưng có tình tiết đặc biệt (Điều 174 Khoản 1).\n\n- **Hình phạt**:\n  - **Trộm cắp**:\n    - Trị giá **500.000.000 đồng trở lên**: Phạt từ **12–20 năm** (Điều 173 Khoản 4).\n    - Trị giá **200.000.000–500.000.000 đồng** với tình tiết đặc biệt: Phạt từ **12–20 năm** (Điều 173 Khoản 4).\n  - **Lừa đảo**:\n    - Trị giá **500.000.000 đồng trở lên**: Phạt từ **12–20 năm hoặc tù chung thân** (Điều 174 Khoản 4).\n    - Trị giá **200.000.000–500.000.000 đồng** với tình tiết đặc biệt: Phạt từ **12–20 năm** (Điều 174 Khoản 4).\n\n- **Tình tiết tăng nặng**:\n  - **Trộm cắp**: Có tổ chức, dùng thủ đoạn nguy hiểm, hành hung để tẩu thoát (Điều 173 Khoản 2).\n  - **Lừa đảo**: Lợi dụng hoàn cảnh chiến tranh, tình trạng khẩn cấp, hoặc lợi dụng chức vụ (Điều 174 Khoản 2, 4).\n\n### 💡 Câu hỏi liên quan\n- Tội trộm cắp tài sản có bị xử lý nghiêm hơn nếu tái phạm không?\n- Làm thế nào để phân biệt tội lừa đảo với tội lạm dụng tín nhiệm chiếm đoạt tài sản?\n- Có quy định nào về phạt tiền kèm theo đối với hai tội này không?",
     "final_answer": "⚠️ **Tôi không tìm thấy đủ thông tin chính xác để trả lời câu hỏi này.**\n\nMặc dù tôi đã tìm kiếm trong cơ sở dữ liệu, nhưng thông tin tìm được không đủ độ tin cậy để đưa ra câu trả lời chính xác.\n\n💡 **Gợi ý:**\n- Hãy thử diễn đạt lại câu hỏi của bạn\n- Đề cập cụ thể tên văn bản pháp luật hoặc điều khoản\n- Tham khảo ý kiến luật sư để được tư vấn chính xác",
     "refused": true,
     "verifier": {
@@ -410,56 +429,56 @@
       ],
       "invalid_citations": [],
       "claims": [
-        "Tội trộm cắp tài sản và tội lừa đảo chiếm đoạt tài sản khác nhau về phương thức thực hiện, đặc điểm pháp lý, và hệ quả pháp lý.",
-        "Cụ thể, trộm cắp là chiếm đoạt tài sản bằng thủ đoạn bí mật, còn lừa đảo là chiếm đoạt bằng thủ đoạn gian dối.",
+        "Tội trộm cắp tài sản (Điều 173 BLHS 2015) và tội lừa đảo chiếm đoạt tài sản (Điều 174 BLHS 2015) khác nhau về phương thức thực hiện, điều kiện định tội, và hình phạt.",
         "Phương thức thực hiện:",
-        "Trộm cắp: Được quy định tại Điều 173 BLHS 2015, nhấn mạnh việc chiếm đoạt tài sản bằng thủ đoạn bí mật (ví dụ: lấy tài sản khi người khác không biết).",
-        "Lừa đảo: Theo Điều 174 BLHS 2015, yêu cầu thủ đoạn gian dối (ví dụ: giả danh, tạo tình huống giả để chiếm đoạt tài sản).",
-        "Đặc điểm pháp lý:",
-        "Trộm cắp: Không cần yếu tố \"định trước\" chiếm đoạt, chỉ cần hành vi bí mật.",
-        "Lừa đảo: Phải có ý định chiếm đoạt từ trước và sử dụng thủ đoạn gian dối để lừa người khác giao tài sản.",
-        "Hệ quả pháp lý:",
+        "Trộm cắp: Lấy tài sản của người khác bằng thủ đoạn tinh vi, bí mật (ví dụ: trộm đồ khi người khác không để ý) (Điều 173 Khoản 1).",
+        "Lừa đảo: Sử dụng thủ đoạn gian dối (ví dụ: giả danh, lừa đảo qua mạng) để chiếm đoạt tài sản (Điều 174 Khoản 1).",
+        "Điều kiện định tội:",
+        "Trộm cắp: Áp dụng khi tài sản trị giá từ 2.000.000 đồng trở lên hoặc dưới ngưỡng này nhưng có tình tiết đặc biệt (Điều 173 Khoản 1).",
+        "Lừa đảo: Áp dụng khi tài sản trị giá từ 2.000.000 đồng trở lên hoặc dưới ngưỡng này nhưng có tình tiết đặc biệt (Điều 174 Khoản 1).",
+        "Hình phạt:",
         "Trộm cắp:",
-        "Khoản 2 Điều 173: Phạm tội có tổ chức hoặc dùng thủ đoạn xảo quyệt bị phạt 2–7 năm.",
-        "Khoản 4 Điều 173: Chiếm đoạt tài sản trị giá 500 triệu đồng trở lên bị phạt 12–20 năm hoặc tù chung thân.",
+        "Trị giá 500.000.000 đồng trở lên: Phạt từ 12–20 năm (Điều 173 Khoản 4).",
+        "Trị giá 200.000.000–500.000.000 đồng với tình tiết đặc biệt: Phạt từ 12–20 năm (Điều 173 Khoản 4).",
         "Lừa đảo:",
-        "Khoản 2 Điều 174: Chiếm đoạt tài sản trị giá 50–200 triệu đồng hoặc có tổ chức bị phạt 2–7 năm.",
-        "Khoản 4 Điều 174: Chiếm đoạt tài sản 500 triệu đồng trở lên bị phạt 12–20 năm hoặc tù chung thân.",
-        "Các tình tiết tăng nặng đặc biệt:",
-        "Trộm cắp: Hành hung để tẩu thoát (Điều 173.2).",
-        "Lừa đảo: Lợi dụng chức vụ, quyền hạn (Điều 174.2) hoặc gây hậu quả đặc biệt nghiêm trọng (Điều 174.4)."
+        "Trị giá 500.000.000 đồng trở lên: Phạt từ 12–20 năm hoặc tù chung thân (Điều 174 Khoản 4).",
+        "Trị giá 200.000.000–500.000.000 đồng với tình tiết đặc biệt: Phạt từ 12–20 năm (Điều 174 Khoản 4).",
+        "Tình tiết tăng nặng:",
+        "Trộm cắp: Có tổ chức, dùng thủ đoạn nguy hiểm, hành hung để tẩu thoát (Điều 173 Khoản 2).",
+        "Lừa đảo: Lợi dụng hoàn cảnh chiến tranh, tình trạng khẩn cấp, hoặc lợi dụng chức vụ (Điều 174 Khoản 2, 4)."
       ],
       "entailment_labels": [
         "NEUTRAL",
+        "CONTRADICTION",
+        "NEUTRAL",
+        "NEUTRAL",
+        "CONTRADICTION",
+        "NEUTRAL",
+        "CONTRADICTION",
+        "CONTRADICTION",
+        "CONTRADICTION",
         "ENTAILMENT",
         "NEUTRAL",
-        "NEUTRAL",
-        "NEUTRAL",
-        "ENTAILMENT",
-        "NEUTRAL",
+        "CONTRADICTION",
         "NEUTRAL",
         "NEUTRAL",
         "NEUTRAL",
-        "NEUTRAL",
-        "NEUTRAL",
-        "NEUTRAL",
-        "NEUTRAL",
-        "NEUTRAL",
-        "NEUTRAL",
-        "NEUTRAL",
+        "CONTRADICTION",
         "NEUTRAL"
       ],
-      "entailment_ratio": 0.1111111111111111,
-      "contradiction_ratio": 0.0,
-      "warnings": []
+      "entailment_ratio": 0.058823529411764705,
+      "contradiction_ratio": 0.4117647058823529,
+      "warnings": [
+        "⚠️ 41% of claims contradicted by source documents."
+      ]
     },
     "confidence": {
       "retriever_score": 0.8333334,
-      "reranker_score": 0.0,
-      "llm_self_eval_score": 0.6,
-      "context_overlap_score": 0.8571428571428571,
-      "entailment_score": 0.1111111111111111,
-      "score": 0.6600198621031745,
+      "reranker_score": 0.8082186275507353,
+      "llm_self_eval_score": 0.7,
+      "context_overlap_score": 0.9230769230769231,
+      "entailment_score": 0.058823529411764705,
+      "score": 0.724320966912862,
       "refused": true
     }
   },
@@ -569,8 +588,8 @@
       }
     ],
     "rerank_scores": null,
-    "raw_answer": "### 💬 Trả lời ngắn  \nLuật sửa đổi Bộ luật Hình sự 2025 đã **bổ sung thêm 3 trường hợp không thi hành án tử hình**, bao gồm: người mắc bệnh ung thư giai đoạn cuối, người đủ 75 tuổi trở lên, và phụ nữ có thai hoặc đang nuôi con dưới 36 tháng tuổi.  \n\n### 📋 Chi tiết  \n- **Bổ sung khoản 3 Điều 40** (Luật sửa đổi 2025, Điều 1):  \n  - Không thi hành án tử hình đối với:  \n    a) Phụ nữ có thai hoặc đang nuôi con dưới 36 tháng tuổi;  \n    b) Người đủ 75 tuổi trở lên;  \n    c) Người mắc bệnh ung thư giai đoạn cuối.  \n- **Hiệu lực áp dụng**: Các quy định này có lợi cho người phạm tội và được áp dụng theo Điều 4 của Luật sửa đổi 2025.  \n\n### 💡 Câu hỏi liên quan  \n- Những trường hợp nào **không áp dụng tử hình** theo Bộ luật Hình sự 2015 trước sửa đổi?  \n- Thủ tục xem xét chuyển án tử hình thành tù chung thân được quy định như thế nào?  \n- Luật sửa đổi 2025 có hiệu lực từ khi nào và áp dụng như thế nào đối với các án đã xét xử trước đó?",
-    "final_answer": "### 💬 Trả lời ngắn  \nLuật sửa đổi Bộ luật Hình sự 2025 đã **bổ sung thêm 3 trường hợp không thi hành án tử hình**, bao gồm: người mắc bệnh ung thư giai đoạn cuối, người đủ 75 tuổi trở lên, và phụ nữ có thai hoặc đang nuôi con dưới 36 tháng tuổi.  \n\n### 📋 Chi tiết  \n- **Bổ sung khoản 3 Điều 40** (Luật sửa đổi 2025, Điều 1):  \n  - Không thi hành án tử hình đối với:  \n    a) Phụ nữ có thai hoặc đang nuôi con dưới 36 tháng tuổi;  \n    b) Người đủ 75 tuổi trở lên;  \n    c) Người mắc bệnh ung thư giai đoạn cuối.  \n- **Hiệu lực áp dụng**: Các quy định này có lợi cho người phạm tội và được áp dụng theo Điều 4 của Luật sửa đổi 2025.  \n\n### 💡 Câu hỏi liên quan  \n- Những trường hợp nào **không áp dụng tử hình** theo Bộ luật Hình sự 2015 trước sửa đổi?  \n- Thủ tục xem xét chuyển án tử hình thành tù chung thân được quy định như thế nào?  \n- Luật sửa đổi 2025 có hiệu lực từ khi nào và áp dụng như thế nào đối với các án đã xét xử trước đó?",
+    "raw_answer": "### 💬 Trả lời ngắn  \nLuật sửa đổi Bộ luật Hình sự 2025 đã **bổ sung quy định không thi hành án tử hình đối với người mắc bệnh ung thư giai đoạn cuối**, đồng thời quy định các điều khoản chuyển tiếp áp dụng từ ngày 01/7/2025.\n\n---\n\n### 📋 Chi tiết  \n- **Bổ sung trường hợp không thi hành án tử hình**:  \n  Theo **Điều 1, khoản 1, điểm c** Luật sửa đổi 2025, người bị kết án tử hình thuộc trường hợp **mắc bệnh ung thư giai đoạn cuối** sẽ không bị thi hành án. Đây là nội dung mới, chưa có trong Bộ luật Hình sự 2015.  \n- **Điều khoản chuyển tiếp**:  \n  Theo **Điều 4, khoản 1, điểm b** Luật sửa đổi 2025:  \n  - Các quy định có lợi cho người phạm tội (bao gồm quy định về không thi hành án tử hình) được áp dụng **ngay cả với các hành vi phạm tội trước ngày 01/7/2025** nếu bản án chưa thi hành.  \n- **Cơ sở pháp lý cũ**:  \n  Trước sửa đổi, Bộ luật Hình sự 2015 (Điều 40, khoản 3) đã quy định không thi hành án tử hình đối với phụ nữ có thai, người đủ 75 tuổi trở lên. Luật 2025 **mở rộng thêm trường hợp ung thư giai đoạn cuối**.\n\n---\n\n### 💡 Câu hỏi liên quan  \n- Những trường hợp nào được miễn thi hành án tử hình theo quy định mới?  \n- Quy định chuyển tiếp trong Luật sửa đổi 2025 ảnh hưởng như thế nào đến các bản án chưa thi hành?  \n- Thủ tục xem xét chuyển án tử hình thành tù chung thân được quy định như thế nào?",
+    "final_answer": "### 💬 Trả lời ngắn  \nLuật sửa đổi Bộ luật Hình sự 2025 đã **bổ sung quy định không thi hành án tử hình đối với người mắc bệnh ung thư giai đoạn cuối**, đồng thời quy định các điều khoản chuyển tiếp áp dụng từ ngày 01/7/2025.\n\n---\n\n### 📋 Chi tiết  \n- **Bổ sung trường hợp không thi hành án tử hình**:  \n  Theo **Điều 1, khoản 1, điểm c** Luật sửa đổi 2025, người bị kết án tử hình thuộc trường hợp **mắc bệnh ung thư giai đoạn cuối** sẽ không bị thi hành án. Đây là nội dung mới, chưa có trong Bộ luật Hình sự 2015.  \n- **Điều khoản chuyển tiếp**:  \n  Theo **Điều 4, khoản 1, điểm b** Luật sửa đổi 2025:  \n  - Các quy định có lợi cho người phạm tội (bao gồm quy định về không thi hành án tử hình) được áp dụng **ngay cả với các hành vi phạm tội trước ngày 01/7/2025** nếu bản án chưa thi hành.  \n- **Cơ sở pháp lý cũ**:  \n  Trước sửa đổi, Bộ luật Hình sự 2015 (Điều 40, khoản 3) đã quy định không thi hành án tử hình đối với phụ nữ có thai, người đủ 75 tuổi trở lên. Luật 2025 **mở rộng thêm trường hợp ung thư giai đoạn cuối**.\n\n---\n\n### 💡 Câu hỏi liên quan  \n- Những trường hợp nào được miễn thi hành án tử hình theo quy định mới?  \n- Quy định chuyển tiếp trong Luật sửa đổi 2025 ảnh hưởng như thế nào đến các bản án chưa thi hành?  \n- Thủ tục xem xét chuyển án tử hình thành tù chung thân được quy định như thế nào?",
     "refused": false,
     "verifier": {
       "citation_validity": [
@@ -580,34 +599,42 @@
       ],
       "invalid_citations": [],
       "claims": [
-        "Luật sửa đổi Bộ luật Hình sự 2025 đã bổ sung thêm 3 trường hợp không thi hành án tử hình, bao gồm: người mắc bệnh ung thư giai đoạn cuối, người đủ 75 tuổi trở lên, và phụ nữ có thai hoặc đang nuôi con dưới 36 tháng tuổi.",
-        "Bổ sung khoản 3 Điều 40 (Luật sửa đổi 2025, Điều 1):",
-        "Không thi hành án tử hình đối với:",
-        "a) Phụ nữ có thai hoặc đang nuôi con dưới 36 tháng tuổi;",
-        "b) Người đủ 75 tuổi trở lên;",
-        "c) Người mắc bệnh ung thư giai đoạn cuối.",
-        "Hiệu lực áp dụng: Các quy định này có lợi cho người phạm tội và được áp dụng theo Điều 4 của Luật sửa đổi 2025."
+        "Luật sửa đổi Bộ luật Hình sự 2025 đã bổ sung quy định không thi hành án tử hình đối với người mắc bệnh ung thư giai đoạn cuối, đồng thời quy định các điều khoản chuyển tiếp áp dụng từ ngày 01/7/2025.",
+        "Bổ sung trường hợp không thi hành án tử hình:",
+        "Theo Điều 1, khoản 1, điểm c Luật sửa đổi 2025, người bị kết án tử hình thuộc trường hợp mắc bệnh ung thư giai đoạn cuối sẽ không bị thi hành án.",
+        "Đây là nội dung mới, chưa có trong Bộ luật Hình sự 2015.",
+        "Điều khoản chuyển tiếp:",
+        "Theo Điều 4, khoản 1, điểm b Luật sửa đổi 2025:",
+        "Các quy định có lợi cho người phạm tội (bao gồm quy định về không thi hành án tử hình) được áp dụng ngay cả với các hành vi phạm tội trước ngày 01/7/2025 nếu bản án chưa thi hành.",
+        "Cơ sở pháp lý cũ:",
+        "Trước sửa đổi, Bộ luật Hình sự 2015 (Điều 40, khoản 3) đã quy định không thi hành án tử hình đối với phụ nữ có thai, người đủ 75 tuổi trở lên.",
+        "Luật 2025 mở rộng thêm trường hợp ung thư giai đoạn cuối."
       ],
       "entailment_labels": [
         "NEUTRAL",
         "ENTAILMENT",
+        "ENTAILMENT",
+        "CONTRADICTION",
         "CONTRADICTION",
         "ENTAILMENT",
         "ENTAILMENT",
-        "ENTAILMENT",
-        "ENTAILMENT"
+        "CONTRADICTION",
+        "NEUTRAL",
+        "CONTRADICTION"
       ],
-      "entailment_ratio": 0.7142857142857143,
-      "contradiction_ratio": 0.14285714285714285,
-      "warnings": []
+      "entailment_ratio": 0.4,
+      "contradiction_ratio": 0.4,
+      "warnings": [
+        "⚠️ 40% of claims contradicted by source documents."
+      ]
     },
     "confidence": {
       "retriever_score": 0.69109714,
       "reranker_score": 0.0,
-      "llm_self_eval_score": 1.0,
+      "llm_self_eval_score": 0.85,
       "context_overlap_score": 1.0,
-      "entailment_score": 0.7142857142857143,
-      "score": 0.8677535705357142,
+      "entailment_score": 0.4,
+      "score": 0.77221785625,
       "refused": false
     }
   }
