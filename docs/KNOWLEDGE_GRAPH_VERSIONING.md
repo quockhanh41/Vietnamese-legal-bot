@@ -1,6 +1,15 @@
-# Tài liệu Kiến trúc Phase 2: Knowledge Graph & Phiên bản hoá
+# Knowledge Graph & Phiên bản hoá (lớp Enrichment)
 
-Tài liệu này giải thích chi tiết về luồng hoạt động (flow) của 3 trụ cột chính trong kiến trúc Phase 2 của Vietnamese Legal Bot, dựa trên thiết kế và mã nguồn hiện tại. Mục tiêu của Phase 2 là chuyển đổi từ việc lưu trữ văn bản phẳng (flat documents) sang một Đồ thị Tri thức có tính đến mốc thời gian và sự sửa đổi (Versioned Knowledge Graph).
+> Tài liệu này đi sâu vào **lớp làm giàu dữ liệu (enrichment)** — được xây dựng trong Phase 2
+> của dự án. Để có bức tranh toàn cảnh về mã nguồn (module nào nằm ở đâu, một câu hỏi chạy
+> qua những hàm nào), đọc [`ARCHITECTURE.md`](ARCHITECTURE.md) trước.
+
+Tài liệu này giải thích chi tiết về luồng hoạt động (flow) của 3 trụ cột chính trong lớp enrichment của Vietnamese Legal Bot, dựa trên thiết kế và mã nguồn hiện tại. Mục tiêu là chuyển đổi từ việc lưu trữ văn bản phẳng (flat documents) sang một Đồ thị Tri thức có tính đến mốc thời gian và sự sửa đổi (Versioned Knowledge Graph).
+
+**Vị trí trong hệ thống:** lớp enrichment chạy **tách biệt** với pipeline chat. Kết quả của nó
+(graph, timeline, amendment) được lưu trong `MetadataStore` (JSON) và phục vụ qua
+`EnhancedRetriever` + các API endpoint riêng (xem mục 5) — pipeline chat chính
+(`AdaptiveRAGPipeline`) hiện **chưa** dùng đến các dữ liệu này.
 
 ---
 
@@ -12,13 +21,13 @@ Tài liệu này giải thích chi tiết về luồng hoạt động (flow) c�
 
 ### Luồng hoạt động (Flow):
 1. **Trích xuất (Extraction - `ref_extractor.py`)**: 
-   - Hệ thống đọc từng đoạn text của Điều luật và sử dụng các biểu thức chính quy (Regex) (9 patterns) được thiết kế đặc thù cho ngôn ngữ pháp lý Việt Nam để tìm kiếm các tham chiếu.
-   - **Các loại tham chiếu (5 types) được nhận diện:**
-     - Tham chiếu ngoại (External): "Điều X của Luật Y" hoặc "Điều X của Bộ luật Y".
-     - Tham chiếu nội (Internal): "Điều X của Luật/Bộ luật này".
-     - Tham chiếu khoản (Clause): "khoản X Điều Y".
-     - Tham chiếu chung: "theo quy định tại Điều X" hoặc "tại Chương X".
-     - Đa tham chiếu (Multi): "Điều 5 và Điều 6".
+   - Hệ thống đọc từng đoạn text của Điều luật và sử dụng các biểu thức chính quy (Regex) (10 patterns) được thiết kế đặc thù cho ngôn ngữ pháp lý Việt Nam để tìm kiếm các tham chiếu.
+   - **Các loại tham chiếu (5 types — enum `RefType`) được nhận diện:**
+     - Tham chiếu ngoại (`EXTERNAL`): "Điều X của Luật Y" hoặc "Điều X của Bộ luật Y".
+     - Tham chiếu nội (`INTERNAL`): "Điều X của Luật/Bộ luật này", "theo quy định tại Điều X".
+     - Tham chiếu khoản (`CLAUSE`): "khoản X Điều Y".
+     - Tham chiếu chương (`CHAPTER`): "tại Chương X".
+     - Đa tham chiếu (`MULTI`): "Điều 5 và Điều 6".
    - **Output:** Danh sách các đối tượng `Reference` chứa thông tin đã được chuẩn hóa.
 
 2. **Xây dựng đồ thị (Graph Building - `graph_builder.py`)**:
@@ -58,8 +67,8 @@ Tài liệu này giải thích chi tiết về luồng hoạt động (flow) c�
 
 ### Luồng hoạt động (Flow):
 1. **Trích xuất chỉ thị sửa đổi (Extraction - `amendment_extractor.py`)**: 
-   - Sử dụng hơn 20 regex patterns để đọc hiểu và trích xuất các thao tác sửa đổi dưới dạng dữ liệu có cấu trúc.
-   - Hỗ trợ lên đến 15 loại thao tác (action types), ví dụ:
+   - Sử dụng ~30 regex patterns để đọc hiểu và trích xuất các thao tác sửa đổi dưới dạng dữ liệu có cấu trúc.
+   - Hỗ trợ 14 loại thao tác (action types), ví dụ:
      - `batch_insert`: Bổ sung một số từ, cụm từ.
      - `modify_point`: Sửa đổi, bổ sung điểm X khoản Y.
      - `modify_multi_article`: Sửa đổi, bổ sung các điều X, Y, Z.
@@ -85,7 +94,7 @@ Sau khi hoàn thiện 3 module độc lập, hệ thống đã được tích h�
 ### Khả năng Truy vấn thực tế (Query-Time Capabilities)
 - **Context expansion (Mở rộng ngữ cảnh qua Cross-references):**
   ```python
-  results = retriever.retrieve("Điều 123 BLHS", expand_context=True, hops=1)
+  results = retriever.retrieve("Điều 123 BLHS", expand_context=True, expansion_hops=1)
   ```
 - **Time-aware search (Truy vấn theo mốc thời gian lịch sử):**
   ```python

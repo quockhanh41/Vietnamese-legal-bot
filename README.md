@@ -160,6 +160,12 @@ docs/           evaluation report, production roadmap, design notes
 data/eval/      grounded eval sets (criminal + general)
 ```
 
+📖 **New to the codebase?** Start with [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+(in Vietnamese) — a guided code walkthrough: module map, the life of a query
+(file-by-file), the ingest pipeline, and the key design decisions. The knowledge-graph /
+versioning layer has its own deep-dive:
+[`docs/KNOWLEDGE_GRAPH_VERSIONING.md`](docs/KNOWLEDGE_GRAPH_VERSIONING.md).
+
 ---
 
 ## Key API endpoints
