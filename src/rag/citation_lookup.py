@@ -306,6 +306,7 @@ class CitationLookup:
             chapter=payload.get("chapter"),
             url=payload.get("url"),
             document_id=payload.get("document_id", doc_id),
+            parent_chunk_text=payload.get("parent_chunk_text"),
         )
 
 

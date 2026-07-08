@@ -281,6 +281,9 @@ def _render_citation_card(cite: Dict):
         header += f" — {article}"
 
     with st.expander(header):
+        if cite.get('is_amended'):
+            laws = ", ".join(cite.get('amending_laws') or [])
+            st.warning(f"⚠️ Điều này đã được sửa đổi bởi: {laws}" if laws else "⚠️ Điều này đã được sửa đổi.")
         excerpt = cite.get('chunk_text') or '...'
         st.markdown(f"*{excerpt}*")
         meta_bits = []

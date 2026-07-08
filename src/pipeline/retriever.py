@@ -30,6 +30,72 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
+def _extract_article_number(article_str: str) -> Optional[str]:
+    """Extract article number from string like 'Điều 123'."""
+    m = re.search(r'(\d+[a-z]?)', article_str)
+    return m.group(1) if m else None
+
+
+def get_phase2_status(
+    document_id: Optional[int],
+    article: Optional[str],
+    metadata_store: MetadataStore,
+) -> Dict[str, Any]:
+    """
+    Look up Phase 2 (temporal + amendment) status for one retrieved chunk.
+
+    Shared by EnhancedRetriever (search API) and the chat orchestrator
+    (Plan §3.6), so amendment/temporal logic lives in exactly one place.
+
+    Returns:
+        {
+            "effective_date": Optional[str],
+            "is_in_effect": Optional[bool],  # None = no metadata for this doc
+                                              # (fail-open — NOT the same as False)
+            "ref_count": int,
+            "is_amended": bool,
+            "amending_laws": List[str],
+        }
+    """
+    status: Dict[str, Any] = {
+        "effective_date": None,
+        "is_in_effect": None,
+        "ref_count": 0,
+        "is_amended": False,
+        "amending_laws": [],
+    }
+    if not document_id:
+        return status
+
+    doc_meta = metadata_store.get_document(document_id)
+    if doc_meta:
+        status["effective_date"] = doc_meta.effective_date
+        status["is_in_effect"] = doc_meta.is_in_effect
+        status["ref_count"] = doc_meta.ref_count
+
+        if article and doc_meta.is_amendment:
+            # This chunk IS from an amendment law — it doesn't get amended itself
+            status["is_amended"] = True
+            status["amending_laws"] = list(doc_meta.target_laws)
+        elif article:
+            # Check if any amendment law targets this article
+            article_num = _extract_article_number(article)
+            if article_num:
+                amending_laws = []
+                for _, meta in metadata_store.get_all_documents().items():
+                    if meta.is_amendment and article_num in meta.amended_articles:
+                        amending_laws.append(meta.title[:60])
+                if amending_laws:
+                    status["is_amended"] = True
+                    status["amending_laws"] = amending_laws
+
+    timeline = metadata_store.get_timeline(document_id)
+    if timeline:
+        status["effective_date"] = status["effective_date"] or timeline.get("effective_date")
+
+    return status
+
+
 @dataclass
 class EnhancedSearchResult:
     """Search result enriched with Phase 2 metadata."""
@@ -44,6 +110,7 @@ class EnhancedSearchResult:
     chapter: Optional[str] = None
     legal_type: Optional[str] = None
     url: Optional[str] = None
+    parent_chunk_text: Optional[str] = None
 
     # Phase 2 enrichments
     effective_date: Optional[str] = None
@@ -206,34 +273,15 @@ class EnhancedRetriever:
             chapter=result.chapter,
             legal_type=result.legal_type,
             url=result.url,
+            parent_chunk_text=result.parent_chunk_text,
         )
 
-        # Look up document metadata
-        if result.document_id:
-            doc_meta = self.metadata.get_document(result.document_id)
-            if doc_meta:
-                er.effective_date = doc_meta.effective_date
-                er.is_in_effect = doc_meta.is_in_effect
-                er.ref_count = doc_meta.ref_count
-
-                # Check if this article has been amended
-                if result.article and doc_meta.is_amendment:
-                    # This result IS from an amendment law — check the target
-                    er.is_amended = True
-                    er.amending_laws = doc_meta.target_laws
-                elif result.article:
-                    # Check if any amendment law targets this article
-                    article_num = self._extract_article_number(result.article)
-                    if article_num:
-                        for doc_id, meta in self.metadata.get_all_documents().items():
-                            if meta.is_amendment and article_num in meta.amended_articles:
-                                er.is_amended = True
-                                er.amending_laws.append(meta.title[:60])
-
-            # Also check timeline
-            timeline = self.metadata.get_timeline(result.document_id)
-            if timeline:
-                er.effective_date = er.effective_date or timeline.get("effective_date")
+        status = get_phase2_status(result.document_id, result.article, self.metadata)
+        er.effective_date = status["effective_date"]
+        er.is_in_effect = bool(status["is_in_effect"])  # None (no metadata) -> False, same as before
+        er.ref_count = status["ref_count"]
+        er.is_amended = status["is_amended"]
+        er.amending_laws = status["amending_laws"]
 
         return er
 
@@ -316,8 +364,7 @@ class EnhancedRetriever:
     @staticmethod
     def _extract_article_number(article_str: str) -> Optional[str]:
         """Extract article number from string like 'Điều 123'."""
-        m = re.search(r'(\d+[a-z]?)', article_str)
-        return m.group(1) if m else None
+        return _extract_article_number(article_str)
 
     # ── Article History ────────────────────────────────────────
 

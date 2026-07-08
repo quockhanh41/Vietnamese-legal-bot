@@ -3,19 +3,19 @@
   "amendment_laws": 3,
   "base_laws": 3,
   "with_effective_date": 6,
-  "currently_in_effect": 6,
+  "currently_in_effect": 5,
   "total_graph_nodes": 409,
   "total_graph_edges": 403,
-  "total_amendments": 158,
-  "total_articles_amended": 145,
-  "last_enriched": "2026-07-04T09:17:40.552264",
+  "total_amendments": 182,
+  "total_articles_amended": 166,
+  "last_enriched": "2026-07-08T20:43:05.459630",
   "documents": [
     {
       "doc_id": 46056,
       "title": "Bộ Luật Hình sự 1999",
       "is_amendment": false,
       "effective_date": "1999-12-21",
-      "is_in_effect": true,
+      "is_in_effect": false,
       "ref_count": 53,
       "amendment_count": 0
     },
@@ -44,7 +44,7 @@
       "effective_date": "2018-01-01",
       "is_in_effect": true,
       "ref_count": 232,
-      "amendment_count": 120
+      "amendment_count": 143
     },
     {
       "doc_id": 489113,
@@ -53,7 +53,7 @@
       "effective_date": "2021-12-01",
       "is_in_effect": true,
       "ref_count": 7,
-      "amendment_count": 7
+      "amendment_count": 6
     },
     {
       "doc_id": 662377,
@@ -62,7 +62,7 @@
       "effective_date": "2025-06-25",
       "is_in_effect": true,
       "ref_count": 93,
-      "amendment_count": 31
+      "amendment_count": 33
     }
   ]
 }

@@ -215,18 +215,34 @@ Trước khi embed mỗi chunk, dùng LLM rẻ sinh 1-2 câu ngữ cảnh ("Đo�
 **3.3. Citation-lookup route**
 Query dạng "Điều 51 Luật Hôn nhân gia đình" không nên đi qua vector search — parse regex → lookup trực tiếp bằng metadata filter trong Qdrant. Router nên có nhánh `LOOKUP` bên cạnh SIMPLE/MEDIUM/COMPLEX. Đây là loại query phổ biến nhất trong legal và cũng là loại vector search hay fail nhất.
 
-**3.4. Parent-document / small-to-big retrieval**
+**3.4. Parent-document / small-to-big retrieval** — ✅ ĐÃ LÀM 2026-07-08
 Embed và search ở mức Khoản (chính xác), nhưng đưa vào context cả Điều cha (đủ ngữ cảnh). Plan §3.2 mô tả đúng ý bằng "overlap" nhưng cách đúng là lưu `parent_id` và fetch parent lúc retrieve, không duplicate text.
+
+Triển khai: `parent_chunk_text` đã tồn tại sẵn trong payload (tính lúc chunk, `HierarchicalChunker`) nhưng chưa từng được đọc ra — `SearchResult`/`EnhancedSearchResult` không có field này, và `citation_lookup.py._point_to_search_result` build `SearchResult` thủ công (bỏ sót field). Đã thêm field + `orchestrator._expand_to_parent()`: swap `chunk_text` → `parent_chunk_text`, dedupe các Khoản cùng Điều thành 1 block (test trực tiếp: 3 Khoản của Điều 173 → 1 block đầy đủ 3 khoản thay vì 3 block trùng lặp/cụt). `_build_context` cap 500→2000 ký tự/block (bug đã ghi ở mục 2).
+
+**Bug phát hiện khi làm**: `ArticleLevelChunker` (dùng cho 3 văn bản sửa đổi) set `parent_chunk_text = content.strip()` — TOÀN BỘ document (tới 267K ký tự) thay vì chỉ Điều đó — vì mỗi chunk ở strategy này ĐÃ là 1 Điều trọn vẹn, không có "parent" nào lớn hơn. Đã fix code (`parent_chunk_text = art["text"]`) + patch payload 23 điểm đã ingest trên Qdrant Cloud (chỉ sửa payload, không re-embed) + thêm guard `_PARENT_TEXT_MAX_LEN=3000` trong `_expand_to_parent` (fallback về chunk_text nếu parent bất thường lớn) phòng dữ liệu xấu tương tự trong tương lai.
 
 **3.5. Eval trên benchmark Việt Nam có sẵn**
 Dùng **ALQAC** (Automated Legal Question Answering Competition — task retrieval + QA trên luật Việt Nam, có ground truth) và **Zalo Legal Text Retrieval** làm bộ đo retrieval (recall@k, MRR, nDCG) trước khi đo RAGAS. **Đo retrieval tách khỏi generation** — hiện không biết lỗi nằm ở tầng nào.
 
 ### Tier 2 — nâng cấp có chọn lọc
 
-**3.6. Nối Phase 2 vào pipeline chat**
+**3.6. Nối Phase 2 vào pipeline chat** — ✅ ĐÃ LÀM 2026-07-08
 - Temporal filter ("luật còn hiệu lực tại ngày hỏi") nên là **filter mặc định trong Qdrant payload**, không phải post-filter.
 - Amendment status ("Điều này đã bị sửa đổi bởi...") nên xuất hiện trong context đưa cho LLM và trong citation card.
 - Đây là điểm khác biệt thật sự của legal RAG so với RAG thường — đã build 80%, chỉ thiếu 20% wiring.
+
+Triển khai: `EnhancedRetriever._enrich_result`'s amendment/temporal lookup tách thành hàm dùng chung `get_phase2_status()` (`src/pipeline/retriever.py`), gọi từ TẤT CẢ route của orchestrator (naive, lookup, simple, medium, complex, cả streaming lẫn non-streaming). Hai phần:
+1. **Default temporal filter** (`_filter_in_effect`, fail-open — thiếu metadata hoặc `is_in_effect=None` thì GIỮ, chỉ loại khi biết chắc `False`): áp dụng trên broad pool trước dynamic-top-k/rerank.
+2. **Amendment badge**: `_build_context` chèn dòng `⚠️ Đã được sửa đổi bởi: ...` vào block bị sửa đổi; `_build_citations` thêm field `is_amended`/`amending_laws`; UI (`chat.py._render_citation_card`) hiện badge tương ứng.
+
+**Bug phát hiện khi làm — filter trên vốn sẽ là no-op nếu không sửa cái này**: `enricher.py` chưa bao giờ cross-link "luật A thay thế luật B" sang `is_in_effect=False` cho B — chỉ tự ghi nhận từ chính văn bản của nó. Kết quả: BLHS 1999 (doc 46056, đã bị thay thế bởi BLHS 2015 từ 2016-07-01) vẫn mang `is_in_effect=True` trong `data/metadata/documents.json`. Code `VersionResolver.find_replacement()` để làm chính việc này đã tồn tại sẵn nhưng chưa từng được gọi trong `enricher.run()`. Đã nối vào (dùng version chain sẵn có ở Step 3) + chạy lại enrichment local — `currently_in_effect` 6→5, xác nhận qua diff chỉ đổi đúng 1 doc (46056).
+
+**Verify sống**: truy vấn dense "Tội giết người bị xử phạt như thế nào?" — raw top-20 có 7/20 kết quả từ BLHS 1999 (luật đã hết hiệu lực); sau filter còn 0/13. Trước khi có fix này, bot có thể đã trích dẫn điều luật từ bộ luật 1999 như thể còn hiệu lực mà không ai biết.
+
+**Lưu ý chưa làm** (ngoài phạm vi hôm nay): filter vẫn là post-filter (client-side sau khi lấy `is_in_effect` từ `MetadataStore`), CHƯA phải payload filter trong Qdrant như mục 6.2 #10 đề xuất cho corpus lớn — ở quy mô 6 docs post-filter đủ nhanh, để dành khi scale.
+
+**Cảnh báo hiệu ứng phụ lên confidence — CẦN recalibrate**: `_build_context` giờ trả về text dài hơn nhiều (full Điều cha thay vì 500 ký tự) — chuỗi này được `context_overlap` signal (15%) và `llm_self_eval` (qua `context[:2000]`, 30%) tiêu thụ trực tiếp. Chưa chạy lại Tier-2 eval + `calibrate_threshold.py` sau thay đổi này — ngưỡng 0.725 (calibrate lần gần nhất 2026-07-07) có thể không còn margin an toàn như đã đo. Khuyến nghị: recalibrate trước khi coi đây là "xong" cho production.
 
 **3.7. Corrective RAG / Self-RAG nhẹ**
 Thay vì chỉ refuse khi confidence thấp, thêm 1 vòng: nếu reranker score thấp → rewrite query và retrieve lại 1 lần trước khi bỏ cuộc. Rẻ và tăng answer rate đáng kể.

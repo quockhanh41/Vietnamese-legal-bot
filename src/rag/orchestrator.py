@@ -12,12 +12,14 @@ import sys
 import statistics, time
 from typing import List, Dict, Optional, Generator, Tuple
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 # Ensure project root is on path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from src.db.qdrant_client import LegalVectorStore, SearchResult
 from src.data.embedder import BGEEmbedder
+from src.data.metadata_store import MetadataStore
+from src.pipeline.retriever import get_phase2_status
 from src.llm.gateway import LLMGateway
 from src.llm.prompts import (
     SYSTEM_PROMPT,
@@ -59,11 +61,23 @@ class NaiveRAGPipeline:
         llm_gateway: LLMGateway,
         reranker: Optional[object] = None,
         top_k: int = 5,
+        metadata_store: Optional[MetadataStore] = None,
     ):
         self.vector_store = vector_store
         self.embedder = embedder
         self.llm = llm_gateway
         self.top_k = top_k
+        # Phase 2 (temporal + amendment) metadata — lazy default so callers that
+        # don't care about Phase 2 (e.g. unit tests) don't pay a JSON-load cost.
+        # Callers with an existing MetadataStore (api/main.py) should pass it in
+        # to avoid loading the same JSON files twice.
+        self._metadata_store = metadata_store
+
+    @property
+    def metadata_store(self) -> MetadataStore:
+        if self._metadata_store is None:
+            self._metadata_store = MetadataStore()
+        return self._metadata_store
 
     # ── Methods inherited by AdaptiveRAGPipeline ──
     def query(self, question: str) -> RAGResponse:
@@ -79,8 +93,14 @@ class NaiveRAGPipeline:
             top_k=self.top_k,
         )
 
+        # Phase 2 (Plan §3.6): default temporal filter + amendment annotations.
+        # Small-to-big (Plan §3.4): expand Khoản hits to their parent Điều.
+        annotations = self._annotate_phase2(results)
+        results = self._filter_in_effect(results, annotations)
+        results = self._expand_to_parent(results)
+
         # Step 3: Build context from retrieved chunks
-        context = self._build_context(results)
+        context = self._build_context(results, annotations)
 
         # Step 4: Generate answer
         prompt = GENERATION_PROMPT.format(context=context, question=question)
@@ -92,7 +112,7 @@ class NaiveRAGPipeline:
         )
 
         # Step 5: Parse response
-        citations = self._build_citations(results)
+        citations = self._build_citations(results, annotations)
         parsed = self._parse_response(raw_response, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
         parsed.pipeline_used = "naive"
@@ -116,11 +136,16 @@ class NaiveRAGPipeline:
             top_k=self.top_k,
         )
 
+        # Phase 2 (Plan §3.6) + small-to-big (Plan §3.4) — see query() above.
+        annotations = self._annotate_phase2(results)
+        results = self._filter_in_effect(results, annotations)
+        results = self._expand_to_parent(results)
+
         # Build context
-        context = self._build_context(results)
+        context = self._build_context(results, annotations)
 
         # Build citations from search results
-        citations = self._build_citations(results)
+        citations = self._build_citations(results, annotations)
 
         # Yield citations metadata first (as a special marker)
         yield f'__CITATIONS__{json.dumps(citations, ensure_ascii=False)}'
@@ -135,7 +160,59 @@ class NaiveRAGPipeline:
         ):
             yield token
 
-    def _build_context(self, results: List[SearchResult]) -> str:
+    _PARENT_TEXT_MAX_LEN = 3000  # guard against bad/oversized parent_chunk_text data
+
+    def _expand_to_parent(self, results: List[SearchResult]) -> List[SearchResult]:
+        """
+        Small-to-big retrieval (Plan §3.4): retrieval matches at the precise
+        Khoản level, but the LLM needs the full Điều for context. Swaps each
+        result's chunk_text for its parent_chunk_text (already computed at
+        chunk time by HierarchicalChunker) and collapses results that share
+        the same parent article, so a multi-Khoản hit on one Điều doesn't
+        repeat that Điều as several context blocks.
+
+        Order is preserved — the first (highest-scored/reranked) occurrence
+        of an article wins the slot; later duplicates are dropped entirely
+        rather than merged, keeping the returned list 1:1 with the `[n]`
+        blocks `_build_context` will produce from it.
+        """
+        seen: set = set()
+        expanded: List[SearchResult] = []
+        for r in results:
+            key = (r.document_id, r.article) if r.article else None
+            if key is not None and key in seen:
+                continue
+            parent_text = r.parent_chunk_text or r.chunk_text
+            if not parent_text or len(parent_text) > self._PARENT_TEXT_MAX_LEN:
+                parent_text = r.chunk_text  # guard: never trust oversized/bad parent data
+            if key is not None:
+                seen.add(key)
+            expanded.append(replace(r, chunk_text=parent_text))
+        return expanded
+
+    def _annotate_phase2(self, results: List[SearchResult]) -> Dict[str, Dict]:
+        """Look up Phase 2 (temporal + amendment) status per result (Plan §3.6)."""
+        return {
+            r.point_id: get_phase2_status(r.document_id, r.article, self.metadata_store)
+            for r in results
+        }
+
+    @staticmethod
+    def _filter_in_effect(
+        results: List[SearchResult], annotations: Dict[str, Dict]
+    ) -> List[SearchResult]:
+        """
+        Default temporal filter (Plan §3.6): drop chunks whose source law is
+        known to no longer be in effect. Fail-open — a chunk with no Phase 2
+        metadata, or is_in_effect=None (unknown), is KEPT. Only an explicit
+        is_in_effect=False (a law we positively know was superseded) excludes.
+        """
+        return [
+            r for r in results
+            if annotations.get(r.point_id, {}).get("is_in_effect") is not False
+        ]
+
+    def _build_context(self, results: List[SearchResult], annotations: Optional[Dict[str, Dict]] = None) -> str:
         """Format search results into a context string for the LLM."""
         parts = []
         for i, result in enumerate(results, 1):
@@ -145,11 +222,20 @@ class NaiveRAGPipeline:
             if result.chapter:
                 header += f" ({result.chapter})"
 
-            parts.append(f"{header}\n{result.chunk_text[:500]}")
+            block = header
+            status = (annotations or {}).get(result.point_id)
+            if status and status.get("is_amended"):
+                laws = ", ".join(status["amending_laws"][:2])
+                block += f"\n⚠️ Đã được sửa đổi bởi: {laws}"
+
+            # Cap raised from 500: blocks now usually hold the full parent
+            # Điều text (Plan §3.4), which runs longer than 500 chars.
+            block += f"\n{result.chunk_text[:2000]}"
+            parts.append(block)
 
         return "\n\n---\n\n".join(parts)
 
-    def _build_citations(self, results: List[SearchResult]) -> List[Dict]:
+    def _build_citations(self, results: List[SearchResult], annotations: Optional[Dict[str, Dict]] = None) -> List[Dict]:
         """Build citation list from search results.
 
         `results` MUST be the exact same list (same order, same slice) passed
@@ -162,6 +248,7 @@ class NaiveRAGPipeline:
         """
         citations = []
         for i, r in enumerate(results, 1):
+            status = (annotations or {}).get(r.point_id, {})
             citations.append({
                 "block_index": i,
                 "document_title": r.document_title,
@@ -170,6 +257,8 @@ class NaiveRAGPipeline:
                 "legal_type": r.legal_type,
                 "url": r.url,
                 "score": round(r.score, 4),
+                "is_amended": status.get("is_amended", False),
+                "amending_laws": status.get("amending_laws", []),
             })
         return citations
 
@@ -318,12 +407,16 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             question, self.vector_store, self.embedder, citation_lookup, fill_top_k=10,
         )
 
-        context = self._build_context(results)
+        annotations = self._annotate_phase2(results)
+        results = self._filter_in_effect(results, annotations)
+        results = self._expand_to_parent(results)
+
+        context = self._build_context(results, annotations)
         prompt = GENERATION_PROMPT.format(context=context, question=question)
         raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
 
-        citations = self._build_citations(results)
-        context = self._build_context(results)
+        citations = self._build_citations(results, annotations)
+        context = self._build_context(results, annotations)
 
         # Post-process: verify + confidence (same as every other route)
         conf_result, ver_result, final_answer = self._post_process(question, raw, results, context)
@@ -426,15 +519,22 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         query_vector = self.embedder.encode_queries([question])[0]
         # Use a broader initial pool, then dynamically select
         results = self.vector_store.search_dense(query_vector.tolist(), top_k=20)
+
+        # Phase 2 (Plan §3.6): default temporal filter, computed on the broad
+        # pool before dynamic-top-k picks the final candidate count.
+        annotations = self._annotate_phase2(results)
+        results = self._filter_in_effect(results, annotations)
+
         top_k = self._dynamic_top_k(results, min_k=3, max_k=15)
         results = results[:top_k]
-        context = self._build_context(results)
+        results = self._expand_to_parent(results)  # Plan §3.4
+        context = self._build_context(results, annotations)
 
         prompt = GENERATION_PROMPT.format(context=context, question=question)
         raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
 
-        citations = self._build_citations(results)
-        context = self._build_context(results)
+        citations = self._build_citations(results, annotations)
+        context = self._build_context(results, annotations)
 
         # Post-process: verify + confidence
         conf_result, ver_result, final_answer = self._post_process(question, raw, results, context)
@@ -453,22 +553,29 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
         # Broader initial pool
         results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20)
+
+        # Phase 2 (Plan §3.6): default temporal filter, before dynamic-top-k/rerank.
+        annotations = self._annotate_phase2(results)
+        results = self._filter_in_effect(results, annotations)
+
         top_k = self._dynamic_top_k(results, min_k=5, max_k=15)
         results = results[:top_k]
 
         # Re-rank (if available)
         results, rerank_scores = self._rerank_results(question, results)
 
-        context = self._build_context(results[:15])
+        results = results[:15]
+        results = self._expand_to_parent(results)  # Plan §3.4
+        context = self._build_context(results, annotations)
         prompt = GENERATION_PROMPT.format(context=context, question=question)
         raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
 
-        citations = self._build_citations(results[:15])
-        context = self._build_context(results[:15])
+        citations = self._build_citations(results, annotations)
+        context = self._build_context(results, annotations)
 
         # Post-process: verify + confidence
         conf_result, ver_result, final_answer = self._post_process(
-            question, raw, results[:15], context, rerank_scores=rerank_scores,
+            question, raw, results, context, rerank_scores=rerank_scores,
         )
 
         parsed = self._parse_response(final_answer, citations)
@@ -507,6 +614,10 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             if r.point_id not in seen:
                 seen.add(r.point_id)
                 unique_results.append(r)
+        # Phase 2 (Plan §3.6): default temporal filter, before dynamic-top-k/rerank.
+        annotations = self._annotate_phase2(unique_results)
+        unique_results = self._filter_in_effect(unique_results, annotations)
+
         top_k = self._dynamic_top_k(unique_results, min_k=5, max_k=20)
         results = unique_results[:top_k]
 
@@ -514,15 +625,16 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         results, rerank_scores = self._rerank_results(question, results)
 
         # 7. Context Compression — extract only relevant sentences
-        context = self._build_context(results)
+        results = self._expand_to_parent(results)  # Plan §3.4
+        context = self._build_context(results, annotations)
         context = self._compress_context(question, context)
 
         # 8. Generate
         prompt = GENERATION_PROMPT.format(context=context, question=question)
         raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
 
-        citations = self._build_citations(results)
-        context = self._build_context(results)
+        citations = self._build_citations(results, annotations)
+        context = self._build_context(results, annotations)
 
         # Post-process: verify + confidence
         conf_result, ver_result, final_answer = self._post_process(
@@ -646,12 +758,16 @@ Các câu liên quan (giữ nguyên văn):"""
             results, route, _ = retrieve_routed(
                 question, self.vector_store, self.embedder, citation_lookup, fill_top_k=10,
             )
+            annotations = self._annotate_phase2(results)  # Plan §3.6
+            results = self._filter_in_effect(results, annotations)
             yield f'__STEP__{json.dumps({"step": "Routing", "result": f"Citation Lookup ({len(results)} chunks, route={route})"})}'
 
         elif complexity == "simple":
             yield f'__STEP__{json.dumps({"step": "Routing", "result": "Simple Pipeline (Dense Search)"})}'
             query_vector = self.embedder.encode_queries([question])[0]
             results = self.vector_store.search_dense(query_vector.tolist(), top_k=20)
+            annotations = self._annotate_phase2(results)  # Plan §3.6
+            results = self._filter_in_effect(results, annotations)
             # Dynamic top-k
             top_k = self._dynamic_top_k(results, min_k=3, max_k=15)
             results = results[:top_k]
@@ -662,6 +778,8 @@ Các câu liên quan (giữ nguyên văn):"""
             dense_vec = output["dense_vecs"][0]
             sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
             results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20)
+            annotations = self._annotate_phase2(results)  # Plan §3.6
+            results = self._filter_in_effect(results, annotations)
             # Dynamic top-k + rerank
             top_k = self._dynamic_top_k(results, min_k=5, max_k=15)
             results = results[:top_k]
@@ -706,6 +824,8 @@ Các câu liên quan (giữ nguyên văn):"""
                 if r.point_id not in seen:
                     seen.add(r.point_id)
                     unique_results.append(r)
+            annotations = self._annotate_phase2(unique_results)  # Plan §3.6
+            unique_results = self._filter_in_effect(unique_results, annotations)
             top_k = self._dynamic_top_k(unique_results, min_k=5, max_k=20)
             results = unique_results[:top_k]
 
@@ -713,8 +833,9 @@ Các câu liên quan (giữ nguyên văn):"""
             results, rerank_scores = self._rerank_results(question, results)
 
         # Build context & citations
-        context = self._build_context(results)
-        citations = self._build_citations(results)
+        results = self._expand_to_parent(results)  # Plan §3.4
+        context = self._build_context(results, annotations)
+        citations = self._build_citations(results, annotations)
 
         # Compress context for COMPLEX
         if complexity == "complex":

@@ -119,6 +119,7 @@ def get_naive_pipeline() -> NaiveRAGPipeline:
         vector_store=app.state.vector_store,
         embedder=get_embedder(),
         llm_gateway=app.state.llm,
+        metadata_store=app.state.metadata_store,
     )
 
 
@@ -127,6 +128,7 @@ def get_adaptive_pipeline() -> AdaptiveRAGPipeline:
         vector_store=app.state.vector_store,
         embedder=get_embedder(),
         llm_gateway=app.state.llm,
+        metadata_store=app.state.metadata_store,
     )
 
 

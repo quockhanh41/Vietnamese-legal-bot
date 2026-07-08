@@ -108,7 +108,9 @@ class ArticleLevelChunker(BaseChunker):
                 article=art["header"],
                 clause=None,
                 chunk_index=i,
-                parent_chunk_text=content.strip(),
+                # Each chunk already IS one full Điều — there's no larger parent
+                # unit to expand to (unlike HierarchicalChunker's Khoản chunks).
+                parent_chunk_text=art["text"],
             )
             legal_chunks.append(chunk)
 

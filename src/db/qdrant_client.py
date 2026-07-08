@@ -41,6 +41,7 @@ class SearchResult:
     chapter: Optional[str] = None
     url: Optional[str] = None
     document_id: Optional[int] = None
+    parent_chunk_text: Optional[str] = None
 
 
 class LegalVectorStore:
@@ -286,6 +287,7 @@ class LegalVectorStore:
             chapter=payload.get("chapter"),
             url=payload.get("url"),
             document_id=payload.get("document_id"),
+            parent_chunk_text=payload.get("parent_chunk_text"),
         )
 
     def list_documents(

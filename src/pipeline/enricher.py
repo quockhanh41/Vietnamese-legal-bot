@@ -195,6 +195,19 @@ class EnrichmentPipeline:
                         f"{t.law_name} ({t.effective_date.isoformat() if t.effective_date else '?'})"
                         for t in chain
                     ]
+
+                    # Cross-link supersession (Plan §3.6): is_in_effect above
+                    # was only self-reported from each doc's own expiry text,
+                    # so a law that was replaced by a *newer* law (which
+                    # names it in ITS `replaced_laws`) was never marked
+                    # expired. VersionResolver.find_replacement already does
+                    # this name-matching — it just wasn't wired in before.
+                    replacement = resolver.find_replacement(doc_id)
+                    if replacement and replacement.effective_date and meta.is_in_effect:
+                        meta.is_in_effect = False
+                        meta.expiry_date = meta.expiry_date or replacement.effective_date.isoformat()
+                        self.result.currently_in_effect -= 1
+
                     self.metadata_store.save_document(doc_id, meta)
 
             # Save timelines

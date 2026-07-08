@@ -207,9 +207,13 @@ for the full evaluation history and the roadmap toward production.
 - **Refusal is a feature.** A ~6% false-refusal rate is an accepted trade-off for never
   answering an out-of-scope legal question. The threshold is tunable via
   `CONFIDENCE_REFUSAL_THRESHOLD`.
-- **Phase 2 (temporal / amendment / cross-reference graph)** is built and exposed via API,
-  but not yet wired into the chat pipeline — its value shows once the corpus contains
-  superseded and amended documents.
+- **Phase 2 (temporal / amendment)** is wired into the chat pipeline: superseded laws are
+  filtered out of retrieval by default (fail-open on unknown status), and amended articles
+  are flagged inline (context + citation cards). The cross-reference graph is still
+  API-only (`/api/graph/*`), not yet used for context expansion in chat.
+- **Parent-document retrieval.** Retrieval matches at the precise Khoản (clause) level, but
+  context sent to the LLM expands to the full parent Điều (article), deduplicated so a
+  multi-Khoản hit on one Điều doesn't repeat it as several blocks.
 - **Not legal advice.** Outputs are for reference only.
 
 ---
