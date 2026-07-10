@@ -25,10 +25,22 @@ class ArticleLevelChunker(BaseChunker):
                             (non-Điều) preamble text as a chunk.
     """
 
+    # Header anchored to line start. Two amendment-law quirks (M1.2b,
+    # measured on the 100-doc corpus, 2026-07-10):
+    #   - suffixed articles: "Bổ sung Điều 43a..." inserts headers like
+    #     "Điều 43b." — \d+[a-z]? , otherwise those Điều stay glued to the
+    #     previous chunk with no label (invisible to citation lookup);
+    #   - the FIRST quoted article of an amendment block opens with a curly
+    #     quote (“Điều 43a. …) while subsequent ones are bare — accept an
+    #     optional opening quote so both become boundaries consistently.
     ARTICLE_PATTERN = re.compile(
-        r'^\s*Điều\s+(\d+)\s*[\.:\)]\s*(.*)',
+        r'^\s*[“"«]?\s*Điều\s+(\d+[a-z]?)\s*[\.:\)]\s*(.*)',
         re.IGNORECASE,
     )
+
+    # Leading quote/space chars stripped off the header LABEL (metadata
+    # only — chunk_text keeps the document's own text verbatim).
+    _LABEL_STRIP = '“"« \t'
 
     CHAPTER_PATTERN = re.compile(
         r'^\s*CHƯƠNG\s+([IVXLCDM]+|\d+)\s*[\.:\)]\s*(.*)',
@@ -84,7 +96,7 @@ class ArticleLevelChunker(BaseChunker):
             article_match = self.ARTICLE_PATTERN.match(stripped)
             if article_match:
                 flush_article()
-                current_article_header = stripped
+                current_article_header = stripped.lstrip(self._LABEL_STRIP)
                 current_article_text = stripped
                 continue
 

@@ -54,6 +54,18 @@ AMENDMENT_RE = re.compile(r'(?:sửa\s+đổi|bổ\s+sung)', re.IGNORECASE)
 # optional single-letter suffix tolerated (e.g. "Điều 105a.").
 HEADER_RE = re.compile(r'(?:^|\n)\s*Điều\s+(\d+[a-z]?)\s*[\.:]', re.IGNORECASE)
 
+# Quote-aware variant, mirroring ArticleLevelChunker's M1.2b contract:
+# amendment laws open the first quoted article of a block with a curly
+# quote (“Điều 43a. …) which the chunker treats as a boundary, keeping the
+# quote in chunk_text but stripping it from the `article` label. Docs
+# chunked by ArticleLevelChunker are therefore audited with this regex;
+# HierarchicalChunker docs keep the strict HEADER_RE (its pattern does not
+# treat quoted lines as boundaries, and original — non-amendment — laws
+# contain no such headers).
+HEADER_RE_QUOTED = re.compile(
+    r'(?:^|\n)\s*[“"«]?\s*Điều\s+(\d+[a-z]?)\s*[\.:]', re.IGNORECASE
+)
+
 # Same shape, used to pull the article number out of a chunk's `article`
 # metadata label (e.g. "Điều 21. Người bào chữa" -> "21").
 LABEL_NUM_RE = re.compile(r'Điều\s+(\d+[a-z]?)', re.IGNORECASE)
@@ -91,25 +103,25 @@ def article_num_from_label(label):
     return m.group(1).lower() if m else None
 
 
-def classify_chunk(article_label, chunk_text):
+def classify_chunk(article_label, chunk_text, header_re=HEADER_RE):
     """Mirrors the production audit's 4-way classification."""
     if not article_label:
         return "NO_ARTICLE_LABEL"
 
     label_num = article_num_from_label(article_label)
-    headers = [h.lower() for h in HEADER_RE.findall(chunk_text)]
+    headers = [h.lower() for h in header_re.findall(chunk_text)]
 
     if any(h != label_num for h in headers):
         return "WRONG_LABEL"
-    if headers and HEADER_RE.match(chunk_text):
+    if headers and header_re.match(chunk_text):
         # First header in the text occurs at position 0 -> chunk opens
         # with its own Điều's header.
         return "HEADER_OK"
     return "MID_ARTICLE"
 
 
-def distinct_articles_in_content(content):
-    return {h.lower() for h in HEADER_RE.findall(content)}
+def distinct_articles_in_content(content, header_re=HEADER_RE):
+    return {h.lower() for h in header_re.findall(content)}
 
 
 def distinct_articles_in_chunks(chunks):
@@ -120,7 +132,7 @@ def distinct_articles_in_chunks(chunks):
     }
 
 
-def check_parent_homogeneity(chunks):
+def check_parent_homogeneity(chunks, header_re=HEADER_RE):
     """Group chunks by article label; every group must share one identical
     parent_chunk_text that starts with that Điều's own header. Returns a
     list of violation strings (empty if all good)."""
@@ -145,7 +157,7 @@ def check_parent_homogeneity(chunks):
             continue
         parent = next(iter(parents))
         num = article_num_from_label(label)
-        m = HEADER_RE.match(parent or "")
+        m = header_re.match(parent or "")
         if not m or m.group(1).lower() != num:
             violations.append(
                 f"article={label!r}: parent_chunk_text does not start with "
@@ -192,10 +204,14 @@ def run(data_path=DATA_PATH, quiet=False):
         chunks = chunker.chunk_document(row)
         overall_total_chunks += len(chunks)
 
+        # Amendment docs are audited quote-aware, mirroring the chunker
+        # contract they were split with (see HEADER_RE_QUOTED above).
+        doc_header_re = HEADER_RE_QUOTED if is_amend else HEADER_RE
+
         counts = {"HEADER_OK": 0, "MID_ARTICLE": 0, "WRONG_LABEL": 0, "NO_ARTICLE_LABEL": 0}
         wrong_label_examples = []
         for c in chunks:
-            cls = classify_chunk(c.article, c.chunk_text)
+            cls = classify_chunk(c.article, c.chunk_text, header_re=doc_header_re)
             counts[cls] += 1
             overall_counts[cls] += 1
             if cls == "WRONG_LABEL" and len(wrong_label_examples) < 3:
@@ -204,13 +220,13 @@ def run(data_path=DATA_PATH, quiet=False):
                 )
         overall_wrong_label_examples.extend(wrong_label_examples)
 
-        content_articles = distinct_articles_in_content(content)
+        content_articles = distinct_articles_in_content(content, header_re=doc_header_re)
         chunk_articles = distinct_articles_in_chunks(chunks)
         missing = content_articles - chunk_articles
         extra = chunk_articles - content_articles
         article_count_ok = not missing
 
-        parent_violations = check_parent_homogeneity(chunks)
+        parent_violations = check_parent_homogeneity(chunks, header_re=doc_header_re)
 
         if chunker_name == "HierarchicalChunker":
             if not article_count_ok:

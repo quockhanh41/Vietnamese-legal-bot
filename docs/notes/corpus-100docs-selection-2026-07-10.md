@@ -62,3 +62,29 @@ bản có thể vắng mặt — bot không phủ Luật Nhà ở, Luật Kinh d
 out-of-scope mới ở M1.6 (hành chính/quốc tế/tư vấn cá nhân). Các NĐ xử phạt
 VPHC theo lĩnh vực (12/2022, 98/2020, 123/2024...) vẫn trong scope vì gắn
 trực tiếp lĩnh vực đã phủ.
+
+## Gate alignment 100 docs + fix M1.2b (cùng ngày)
+
+Chạy `scripts/verify_chunker_alignment.py --data-path data/raw/corpus_100docs.parquet --quiet`:
+
+- **Trước fix**: 23.505 chunks, WRONG_LABEL=8, ~11 Điều bổ sung (Xa/Xb) không
+  có nhãn (SHTT 25a/191a/191b, Đấu giá 43b, BHYT 48b, THADS 7b...), chunk
+  luật sửa đổi dài tới 46.880 ký tự. Nguyên nhân: `ARTICLE_PATTERN` của
+  ArticleLevelChunker chỉ nhận `\d+` (không hậu tố chữ) và không nhận header
+  mở đầu bằng ngoặc kép cong (`“Điều 43a.` — Điều đầu tiên của mỗi khối trích
+  dẫn); text KHÔNG mất, chỉ sai/thiếu nhãn (đã kiểm chứng từng trường hợp).
+- **Fix M1.2b**: pattern nhận `\d+[a-z]?` + ngoặc kép mở tùy chọn; nhãn strip
+  ngoặc, chunk_text giữ nguyên văn. Checker cập nhật quote-aware CHỈ cho docs
+  amendment (hierarchical giữ regex chặt — luật gốc không có Điều hậu tố).
+- **Sau fix**: 23.727 chunks, **WRONG_LABEL=0, GATE PASS toàn phần**;
+  p50=650, p99=1.000 ký tự; 28 chunks >8K (0,12%), 7 chunks >16K (0,03%).
+- **Known limitations chấp nhận ở M1** (xem lại ở M3 nếu eval lộ miss):
+  1. ~7 chunks Điều-trích-dẫn rất dài vượt cửa sổ embed BGE-M3 8192 token —
+     phần đuôi vô hình với dense/sparse retrieval (chunk_text lưu đầy đủ, LLM
+     vẫn thấy nếu chunk được retrieve). Eval M1.5 cần ≥1 câu nhắm nội dung
+     Điều trích dẫn trong luật sửa đổi để theo dõi.
+  2. NĐ 226/2025 (sửa nhiều NĐ): 2 văn bản đính kèm đều có "Điều 1" → 2 chunks
+     trùng nhãn khác parent (1 vi phạm homogeneity, non-gating). Dedupe
+     parent-retrieval theo (document_id, article) có thể rụng 1 trong 2.
+  3. Nhãn Điều trích dẫn quy về document sửa đổi (đúng bản chất văn bản gốc,
+     chưa consolidate); dataset có legal_type "Văn bản hợp nhất" — ứng viên M3.

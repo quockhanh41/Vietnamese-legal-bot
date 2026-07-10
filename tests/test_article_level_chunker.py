@@ -104,3 +104,61 @@ def test_short_preamble_before_first_article_still_dropped():
     assert all(c.article.startswith("Điều") for c in chunks), (
         f"preamble scrap leaked into chunks: {[c.article for c in chunks]}"
     )
+
+
+def test_suffixed_quoted_articles_become_labeled_boundaries():
+    """M1.2b (2026-07-10): amendment laws insert suffixed articles
+    ("Bổ sung Điều 43a và Điều 43b...") whose quoted headers open with a
+    curly quote for the FIRST article of a block (“Điều 43a. …) and appear
+    bare for subsequent ones (Điều 43b. …). Both must become their own
+    chunk with a clean label (no leading quote) — before this fix the
+    suffixed/quoted ones stayed glued to the previous chunk with no label,
+    invisible to article_number citation lookup, producing chunks up to
+    46K chars (past BGE-M3's embed window)."""
+    row = {
+        "id": 2,
+        "title": "Luật Đấu giá tài sản sửa đổi 2024",
+        "content": (
+            "QUỐC HỘI\n"
+            "Điều 1. Sửa đổi, bổ sung một số điều của Luật Đấu giá tài sản\n"
+            "28. Bổ sung Điều 43a và Điều 43b vào sau Điều 43 như sau:\n"
+            "“Điều 43a. Đấu giá trực tuyến\n"
+            "1. Việc đấu giá trực tuyến được thực hiện thông qua Cổng Đấu giá.\n"
+            "Điều 43b. Trình tự đấu giá trực tuyến\n"
+            "1. Tổ chức hành nghề đấu giá đăng tải Quy chế.”.\n"
+            "Điều 2. Hiệu lực thi hành\n"
+            "Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2025.\n"
+        ),
+    }
+    chunks = ArticleLevelChunker(min_article_length=100).chunk_document(row)
+    labels = [c.article for c in chunks]
+
+    assert "Điều 43a. Đấu giá trực tuyến" in labels          # quoted-“ header
+    assert "Điều 43b. Trình tự đấu giá trực tuyến" in labels  # bare suffixed header
+    assert not any(l.startswith("“") for l in labels if l)   # labels quote-free
+
+    # chunk_text stays verbatim — the opening quote is NOT stripped from text
+    c43a = next(c for c in chunks if c.article.startswith("Điều 43a"))
+    assert c43a.chunk_text.startswith("“Điều 43a.")
+    # mid-line mentions ("Bổ sung Điều 43a và...") must NOT create boundaries:
+    # the intro line stays in Điều 1's chunk
+    c1 = next(c for c in chunks if c.article.startswith("Điều 1"))
+    assert "Bổ sung Điều 43a và Điều 43b" in c1.chunk_text
+
+
+def test_plain_numbered_articles_unaffected_by_suffix_support():
+    row = {
+        "id": 3,
+        "title": "Luật sửa đổi X 2024",
+        "content": (
+            "Điều 1. Phạm vi điều chỉnh\n"
+            "Nội dung một " + ("a" * 120) + "\n"
+            "Điều 2. Hiệu lực\n"
+            "Nội dung hai " + ("b" * 120) + "\n"
+        ),
+    }
+    chunks = ArticleLevelChunker(min_article_length=100).chunk_document(row)
+    assert [c.article for c in chunks] == [
+        "Điều 1. Phạm vi điều chỉnh",
+        "Điều 2. Hiệu lực",
+    ]
