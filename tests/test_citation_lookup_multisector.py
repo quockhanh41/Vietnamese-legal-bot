@@ -369,3 +369,27 @@ def test_load_collection_cache_populates_doc_number_index_from_payload():
     # doc_number cache — still the same bullet-list contract.
     summary = lookup.corpus_summary()
     assert "- Luật Doanh nghiệp 2020" in summary
+
+
+def test_resolve_doc_overcaptured_hint_trims_to_matching_title():
+    """Regression (Tier-1 v3, crim-304): the generic hint pattern captured
+    'bộ luật hình sự đã bị sửa đổi bởi những luật nào' (stopword list didn't
+    know 'đã') -> matched no title -> fell back to ALL docs -> lookup
+    flooded with Điều 40 from other sectors. resolve_doc must trim the hint
+    from the right until a title matches."""
+    lookup = _lookup_with_fake_index()
+    resolved = lookup.resolve_doc(
+        "bộ luật hình sự đã bị sửa đổi bởi những luật nào", None
+    )
+    titles = [REAL_TITLES[d].lower() for d in resolved]
+    assert titles, "must resolve to something"
+    assert all("hình sự" in t for t in titles)
+    assert len(resolved) < len(REAL_TITLES)  # NOT the all-docs fallback
+
+
+def test_resolve_doc_totally_unknown_hint_still_falls_back_to_all():
+    """Trimming must not break the pinned all-docs fallback for hints that
+    match nothing at ANY length."""
+    lookup = _lookup_with_fake_index()
+    resolved = lookup.resolve_doc("luật hàng không vũ trụ", None)
+    assert set(resolved) == set(REAL_TITLES.keys())

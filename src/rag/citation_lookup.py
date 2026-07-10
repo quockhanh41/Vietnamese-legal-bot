@@ -452,6 +452,24 @@ class CitationLookup:
         hint_norm = hint.strip().lower()
         expanded = _ABBREV_EXPANSIONS.get(hint_norm.replace(" ", ""), hint_norm)
 
+        # The generic hint patterns can over-capture trailing prose the
+        # stopword list doesn't know ("bộ luật hình sự ĐÃ BỊ SỬA ĐỔI BỞI
+        # NHỮNG LUẬT NÀO") — then nothing matches and we'd fall back to ALL
+        # docs, which at 100-doc scale floods lookup with same-numbered
+        # articles from other sectors (measured: crim-304, Điều 40 đất đai
+        # burying Điều 40 BLHS). Trim words off the RIGHT until some title
+        # matches, down to a 2-word minimum.
+        candidate = expanded
+        while candidate and not any(
+            candidate in title.lower() for title in aliases.values()
+        ):
+            words = candidate.rsplit(" ", 1)[0]
+            if words == candidate or len(words.split()) < 2:
+                candidate = expanded  # nothing matched at any length — keep original semantics
+                break
+            candidate = words
+        expanded = candidate
+
         # Multi-sector corpus hazard (M1.3): guiding-decree titles CONTAIN
         # the law name they implement ("Nghị định 126/2014/NĐ-CP hướng dẫn
         # thi hành Luật Hôn nhân và gia đình"), so a bare substring test
