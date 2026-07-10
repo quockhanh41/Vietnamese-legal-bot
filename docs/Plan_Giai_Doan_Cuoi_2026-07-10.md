@@ -199,7 +199,7 @@ Baseline 6 docs = 1.670 chunks (~278 chunks/doc — đây là **worst case** vì
 
 | Milestone | Trạng thái | Ngày xong | Ghi chú |
 |---|---|---|---|
-| M0 — Nền sạch | 🔲 Chưa bắt đầu | | |
+| M0 — Nền sạch | ✅ Hoàn thành | 2026-07-10 | 6 commits (`5dd8f43`…). Nổi bật: 178 Điều khôi phục vào index; phân bố confidence lần đầu tách sạch (gap +0.0139); threshold 0.725→0.700 (refusal_recall 1.0, false_refusal 0.0). Chi tiết: roadmap doc mục "Trạng thái M0". |
 | M1 — 100 docs | 🔲 | | |
 | M2 — 600 docs | 🔲 | | |
 | M3 — SOTA theo số đo | 🔲 | | |
