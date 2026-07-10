@@ -29,6 +29,7 @@ from dataclasses import dataclass, field
 from src.db.qdrant_client import SearchResult
 from src.llm.gateway import LLMGateway
 from src.llm.prompts import CONFIDENCE_EVAL_PROMPT
+from src.rag.context_blocks import parse_context_blocks, select_premise
 
 logger = logging.getLogger(__name__)
 
@@ -253,25 +254,70 @@ class ConfidenceScorer:
 
     # ── Signal ③: LLM Self-Eval ───────────────────────────
 
+    # Rubric criteria, in the order they appear in `CONFIDENCE_EVAL_PROMPT`.
+    # Each is graded 0/1/2 by the LLM; combined in code into a 0-1 score
+    # (sum / (2 * len(criteria))) instead of trusting a single self-reported
+    # 0-100 number.
+    _RUBRIC_CRITERIA = ["CĂN CỨ", "TRÍCH DẪN", "SUY DIỄN", "ĐẦY ĐỦ"]
+    _RUBRIC_LINE_PATTERN = {
+        label: re.compile(rf'{re.escape(label)}\s*:\s*([0-2])\b', re.IGNORECASE)
+        for label in _RUBRIC_CRITERIA
+    }
+
     def _llm_self_eval(self, question: str, answer: str, context: str) -> float:
-        """Ask LLM to rate its own answer confidence on 0-100 scale."""
+        """
+        Ask the LLM to grade its own answer against a rubric of separate,
+        coarse (0/1/2) criteria, then combine them into a 0-1 score in code.
+
+        Replaces the old single self-reported 0-100 number, which ceilinged
+        at 0.85-1.00 across 8/8 manually inspected cases — including ones
+        where the verifier flagged a contradiction — despite carrying 0.30
+        of the total signal weight (see roadmap M0.1 follow-up).
+
+        Context passed to the LLM is also no longer a blind `context[:2000]`
+        truncation: it's the union of context block(s) the answer actually
+        cites via `[n]` (same selector as the per-claim NLI premise), capped
+        to ~3000 chars — falling back to lexical-overlap / blind truncation
+        per `context_blocks.select_premise`.
+        """
         try:
+            blocks = parse_context_blocks(context)
+            eval_context = select_premise(answer, context, blocks=blocks, cap=3000)
             prompt = CONFIDENCE_EVAL_PROMPT.format(
                 question=question,
                 answer=answer[:1000],  # Keep prompt manageable
-                context=context[:2000],
+                context=eval_context,
             )
             result = self.llm.generate(
-                prompt=prompt, temperature=0, max_tokens=100, reasoning_effort="none",
+                prompt=prompt, temperature=0, max_tokens=150, reasoning_effort="none",
             )
-            # Extract number from response
-            nums = re.findall(r'\d+', result.strip())
-            if nums:
-                score = int(nums[0]) / 100.0
-                return max(0.0, min(1.0, score))
+            score = self._parse_rubric_score(result)
+            if score is not None:
+                return score
         except Exception as e:
             logger.warning(f"LLM self-eval failed: {e}")
-        return 0.5  # Neutral default on failure
+        return 0.5  # Neutral default on failure / unparseable rubric response
+
+    @classmethod
+    def _parse_rubric_score(cls, raw: str) -> Optional[float]:
+        """
+        Parse a `CONFIDENCE_EVAL_PROMPT` rubric response into a 0-1 score.
+
+        Fail-safe: returns None unless ALL 4 criteria are found with a value
+        in {0, 1, 2} — a partial/garbled parse is treated the same as a total
+        failure (caller falls back to the 0.5 neutral default) rather than
+        silently averaging over fewer criteria, which would bias the score
+        in an unpredictable direction.
+        """
+        if not raw:
+            return None
+        scores = []
+        for label in cls._RUBRIC_CRITERIA:
+            m = cls._RUBRIC_LINE_PATTERN[label].search(raw)
+            if not m:
+                return None
+            scores.append(int(m.group(1)))
+        return sum(scores) / (2 * len(cls._RUBRIC_CRITERIA))
 
     # ── Signal ④: Context Overlap ─────────────────────────
 

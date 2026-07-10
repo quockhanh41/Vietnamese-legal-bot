@@ -20,6 +20,13 @@ import logging
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass, field
 
+from src.rag.context_blocks import (
+    BLOCK_HEADER_PATTERN,
+    BLOCK_REF_PATTERN,
+    parse_context_blocks,
+    select_premise,
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -167,32 +174,17 @@ class HallucinationVerifier:
 
     # ── Tier 1.5: Grounding ─────────────────────────────────────
 
-    # Matches a block header line like "[1] Bộ luật Hình sự 2015 — Điều 17 (...)"
-    # at the start of each `_build_context()` block (src/rag/orchestrator.py).
-    BLOCK_HEADER_PATTERN = re.compile(r'^\[(\d+)\]')
-    BLOCK_REF_PATTERN = re.compile(r'\[(\d+)\]')
+    # Block header/ref patterns and the block parser now live in
+    # `src.rag.context_blocks` (shared with `ConfidenceScorer` — M0.1) — kept
+    # as class attributes / a thin method wrapper here so existing call sites
+    # in this class (and any external code referencing them) don't change.
+    BLOCK_HEADER_PATTERN = BLOCK_HEADER_PATTERN
+    BLOCK_REF_PATTERN = BLOCK_REF_PATTERN
 
     def _parse_context_blocks(self, context: str) -> Dict[int, str]:
-        """
-        Parse the `_build_context()` output — blocks numbered "[i] ..." joined
-        by "\n\n---\n\n" — into an {index: block_text} dict. Derives the block
-        count from what's actually parsed, not from an assumed format.
-        """
-        blocks: Dict[int, str] = {}
-        if not context:
-            return blocks
-
-        for raw_block in context.split('\n\n---\n\n'):
-            raw_block = raw_block.strip()
-            if not raw_block:
-                continue
-            match = self.BLOCK_HEADER_PATTERN.match(raw_block)
-            if not match:
-                continue
-            idx = int(match.group(1))
-            blocks[idx] = raw_block
-
-        return blocks
+        """Parse `_build_context()` output into an {index: block_text} dict.
+        Delegates to `context_blocks.parse_context_blocks` (shared parser)."""
+        return parse_context_blocks(context)
 
     def _verify_grounding(self, answer: str, context: str, result: VerificationResult):
         """
@@ -452,19 +444,33 @@ class HallucinationVerifier:
             return
 
         result.claims = claims
-        # Truncate context to fit model max length (typically 512 tokens).
-        # Keep the char-based truncation as a cheap first pass; the tokenizer
-        # will also truncate (truncation=True) so we don't overflow the model.
-        truncated_context = context[:2000]
+
+        # Per-claim premise selection (M0.1 fix): a single `context[:2000]`
+        # blind truncation used to serve as the premise for EVERY claim,
+        # silently dropping the ground-truth article whenever it fell
+        # outside the first ~3-4 context blocks (crim-109 false-negative —
+        # entailment_ratio was artificially deflated). Each claim now gets
+        # its own premise built from the block(s) it actually cites via
+        # `[n]` (`_build_context()` numbers every block, and the "Chi tiết"
+        # bullets are prompted to cite them — same mapping `_verify_grounding`
+        # already relies on). Falls back to the highest lexical-overlap block
+        # when a claim cites none (e.g. the "Trả lời ngắn" summary sentence),
+        # and to the old blind truncation only if `context` doesn't parse
+        # into numbered blocks at all (see `context_blocks.select_premise`).
+        # Cap stays ~2000 chars: mDeBERTa's max is 512 tokens, so a longer
+        # premise is truncated by the tokenizer anyway (kept as belt-and-
+        # braces via `truncation=True` below).
+        blocks = parse_context_blocks(context)
 
         entail_count = 0
         contradict_count = 0
 
         for claim in claims:
+            premise = select_premise(claim, context, blocks=blocks, cap=2000)
             try:
                 # Native NLI pair: premise=context, hypothesis=claim.
                 output = self._nli_model(
-                    {"text": truncated_context, "text_pair": claim},
+                    {"text": premise, "text_pair": claim},
                     truncation=True,
                 )
                 # pipeline() may return a dict or a list with one dict depending on version

@@ -138,16 +138,54 @@ Câu hỏi: {question}
 SCOPE:"""
 
 
-CONFIDENCE_EVAL_PROMPT = """Đánh giá độ tin cậy của câu trả lời dựa trên tài liệu tham khảo.
+# Rubric-based self-eval (M0.1 fix — see docs/Danh_Gia_va_Roadmap_Production_2026-07-06.md,
+# "2 follow-up còn lại"). The old version asked the LLM for a single 0-100
+# self-reported number, which ceilinged at 0.85-1.00 across 8/8 manually
+# inspected cases (including ones the verifier flagged as contradicted) —
+# too coarse to carry its 0.30 signal weight. This version asks 4 SEPARATE
+# coarse (0/1/2) criteria instead; `ConfidenceScorer._parse_rubric_score`
+# combines them into a 0-1 score in code, never trusting an LLM-computed
+# total. Two short few-shot examples anchor the 0/1/2 scale (one fully
+# grounded → high, one that over-infers past the source → low).
+CONFIDENCE_EVAL_PROMPT = """Chấm điểm câu trả lời pháp lý dưới đây dựa trên tài liệu tham khảo, theo
+4 TIÊU CHÍ RIÊNG BIỆT. Với MỖI tiêu chí, cho điểm 0, 1, hoặc 2:
+  0 = không đạt tiêu chí
+  1 = đạt một phần
+  2 = đạt đầy đủ
+
+TIÊU CHÍ:
+- CĂN CỨ: Mọi khẳng định trong câu trả lời đều có căn cứ rõ ràng trong tài liệu tham khảo (không bịa thông tin)?
+- TRÍCH DẪN: Các trích dẫn Điều/Khoản trong câu trả lời khớp đúng với nội dung tài liệu?
+- SUY DIỄN: Câu trả lời KHÔNG suy diễn/mở rộng vượt quá những gì tài liệu nói (0 = suy diễn nhiều, 2 = bám sát tài liệu)?
+- ĐẦY ĐỦ: Câu trả lời có giải quyết đầy đủ câu hỏi được đặt ra?
+
+VÍ DỤ 1 (bám sát tài liệu, đầy đủ → điểm cao):
+Câu hỏi: Đồng phạm là gì?
+Tài liệu tham khảo: [1] Bộ luật Hình sự 2015 — Điều 17
+Đồng phạm là trường hợp có hai người trở lên cố ý cùng thực hiện tội phạm.
+Câu trả lời: Đồng phạm là trường hợp có hai người trở lên cố ý cùng thực hiện tội phạm (Điều 17 BLHS 2015) [1].
+CĂN CỨ: 2
+TRÍCH DẪN: 2
+SUY DIỄN: 2
+ĐẦY ĐỦ: 2
+
+VÍ DỤ 2 (suy diễn vượt tài liệu, trích dẫn không khớp → điểm thấp):
+Câu hỏi: Người dưới 14 tuổi phạm tội có bị xử lý hình sự không?
+Tài liệu tham khảo: [1] Bộ luật Hình sự 2015 — Điều 12
+Người từ đủ 16 tuổi trở lên phải chịu trách nhiệm hình sự về mọi tội phạm.
+Câu trả lời: Người dưới 14 tuổi sẽ bị phạt tù treo theo Điều 12 và phải bồi thường gấp đôi thiệt hại.
+CĂN CỨ: 0
+TRÍCH DẪN: 0
+SUY DIỄN: 0
+ĐẦY ĐỦ: 1
+
+Bây giờ hãy chấm điểm cho trường hợp thực tế dưới đây. CHỈ trả về ĐÚNG 4 dòng theo định
+dạng "TÊN_TIÊU_CHÍ: <0/1/2>" như trên, không thêm giải thích hay chữ nào khác.
 
 Câu hỏi: {question}
-Câu trả lời: {answer}
 Tài liệu tham khảo: {context}
-
-Trên thang 0-100, câu trả lời này có bao nhiêu % thông tin được hỗ trợ bởi tài liệu?
-CHỈ trả về một số từ 0-100. Không giải thích.
-
-Điểm:"""
+Câu trả lời: {answer}
+CĂN CỨ:"""
 
 
 GENERATION_PROMPT = """Dựa trên các tài liệu pháp luật được cung cấp, hãy trả lời câu hỏi sau.
