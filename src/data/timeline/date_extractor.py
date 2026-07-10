@@ -85,6 +85,9 @@ class LawTimeline:
     law_name: str
 
     issuance_date: Optional[str] = None       # Ngày ban hành (from metadata)
+    doc_number: Optional[str] = None           # Số hiệu ("100/2015/QH13") — for
+                                               # exact replacement matching in
+                                               # VersionResolver (M1.8b)
     effective_date: Optional[date] = None      # Ngày có hiệu lực chính
     expiry_date: Optional[date] = None         # Ngày hết hiệu lực (if any)
 
@@ -201,13 +204,18 @@ class DateExtractor:
         Strategy: Search from the END of the document, since the
         'Hiệu lực thi hành' article is always the last or near-last article.
         """
-        # Strategy 1: Find LAST occurrence of "Hiệu lực thi hành" heading
-        last_idx = content.rfind('Hiệu lực thi hành')
-        if last_idx > 0 and last_idx > len(content) * 0.7:
-            # We're in the last 30% of the doc — likely the real article
-            # Take text from this point to end, or to next major boundary
-            snippet = content[last_idx:last_idx + 1000]
-            return snippet
+        # Strategy 1: Find LAST occurrence of a transition-provision heading.
+        # Both variants are used in practice: "Hiệu lực thi hành" and
+        # "Điều khoản thi hành" (e.g. LDN 2020's Điều 217 — M1.8b: missing
+        # the second variant made large laws fall through to a first-match
+        # scan that hit mid-law false positives like "hiệu lực" of corporate
+        # resolutions, losing the real replaced-laws clause entirely).
+        for heading in ('Hiệu lực thi hành', 'Điều khoản thi hành'):
+            last_idx = content.rfind(heading)
+            if last_idx > 0 and last_idx > len(content) * 0.7:
+                # We're in the last 30% of the doc — likely the real article
+                # Take text from this point to end, or to next major boundary
+                return content[last_idx:last_idx + 1000]
 
         # Strategy 2: Try regex pattern (searches from beginning)
         m = _RE_HIEU_LUC_ARTICLE.search(content)
@@ -219,8 +227,11 @@ class DateExtractor:
         if m:
             return m.group(1)
 
-        # Strategy 4: Any "Hiệu lực thi hành" (not at the very beginning)
-        idx = content.lower().find('hiệu lực thi hành')
+        # Strategy 4: Any "hiệu lực thi hành" — searched from the END
+        # (transition provisions close the document; a first-match scan
+        # latches onto mid-law phrases like the effectiveness of corporate
+        # resolutions — measured on LDN 2020, M1.8b).
+        idx = content.lower().rfind('hiệu lực thi hành')
         if idx > 500:  # Not in preamble
             return content[idx:idx + 800]
 

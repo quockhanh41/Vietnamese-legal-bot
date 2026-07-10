@@ -1,0 +1,560 @@
+{
+  "_meta": {
+    "name": "eval_set_sectors_v1",
+    "version": "1.0",
+    "created": "2026-07-10",
+    "description": "Eval set đa lĩnh vực cho 5 lĩnh vực mới mở rộng trong corpus_100docs.parquet (dan_su, lao_dong, doanh_nghiep, dat_dai, hngd). Toàn bộ câu hỏi expected_behavior=answer (grounded). Mọi (doc_id, article) trong expected_articles đã được xác minh BẰNG CODE — regex tìm header 'Điều N.'/'Điều N:' (tolerate ngoặc kép cong mở đầu '“' và hậu tố chữ như '25a') ở đầu dòng trong content của đúng doc_id đó, đọc trực tiếp từ data/raw/corpus_100docs.parquet. ground_truth diễn đạt lại nội dung thật đọc được từ parquet, KHÔNG lấy từ trí nhớ pháp luật.",
+    "source": "data/raw/corpus_100docs.parquet (100 văn bản, cột sector: hinh_su, dan_su, lao_dong, doanh_nghiep, dat_dai, hngd)",
+    "verification_rule": "Script xác minh: với mỗi (doc_id, article), lấy content = df.set_index('id').loc[doc_id,'content'], tìm regex (?:^|\\n)\\s*[“\"«]?\\s*Điều\\s+<N>\\s*[\\.:] (N escape đúng, tolerate hậu tố chữ vd '25a', '48b', '43a'). Chỉ chấp nhận (doc_id, article) nếu tìm thấy match — không suy luận từ trí nhớ.",
+    "schema": {
+      "id": "unique id, prefix theo sector: ds- (dan_su), ld- (lao_dong), dn- (doanh_nghiep), dd- (dat_dai), hg- (hngd)",
+      "question": "câu hỏi người dùng thực tế — mix tự nhiên (không nêu số điều) và citation-lookup (nêu đích danh số điều)",
+      "type": "citation-lookup | single-hop | multi-hop | comparison | amendment",
+      "difficulty": "easy | medium | hard",
+      "legal_sector": "khớp đúng giá trị cột sector trong parquet: dan_su | lao_dong | doanh_nghiep | dat_dai | hngd",
+      "expected_behavior": "answer (toàn bộ set này là câu grounded)",
+      "ground_truth": "2-4 câu tiếng Việt tóm nội dung điều luật, diễn đạt lại từ content thật trong parquet",
+      "expected_articles": "list {doc_id, article} — đã verify bằng script, article dạng 'Điều N' hoặc 'Điều Na'",
+      "notes": "ghi chú review (optional) — vd bẫy disambiguation, câu nhắm điều luật trong luật sửa đổi (watch-item M1.2b)"
+    }
+  },
+  "questions": [
+    {
+      "id": "ds-001",
+      "question": "Điều 124 Bộ luật Dân sự 2015 quy định về vấn đề gì?",
+      "type": "citation-lookup",
+      "difficulty": "easy",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Điều 124 Bộ luật Dân sự 2015 quy định về giao dịch dân sự vô hiệu do giả tạo. Khi các bên xác lập giao dịch một cách giả tạo nhằm che giấu một giao dịch khác thì giao dịch giả tạo vô hiệu, còn giao dịch bị che giấu vẫn có hiệu lực (trừ trường hợp giao dịch đó cũng vô hiệu theo quy định khác). Trường hợp giao dịch giả tạo nhằm trốn tránh nghĩa vụ với người thứ ba thì giao dịch đó vô hiệu.",
+      "expected_articles": [{"doc_id": 296215, "article": "Điều 124"}]
+    },
+    {
+      "id": "ds-002",
+      "question": "Điều 651 Bộ luật Dân sự 2015 quy định về những hàng thừa kế nào?",
+      "type": "citation-lookup",
+      "difficulty": "medium",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Điều 651 Bộ luật Dân sự 2015 quy định 3 hàng thừa kế theo pháp luật: hàng thứ nhất gồm vợ, chồng, cha đẻ, mẹ đẻ, cha nuôi, mẹ nuôi, con đẻ, con nuôi; hàng thứ hai gồm ông bà nội ngoại, anh chị em ruột, cháu ruột (khi người chết là ông bà); hàng thứ ba gồm cụ nội ngoại, bác/chú/cậu/cô/dì ruột, cháu ruột, chắt ruột. Những người thừa kế cùng hàng được hưởng phần di sản bằng nhau; hàng sau chỉ được hưởng nếu hàng trước không còn ai.",
+      "expected_articles": [{"doc_id": 296215, "article": "Điều 651"}]
+    },
+    {
+      "id": "ds-101",
+      "question": "Vay tiền không có lãi mà đến hạn không trả thì bên vay có phải chịu lãi không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo khoản 4 Điều 466 Bộ luật Dân sự 2015, nếu vay không có lãi mà đến hạn bên vay không trả hoặc trả không đầy đủ, bên cho vay có quyền yêu cầu trả tiền lãi theo mức lãi suất quy định tại khoản 2 Điều 468 trên số tiền chậm trả, trừ trường hợp có thỏa thuận khác. Nếu vay có lãi thì bên vay còn phải trả thêm lãi trên nợ gốc quá hạn bằng 150% lãi suất vay theo hợp đồng.",
+      "expected_articles": [{"doc_id": 296215, "article": "Điều 466"}]
+    },
+    {
+      "id": "ds-102",
+      "question": "Bên có nghĩa vụ chậm trả tiền theo hợp đồng dân sự thì phải chịu hậu quả gì?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 357 Bộ luật Dân sự 2015, bên chậm trả tiền phải trả lãi đối với số tiền chậm trả tương ứng với thời gian chậm trả. Lãi suất do các bên thỏa thuận nhưng không được vượt mức lãi suất quy định tại khoản 1 Điều 468; nếu không có thỏa thuận thì áp dụng mức lãi suất tại khoản 2 Điều 468.",
+      "expected_articles": [{"doc_id": 296215, "article": "Điều 357"}]
+    },
+    {
+      "id": "ds-103",
+      "question": "Quyền tác giả đối với một tác phẩm phát sinh từ thời điểm nào, có bắt buộc đăng ký không?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 6 Luật Sở hữu trí tuệ 2005, quyền tác giả phát sinh kể từ khi tác phẩm được sáng tạo và được thể hiện dưới một hình thức vật chất nhất định, không phân biệt nội dung, chất lượng, đã công bố hay chưa công bố, đã đăng ký hay chưa đăng ký. Như vậy đăng ký không phải là điều kiện bắt buộc để quyền tác giả phát sinh.",
+      "expected_articles": [{"doc_id": 7022, "article": "Điều 6"}]
+    },
+    {
+      "id": "ds-104",
+      "question": "Gây thiệt hại cho người khác thì căn cứ nào để phát sinh trách nhiệm bồi thường thiệt hại ngoài hợp đồng?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 584 Bộ luật Dân sự 2015, người có hành vi xâm phạm tính mạng, sức khỏe, danh dự, nhân phẩm, uy tín, tài sản, quyền, lợi ích hợp pháp khác của người khác mà gây thiệt hại thì phải bồi thường, trừ trường hợp luật có quy định khác. Người gây thiệt hại không phải bồi thường nếu thiệt hại phát sinh do sự kiện bất khả kháng hoặc hoàn toàn do lỗi của bên bị thiệt hại; nếu tài sản gây thiệt hại thì chủ sở hữu, người chiếm hữu tài sản phải chịu trách nhiệm bồi thường.",
+      "expected_articles": [{"doc_id": 296215, "article": "Điều 584"}]
+    },
+    {
+      "id": "ds-105",
+      "question": "Hiện nay công dân phải đi đổi thẻ căn cước ở những mốc tuổi nào?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 21 Luật Căn cước 2023 (26/2023/QH15), công dân Việt Nam đã được cấp thẻ căn cước phải thực hiện thủ tục cấp đổi khi đủ 14 tuổi, 25 tuổi, 40 tuổi và 60 tuổi. Thẻ đã được cấp, cấp đổi, cấp lại trong thời hạn 02 năm trước độ tuổi cấp đổi thì vẫn có giá trị sử dụng đến mốc tuổi cấp đổi tiếp theo.",
+      "expected_articles": [{"doc_id": 552422, "article": "Điều 21"}],
+      "notes": "Luật Căn cước 2023 thay thế Luật Căn cước công dân 2014 — dùng làm cặp so sánh với ds-201."
+    },
+    {
+      "id": "ds-106",
+      "question": "Một hợp đồng dân sự muốn có hiệu lực pháp luật thì cần đáp ứng những điều kiện gì?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 117 Bộ luật Dân sự 2015 (BLDS 2015), giao dịch dân sự có hiệu lực khi: chủ thể có năng lực pháp luật, năng lực hành vi dân sự phù hợp; chủ thể tham gia hoàn toàn tự nguyện; mục đích và nội dung không vi phạm điều cấm của luật, không trái đạo đức xã hội. Ngoài ra, hình thức của giao dịch là điều kiện có hiệu lực trong trường hợp luật có quy định.",
+      "expected_articles": [{"doc_id": 296215, "article": "Điều 117"}]
+    },
+    {
+      "id": "ds-201",
+      "question": "Luật Căn cước công dân 2014 và Luật Căn cước 2023 quy định khác nhau như thế nào về độ tuổi phải đổi thẻ?",
+      "type": "comparison",
+      "difficulty": "hard",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Cả hai luật đều quy định tại Điều 21. Luật Căn cước công dân 2014 chỉ yêu cầu đổi thẻ khi công dân đủ 25 tuổi, 40 tuổi và 60 tuổi. Luật Căn cước 2023 bổ sung thêm mốc 14 tuổi (đủ 14, 25, 40 và 60 tuổi phải cấp đổi thẻ căn cước), do thẻ căn cước mới được cấp sớm hơn cho trẻ em.",
+      "expected_articles": [
+        {"doc_id": 259782, "article": "Điều 21"},
+        {"doc_id": 552422, "article": "Điều 21"}
+      ],
+      "notes": "Bẫy disambiguation: cùng số Điều 21, hai văn bản khác nhau, nội dung khác nhau (thêm mốc 14 tuổi)."
+    },
+    {
+      "id": "ds-301",
+      "question": "Điều 25a Luật Sở hữu trí tuệ sửa đổi 2022 bổ sung quy định gì mới cho người khuyết tật?",
+      "type": "amendment",
+      "difficulty": "hard",
+      "legal_sector": "dan_su",
+      "expected_behavior": "answer",
+      "ground_truth": "Điều 25a (bổ sung bởi Luật Sở hữu trí tuệ sửa đổi 2022) quy định các trường hợp ngoại lệ không xâm phạm quyền tác giả dành cho người khuyết tật: người khuyết tật hoặc người nuôi dưỡng, chăm sóc họ được quyền sao chép, biểu diễn, truyền đạt tác phẩm dưới định dạng bản sao dễ tiếp cận khi có quyền tiếp cận hợp pháp với bản gốc/bản sao, chỉ dùng cho mục đích cá nhân. Tổ chức đáp ứng điều kiện theo quy định của Chính phủ cũng có quyền sao chép, phân phối, truyền đạt bản sao dễ tiếp cận nếu hoạt động không vì mục đích lợi nhuận, kể cả phân phối/nhập khẩu xuyên biên giới theo điều ước quốc tế mà không cần xin phép chủ sở hữu quyền tác giả.",
+      "expected_articles": [{"doc_id": 458435, "article": "Điều 25a"}],
+      "notes": "Watch-item M1.2b: Điều luật có hậu tố chữ (25a) được bổ sung bởi luật sửa đổi — kiểm tra retrieval có tách đúng chunk/nhãn điều hậu tố hay không."
+    },
+    {
+      "id": "ld-001",
+      "question": "Điều 169 Bộ luật Lao động 2019 quy định về vấn đề gì?",
+      "type": "citation-lookup",
+      "difficulty": "easy",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Điều 169 Bộ luật Lao động 2019 quy định về tuổi nghỉ hưu. Tuổi nghỉ hưu trong điều kiện lao động bình thường được điều chỉnh theo lộ trình đến khi đủ 62 tuổi với lao động nam vào năm 2028 và đủ 60 tuổi với lao động nữ vào năm 2035; từ năm 2021, mỗi năm tăng thêm 03 tháng (nam) và 04 tháng (nữ). Người bị suy giảm khả năng lao động hoặc làm nghề nặng nhọc, độc hại có thể nghỉ hưu sớm hơn tối đa 05 tuổi; người có trình độ chuyên môn cao có thể nghỉ hưu muộn hơn tối đa 05 tuổi.",
+      "expected_articles": [{"doc_id": 333670, "article": "Điều 169"}]
+    },
+    {
+      "id": "ld-002",
+      "question": "Điều 125 BLLĐ 2019 liệt kê những trường hợp nào người lao động bị áp dụng hình thức kỷ luật sa thải?",
+      "type": "citation-lookup",
+      "difficulty": "medium",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 125 Bộ luật Lao động 2019, người lao động bị sa thải khi: trộm cắp, tham ô, đánh bạc, cố ý gây thương tích, sử dụng ma túy tại nơi làm việc; tiết lộ bí mật kinh doanh/công nghệ, xâm phạm quyền sở hữu trí tuệ, gây thiệt hại nghiêm trọng về tài sản hoặc quấy rối tình dục tại nơi làm việc; bị xử lý kỷ luật kéo dài thời hạn nâng lương/cách chức mà tái phạm trong thời gian chưa xóa kỷ luật; hoặc tự ý bỏ việc 05 ngày cộng dồn trong 30 ngày (hoặc 20 ngày cộng dồn trong 365 ngày) mà không có lý do chính đáng.",
+      "expected_articles": [{"doc_id": 333670, "article": "Điều 125"}]
+    },
+    {
+      "id": "ld-101",
+      "question": "Trả lương cho lao động nam và lao động nữ làm cùng một công việc có phải bằng nhau không?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo khoản 3 Điều 90 Bộ luật Lao động 2019, người sử dụng lao động phải bảo đảm trả lương bình đẳng, không phân biệt giới tính đối với người lao động làm công việc có giá trị như nhau. Mức lương theo công việc hoặc chức danh cũng không được thấp hơn mức lương tối thiểu.",
+      "expected_articles": [{"doc_id": 333670, "article": "Điều 90"}]
+    },
+    {
+      "id": "ld-102",
+      "question": "Lao động nữ mang thai tháng thứ 7 có bị bắt làm việc ban đêm không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Không. Theo Điều 137 Bộ luật Lao động 2019, người sử dụng lao động không được sử dụng người lao động làm việc ban đêm, làm thêm giờ, đi công tác xa khi mang thai từ tháng thứ 7 (hoặc tháng thứ 6 nếu làm việc ở vùng cao, vùng sâu, vùng xa, biên giới, hải đảo) hoặc khi đang nuôi con dưới 12 tháng tuổi (trừ khi người lao động đồng ý).",
+      "expected_articles": [{"doc_id": 333670, "article": "Điều 137"}]
+    },
+    {
+      "id": "ld-103",
+      "question": "Người lao động có được từ chối làm việc khi thấy có nguy cơ xảy ra tai nạn lao động không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Có. Theo điểm đ khoản 1 Điều 6 Luật An toàn, vệ sinh lao động 2015, người lao động có quyền từ chối làm công việc hoặc rời bỏ nơi làm việc mà vẫn được trả đủ lương và không bị coi là vi phạm kỷ luật khi thấy rõ nguy cơ xảy ra tai nạn lao động đe dọa nghiêm trọng tính mạng hoặc sức khỏe, nhưng phải báo ngay cho người quản lý trực tiếp; chỉ tiếp tục làm việc khi nguy cơ đã được khắc phục.",
+      "expected_articles": [{"doc_id": 281961, "article": "Điều 6"}]
+    },
+    {
+      "id": "ld-104",
+      "question": "Người lao động mất việc làm muốn nhận trợ cấp thất nghiệp thì cần đáp ứng điều kiện gì?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 49 Luật Việc làm 2013, người lao động đang đóng bảo hiểm thất nghiệp được hưởng trợ cấp thất nghiệp khi: chấm dứt hợp đồng lao động/làm việc hợp pháp (trừ đơn phương chấm dứt trái luật hoặc đã hưởng lương hưu); đã đóng bảo hiểm thất nghiệp từ đủ 12 tháng trở lên trong 24 tháng (hoặc 36 tháng tùy trường hợp) trước khi chấm dứt hợp đồng; đã nộp hồ sơ tại trung tâm dịch vụ việc làm; và chưa tìm được việc làm sau 15 ngày kể từ ngày nộp hồ sơ.",
+      "expected_articles": [{"doc_id": 215628, "article": "Điều 49"}]
+    },
+    {
+      "id": "ld-105",
+      "question": "Người lao động Việt Nam có quyền gia nhập công đoàn hay không?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Có. Theo Điều 5 Luật Công đoàn 2012, người lao động là người Việt Nam làm việc trong cơ quan, tổ chức, doanh nghiệp có quyền thành lập, gia nhập và hoạt động công đoàn; trình tự, thủ tục thực hiện theo Điều lệ Công đoàn Việt Nam.",
+      "expected_articles": [{"doc_id": 142186, "article": "Điều 5"}]
+    },
+    {
+      "id": "ld-106",
+      "question": "Theo Luật số 41/2024/QH15, người lao động cần đóng bảo hiểm xã hội bắt buộc tối thiểu bao lâu để đủ điều kiện hưởng lương hưu khi đến tuổi nghỉ hưu?",
+      "type": "single-hop",
+      "difficulty": "hard",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 64 Luật Bảo hiểm xã hội 2024 (41/2024/QH15), người lao động đủ tuổi nghỉ hưu theo Điều 169 Bộ luật Lao động và có thời gian đóng bảo hiểm xã hội bắt buộc từ đủ 15 năm trở lên thì được hưởng lương hưu (mức tối thiểu được giảm so với 20 năm của luật cũ).",
+      "expected_articles": [{"doc_id": 557190, "article": "Điều 64"}]
+    },
+    {
+      "id": "ld-201",
+      "question": "So với Luật Bảo hiểm xã hội 2014, Luật Bảo hiểm xã hội 2024 thay đổi điều kiện về số năm đóng BHXH tối thiểu để hưởng lương hưu như thế nào?",
+      "type": "comparison",
+      "difficulty": "hard",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 54 Luật Bảo hiểm xã hội 2014, người lao động cần đủ 20 năm đóng bảo hiểm xã hội trở lên (kèm điều kiện tuổi) mới được hưởng lương hưu. Theo Điều 64 Luật Bảo hiểm xã hội 2024, mức tối thiểu này giảm xuống còn đủ 15 năm đóng bảo hiểm xã hội bắt buộc trở lên, tạo điều kiện cho nhiều người lao động hơn được hưởng lương hưu thay vì phải rút bảo hiểm xã hội một lần.",
+      "expected_articles": [
+        {"doc_id": 259700, "article": "Điều 54"},
+        {"doc_id": 557190, "article": "Điều 64"}
+      ]
+    },
+    {
+      "id": "ld-301",
+      "question": "Điều 48b Luật Bảo hiểm y tế sửa đổi 2024 định nghĩa hành vi 'trốn đóng bảo hiểm y tế' như thế nào?",
+      "type": "amendment",
+      "difficulty": "hard",
+      "legal_sector": "lao_dong",
+      "expected_behavior": "answer",
+      "ground_truth": "Điều 48b (bổ sung bởi Luật Bảo hiểm y tế sửa đổi 2024) quy định trốn đóng bảo hiểm y tế là hành vi của người sử dụng lao động khi: sau 60 ngày kể từ hạn quy định mà không lập hoặc lập danh sách người phải tham gia BHYT không đầy đủ; đăng ký tiền lương làm căn cứ đóng BHYT thấp hơn quy định; không đóng hoặc đóng không đầy đủ số tiền đã đăng ký sau 60 ngày kể từ hạn đóng chậm nhất dù đã được cơ quan có thẩm quyền đôn đốc; hoặc các trường hợp khác theo quy định của Chính phủ. Chính phủ quy định chi tiết và các trường hợp có lý do chính đáng thì không bị coi là trốn đóng.",
+      "expected_articles": [{"doc_id": 505750, "article": "Điều 48b"}],
+      "notes": "Watch-item M1.2b: Điều luật hậu tố chữ (48b) bổ sung bởi luật sửa đổi — cùng nhóm với ds-301 (SHTT 25a) để đo retrieval trên nhãn điều hậu tố."
+    },
+    {
+      "id": "dn-001",
+      "question": "Điều 46 Luật Doanh nghiệp 2020 định nghĩa công ty trách nhiệm hữu hạn hai thành viên trở lên như thế nào?",
+      "type": "citation-lookup",
+      "difficulty": "easy",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 46 Luật Doanh nghiệp 2020, công ty TNHH hai thành viên trở lên có từ 02 đến 50 thành viên là tổ chức, cá nhân, chịu trách nhiệm về nợ và nghĩa vụ tài sản trong phạm vi số vốn đã góp. Công ty có tư cách pháp nhân kể từ ngày được cấp Giấy chứng nhận đăng ký doanh nghiệp, không được phát hành cổ phần (trừ khi chuyển đổi thành công ty cổ phần) nhưng được phát hành trái phiếu theo quy định.",
+      "expected_articles": [{"doc_id": 427301, "article": "Điều 46"}]
+    },
+    {
+      "id": "dn-002",
+      "question": "Điều 111 Luật Doanh nghiệp 2020 (59/2020/QH14) quy định công ty cổ phần có những đặc điểm gì?",
+      "type": "citation-lookup",
+      "difficulty": "medium",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 111 Luật Doanh nghiệp 2020, công ty cổ phần có vốn điều lệ chia thành nhiều phần bằng nhau gọi là cổ phần; cổ đông có thể là tổ chức, cá nhân, số lượng tối thiểu 03 và không hạn chế tối đa; cổ đông chỉ chịu trách nhiệm trong phạm vi vốn đã góp và có quyền tự do chuyển nhượng cổ phần (trừ một số trường hợp hạn chế). Công ty cổ phần có tư cách pháp nhân từ ngày được cấp Giấy chứng nhận đăng ký doanh nghiệp và có quyền phát hành cổ phần, trái phiếu, các loại chứng khoán khác.",
+      "expected_articles": [{"doc_id": 427301, "article": "Điều 111"}]
+    },
+    {
+      "id": "dn-101",
+      "question": "Doanh nghiệp tư nhân có tư cách pháp nhân không?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Không. Theo Điều 188 Luật Doanh nghiệp 2020, doanh nghiệp tư nhân là doanh nghiệp do một cá nhân làm chủ, tự chịu trách nhiệm bằng toàn bộ tài sản của mình về mọi hoạt động của doanh nghiệp; doanh nghiệp tư nhân không được phát hành bất kỳ loại chứng khoán nào và cũng không được góp vốn thành lập hoặc mua cổ phần, phần vốn góp trong công ty hợp danh, TNHH hoặc cổ phần. Mỗi cá nhân chỉ được thành lập một doanh nghiệp tư nhân.",
+      "expected_articles": [{"doc_id": 427301, "article": "Điều 188"}]
+    },
+    {
+      "id": "dn-102",
+      "question": "Thành viên góp vốn vào công ty TNHH hai thành viên trở lên phải góp đủ vốn cam kết trong thời hạn bao lâu?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 47 Luật Doanh nghiệp 2020, thành viên phải góp đủ và đúng loại tài sản đã cam kết trong thời hạn 90 ngày kể từ ngày được cấp Giấy chứng nhận đăng ký doanh nghiệp (không kể thời gian vận chuyển, làm thủ tục chuyển quyền sở hữu tài sản góp vốn). Sau thời hạn này, thành viên chưa góp vốn đương nhiên không còn là thành viên công ty; công ty phải đăng ký thay đổi vốn điều lệ tương ứng.",
+      "expected_articles": [{"doc_id": 427301, "article": "Điều 47"}]
+    },
+    {
+      "id": "dn-103",
+      "question": "Doanh nghiệp không thực hiện nghĩa vụ trả nợ trong bao lâu thì bị coi là mất khả năng thanh toán, có dấu hiệu phá sản?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo khoản 1 Điều 4 Luật Phá sản 2014, doanh nghiệp, hợp tác xã mất khả năng thanh toán là doanh nghiệp, hợp tác xã không thực hiện nghĩa vụ thanh toán khoản nợ trong thời hạn 03 tháng kể từ ngày đến hạn thanh toán. Phá sản là tình trạng doanh nghiệp mất khả năng thanh toán và bị Tòa án ra quyết định tuyên bố phá sản.",
+      "expected_articles": [{"doc_id": 238641, "article": "Điều 4"}]
+    },
+    {
+      "id": "dn-104",
+      "question": "Cơ quan nhà nước có được ép buộc doanh nghiệp phải mua hàng hóa của một doanh nghiệp cụ thể không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Không. Theo khoản 1 Điều 8 Luật Cạnh tranh 2018, cơ quan nhà nước bị nghiêm cấm thực hiện hành vi gây cản trở cạnh tranh như ép buộc, yêu cầu, khuyến nghị doanh nghiệp phải mua, bán hàng hóa, sử dụng dịch vụ với một doanh nghiệp cụ thể, phân biệt đối xử giữa các doanh nghiệp, hoặc lợi dụng chức vụ, quyền hạn để can thiệp trái pháp luật vào hoạt động cạnh tranh — trừ hàng hóa thuộc lĩnh vực độc quyền nhà nước hoặc trường hợp khẩn cấp theo luật định.",
+      "expected_articles": [{"doc_id": 345182, "article": "Điều 8"}]
+    },
+    {
+      "id": "dn-105",
+      "question": "Kinh doanh dịch vụ đòi nợ thuê hiện nay có bị pháp luật cấm không?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Có. Theo Điều 6 Luật Đầu tư 2025, kinh doanh dịch vụ đòi nợ nằm trong danh mục ngành, nghề cấm đầu tư kinh doanh, cùng với kinh doanh ma túy, mại dâm, pháo nổ, mua bán bảo vật quốc gia, kinh doanh thuốc lá điện tử/thuốc lá nung nóng và một số ngành nghề khác được liệt kê tại Điều này.",
+      "expected_articles": [{"doc_id": 681550, "article": "Điều 6"}]
+    },
+    {
+      "id": "dn-106",
+      "question": "Công ty muốn chào bán cổ phiếu lần đầu ra công chúng (IPO) cần có vốn điều lệ tối thiểu bao nhiêu?",
+      "type": "single-hop",
+      "difficulty": "hard",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo điểm a khoản 1 Điều 15 Luật Chứng khoán 2019, điều kiện chào bán cổ phiếu lần đầu ra công chúng của công ty cổ phần bao gồm mức vốn điều lệ đã góp tại thời điểm đăng ký chào bán từ 30 tỷ đồng trở lên (tính theo giá trị ghi trên sổ kế toán). Ngoài ra công ty phải có 2 năm liên tục liền trước có lãi, không lỗ lũy kế, có phương án phát hành được Đại hội đồng cổ đông thông qua, và tối thiểu 15% cổ phiếu có quyền biểu quyết phải bán cho ít nhất 100 nhà đầu tư không phải cổ đông lớn.",
+      "expected_articles": [{"doc_id": 399763, "article": "Điều 15"}]
+    },
+    {
+      "id": "dn-201",
+      "question": "Danh mục ngành, nghề cấm đầu tư kinh doanh theo Luật Đầu tư 2014 và Luật Đầu tư 2025 khác nhau như thế nào về dịch vụ đòi nợ?",
+      "type": "comparison",
+      "difficulty": "hard",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Cả hai luật đều quy định danh mục ngành, nghề cấm đầu tư kinh doanh tại Điều 6. Điều 6 Luật Đầu tư 2025 tiếp tục liệt kê 'kinh doanh dịch vụ đòi nợ' là ngành nghề bị cấm (kế thừa từ quy định cấm kinh doanh dịch vụ đòi nợ được bổ sung từ Luật Đầu tư 2020), đồng thời bổ sung thêm các ngành nghề cấm mới so với danh mục cũ như kinh doanh thuốc lá điện tử, thuốc lá nung nóng, kinh doanh xuất khẩu di vật, cổ vật.",
+      "expected_articles": [
+        {"doc_id": 259729, "article": "Điều 6"},
+        {"doc_id": 681550, "article": "Điều 6"}
+      ],
+      "notes": "Lưu ý: Luật Đầu tư 2014 (doc 259729) là bản gốc trước khi bổ sung cấm 'dịch vụ đòi nợ' (bổ sung năm 2020); câu hỏi dùng để đo khả năng model nhận biết sự phát triển quy định giữa 2 văn bản, ground_truth chỉ khẳng định điều Điều 6 tồn tại ở cả hai chứ không khẳng định nội dung điểm 'đòi nợ' có trong bản 2014 — cần thận trọng khi chấm Tier-2."
+    },
+    {
+      "id": "dn-301",
+      "question": "Điều 43a Luật Đấu giá tài sản sửa đổi 2024 bổ sung hình thức đấu giá gì mới?",
+      "type": "amendment",
+      "difficulty": "hard",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Điều 43a (bổ sung bởi Luật Đấu giá tài sản sửa đổi 2024) quy định về đấu giá trực tuyến: việc đấu giá trực tuyến được thực hiện qua Cổng Đấu giá tài sản quốc gia hoặc trang thông tin đấu giá trực tuyến; tổ chức hành nghề đấu giá tài sản, Hội đồng đấu giá tài sản có thể tự xây dựng trang thông tin riêng hoặc thuê của tổ chức khác. Chi phí sử dụng Cổng/thuê trang thông tin được tính vào chi phí đấu giá tài sản.",
+      "expected_articles": [{"doc_id": 588810, "article": "Điều 43a"}],
+      "notes": "Watch-item M1.2b: Điều luật hậu tố chữ (43a) — cùng nhóm với ds-301, ld-301 để đo retrieval trên nhãn điều hậu tố trong luật sửa đổi."
+    },
+    {
+      "id": "dn-302",
+      "question": "Điều 25 Luật Doanh nghiệp sửa đổi 2025 bổ sung yêu cầu gì mới về danh sách thành viên, cổ đông của doanh nghiệp?",
+      "type": "amendment",
+      "difficulty": "hard",
+      "legal_sector": "doanh_nghiep",
+      "expected_behavior": "answer",
+      "ground_truth": "Luật Doanh nghiệp sửa đổi 2025 (Điều 1 khoản 11, sửa Điều 25 Luật Doanh nghiệp 2020) bổ sung khoản 5 yêu cầu doanh nghiệp phải lập thêm danh sách chủ sở hữu hưởng lợi của doanh nghiệp, gồm: họ tên, ngày tháng năm sinh, quốc tịch, dân tộc, giới tính, địa chỉ liên lạc, tỷ lệ sở hữu hoặc quyền chi phối, thông tin giấy tờ pháp lý của cá nhân chủ sở hữu hưởng lợi — phục vụ công tác phòng, chống rửa tiền.",
+      "expected_articles": [{"doc_id": 659899, "article": "Điều 25"}],
+      "notes": "Điều 25 ở đây là header của chính Luật Doanh nghiệp sửa đổi 2025 (đoạn trích dẫn nội dung Điều 25 mới của Luật Doanh nghiệp 2020) — không phải hậu tố chữ nhưng vẫn thuộc watch-item M1.2b vì nằm trong chunk luật sửa đổi dài."
+    },
+    {
+      "id": "dd-001",
+      "question": "Điều 91 Luật Đất đai 2024 quy định nguyên tắc gì khi Nhà nước bồi thường đất bị thu hồi?",
+      "type": "citation-lookup",
+      "difficulty": "medium",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 91 Luật Đất đai 2024, việc bồi thường, hỗ trợ, tái định cư khi thu hồi đất phải dân chủ, khách quan, công bằng, công khai, minh bạch, kịp thời, đúng pháp luật. Bồi thường về đất được thực hiện bằng giao đất cùng mục đích sử dụng; nếu không có đất để bồi thường thì bồi thường bằng tiền theo giá đất cụ thể tại thời điểm phê duyệt phương án; nếu người có đất muốn nhận tiền thay vì đất/nhà ở theo nguyện vọng đã đăng ký thì cũng được đáp ứng.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 91"}]
+    },
+    {
+      "id": "dd-002",
+      "question": "Điều 236 Luật Đất đai 2024 (31/2024/QH15) quy định thẩm quyền giải quyết tranh chấp đất đai như thế nào?",
+      "type": "citation-lookup",
+      "difficulty": "hard",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 236 Luật Đất đai 2024, tranh chấp mà một trong các bên có Giấy chứng nhận quyền sử dụng đất (hoặc giấy tờ tương đương quy định tại Điều 137) và tranh chấp về tài sản gắn liền với đất thì do Tòa án giải quyết. Nếu các bên không có giấy tờ đó thì được chọn nộp đơn yêu cầu UBND cấp có thẩm quyền giải quyết hoặc khởi kiện tại Tòa án theo pháp luật tố tụng dân sự.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 236"}]
+    },
+    {
+      "id": "dd-101",
+      "question": "Đất nông nghiệp có được chuyển sang đất ở không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Được, nhưng phải xin phép. Theo Điều 121 Luật Đất đai 2024, chuyển đất nông nghiệp sang đất phi nông nghiệp (bao gồm việc sau đó chuyển đất phi nông nghiệp không phải đất ở sang đất ở) thuộc trường hợp phải được cơ quan nhà nước có thẩm quyền cho phép; người sử dụng đất phải thực hiện nghĩa vụ tài chính theo quy định và chế độ sử dụng đất sẽ áp dụng theo loại đất mới sau khi chuyển mục đích.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 121"}]
+    },
+    {
+      "id": "dd-102",
+      "question": "Cá nhân trực tiếp sản xuất nông nghiệp được Nhà nước giao tối đa bao nhiêu đất trồng cây hằng năm?",
+      "type": "single-hop",
+      "difficulty": "hard",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo khoản 1 Điều 176 Luật Đất đai 2024, hạn mức giao đất trồng cây hằng năm, đất nuôi trồng thủy sản, đất làm muối cho cá nhân trực tiếp sản xuất nông nghiệp là không quá 03 ha cho mỗi loại đất ở khu vực Đông Nam Bộ và đồng bằng sông Cửu Long, không quá 02 ha cho mỗi loại đất ở các tỉnh, thành phố khác.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 176"}]
+    },
+    {
+      "id": "dd-103",
+      "question": "Tranh chấp đất đai giữa hàng xóm có bắt buộc phải hòa giải ở UBND cấp xã trước khi khởi kiện ra tòa không?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Có. Theo khoản 2 Điều 235 Luật Đất đai 2024, trước khi cơ quan nhà nước có thẩm quyền giải quyết tranh chấp đất đai, các bên tranh chấp phải thực hiện hòa giải tại UBND cấp xã nơi có đất tranh chấp; việc hòa giải được thực hiện trong thời hạn không quá 30 ngày kể từ ngày nhận đơn yêu cầu, do Hội đồng hòa giải tranh chấp đất đai do Chủ tịch UBND cấp xã thành lập thực hiện.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 235"}]
+    },
+    {
+      "id": "dd-104",
+      "question": "Giá đất cụ thể được dùng để tính những khoản tiền nào khi Nhà nước giao đất, cho thuê đất?",
+      "type": "single-hop",
+      "difficulty": "hard",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 160 Luật Đất đai 2024, giá đất cụ thể được áp dụng để: tính tiền sử dụng đất khi Nhà nước giao đất có thu tiền không qua đấu giá/đấu thầu; tính tiền thuê đất khi thuê trả tiền một lần; xác định giá khởi điểm đấu giá quyền sử dụng đất; tính tiền khi gia hạn/điều chỉnh thời hạn sử dụng đất, chuyển hình thức sử dụng đất; và tính tiền bồi thường khi Nhà nước thu hồi đất.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 160"}]
+    },
+    {
+      "id": "dd-105",
+      "question": "Muốn được cấp Sổ đỏ lần đầu mà không phải nộp tiền sử dụng đất thì giấy tờ về quyền sử dụng đất phải được lập trước thời điểm nào?",
+      "type": "single-hop",
+      "difficulty": "hard",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo khoản 1 Điều 137 Luật Đất đai 2024, hộ gia đình, cá nhân đang sử dụng đất ổn định mà có một trong các loại giấy tờ về quyền sử dụng đất được lập trước ngày 15/10/1993 (do cơ quan có thẩm quyền của các thời kỳ cấp, hoặc giấy tờ chuyển nhượng được UBND xã xác nhận sử dụng trước mốc này...) thì được cấp Giấy chứng nhận quyền sử dụng đất mà không phải nộp tiền sử dụng đất.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 137"}]
+    },
+    {
+      "id": "dd-106",
+      "question": "Nhà nước được thu hồi đất vì mục đích quốc phòng, an ninh trong những trường hợp nào?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 78 Luật Đất đai 2024, Nhà nước thu hồi đất vì mục đích quốc phòng, an ninh trong các trường hợp: làm nơi đóng quân, trụ sở làm việc; làm căn cứ quân sự; làm công trình phòng thủ quốc gia; làm ga, cảng, công trình thông tin quân sự, an ninh; làm kho tàng của lực lượng vũ trang; làm trường bắn, thao trường, bãi thử/hủy vũ khí; làm cơ sở đào tạo, huấn luyện, khám chữa bệnh của lực lượng vũ trang; làm nhà ở công vụ; và làm cơ sở giam giữ, giáo dục bắt buộc, trường giáo dưỡng do Bộ Quốc phòng, Bộ Công an quản lý.",
+      "expected_articles": [{"doc_id": 523642, "article": "Điều 78"}]
+    },
+    {
+      "id": "dd-201",
+      "question": "Luật Đất đai 2013 và Luật Đất đai 2024 quy định về hạn mức giao đất nông nghiệp có gì giống và khác nhau?",
+      "type": "comparison",
+      "difficulty": "hard",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Cả hai luật đều giữ nguyên mức hạn điền: không quá 03 ha/loại đất (Đông Nam Bộ, đồng bằng sông Cửu Long) hoặc 02 ha/loại đất (nơi khác) cho đất trồng cây hằng năm, nuôi trồng thủy sản, làm muối; không quá 10 ha (đồng bằng) hoặc 30 ha (trung du, miền núi) cho đất trồng cây lâu năm. Khác biệt: Luật Đất đai 2013 (Điều 129) quy định hạn mức áp dụng cho 'hộ gia đình, cá nhân', trong khi Luật Đất đai 2024 (Điều 176) chỉ còn quy định cho 'cá nhân' trực tiếp sản xuất nông nghiệp — phản ánh việc Luật 2024 thu hẹp diện chủ thể sử dụng đất nông nghiệp không còn tính hộ gia đình như đơn vị giao đất.",
+      "expected_articles": [
+        {"doc_id": 215836, "article": "Điều 129"},
+        {"doc_id": 523642, "article": "Điều 176"}
+      ]
+    },
+    {
+      "id": "dd-301",
+      "question": "Luật số 43/2024/QH15 sửa đổi Luật Đất đai 2024 để đẩy nhanh thời điểm luật có hiệu lực thi hành từ khi nào?",
+      "type": "amendment",
+      "difficulty": "medium",
+      "legal_sector": "dat_dai",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 1 Luật sửa đổi, bổ sung một số điều của Luật Đất đai, Luật Nhà ở, Luật Kinh doanh bất động sản và Luật Các tổ chức tín dụng (Luật số 43/2024/QH15), khoản 1 Điều 252 Luật Đất đai 2024 được sửa đổi để Luật Đất đai 2024 có hiệu lực thi hành từ ngày 01/8/2024, sớm hơn so với mốc 01/01/2025 quy định ban đầu.",
+      "expected_articles": [{"doc_id": 612195, "article": "Điều 1"}],
+      "notes": "Doc 612195 chỉ dài 3.636 ký tự, sửa các điều khoản hiệu lực thi hành/chuyển tiếp (Điều 251, 252, 255 của Luật Đất đai 2024) chứ KHÔNG chứa nội dung thực chất về Luật Nhà ở hay Luật Kinh doanh bất động sản — dùng làm cơ sở cho các câu out-of-scope bẫy gen-906/gen-907 trong eval_set_general_v1."
+    },
+    {
+      "id": "hg-001",
+      "question": "Điều 3 Luật Phòng, chống bạo lực gia đình 2022 liệt kê những hành vi nào được coi là bạo lực gia đình?",
+      "type": "citation-lookup",
+      "difficulty": "medium",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Điều 3 Luật Phòng, chống bạo lực gia đình 2022 liệt kê hành vi bạo lực gia đình gồm: hành hạ, ngược đãi, đánh đập, đe dọa xâm hại sức khỏe/tính mạng; lăng mạ, xúc phạm danh dự nhân phẩm; bỏ mặc, không nuôi dưỡng thành viên gia đình là trẻ em, phụ nữ mang thai, người cao tuổi, người khuyết tật; cô lập, ngăn cản gặp gỡ người thân; cưỡng ép quan hệ tình dục, tảo hôn, kết hôn/ly hôn; chiếm đoạt, hủy hoại tài sản chung hoặc tài sản riêng của thành viên gia đình; và nhiều hành vi cưỡng ép, kiểm soát khác được liệt kê chi tiết tại khoản 1.",
+      "expected_articles": [{"doc_id": 490095, "article": "Điều 3"}]
+    },
+    {
+      "id": "hg-002",
+      "question": "Điều 14 Luật Nuôi con nuôi 2010 quy định điều kiện gì đối với người nhận con nuôi?",
+      "type": "citation-lookup",
+      "difficulty": "medium",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 14 Luật Nuôi con nuôi 2010, người nhận con nuôi phải có năng lực hành vi dân sự đầy đủ, hơn con nuôi từ 20 tuổi trở lên, có điều kiện về sức khỏe, kinh tế, chỗ ở bảo đảm chăm sóc nuôi dưỡng con nuôi, và có tư cách đạo đức tốt. Người đang bị hạn chế quyền của cha mẹ, đang chấp hành hình phạt tù, hoặc chưa được xóa án tích về một số tội xâm phạm tính mạng, sức khỏe, danh dự người khác thì không được nhận con nuôi (trừ trường hợp cha dượng/mẹ kế nhận con riêng, hoặc cô/cậu/dì/chú/bác ruột nhận cháu).",
+      "expected_articles": [{"doc_id": 108082, "article": "Điều 14"}]
+    },
+    {
+      "id": "hg-101",
+      "question": "Người bị bạo lực gia đình có những quyền gì để tự bảo vệ mình?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 9 Luật Phòng, chống bạo lực gia đình 2022, người bị bạo lực gia đình có quyền: yêu cầu cơ quan, tổ chức có thẩm quyền bảo vệ sức khỏe, tính mạng, danh dự, nhân phẩm; yêu cầu áp dụng biện pháp ngăn chặn, bảo vệ, hỗ trợ; được bố trí nơi tạm lánh và giữ bí mật thông tin; được cung cấp dịch vụ y tế, tư vấn tâm lý, trợ giúp pháp lý và xã hội; yêu cầu người có hành vi bạo lực bồi thường tổn hại; và khiếu nại, tố cáo, khởi kiện theo quy định pháp luật.",
+      "expected_articles": [{"doc_id": 490095, "article": "Điều 9"}]
+    },
+    {
+      "id": "hg-102",
+      "question": "Trẻ em bao nhiêu tuổi thì có thể được nhận làm con nuôi?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 8 Luật Nuôi con nuôi 2010, trẻ em dưới 16 tuổi có thể được nhận làm con nuôi. Người từ đủ 16 đến dưới 18 tuổi chỉ được nhận làm con nuôi nếu được cha dượng, mẹ kế nhận làm con nuôi, hoặc được cô, cậu, dì, chú, bác ruột nhận làm con nuôi. Một người chỉ được làm con nuôi của một người độc thân hoặc của cả hai vợ chồng.",
+      "expected_articles": [{"doc_id": 108082, "article": "Điều 8"}]
+    },
+    {
+      "id": "hg-103",
+      "question": "Trong gia đình, vợ chồng có quyền ngang nhau khi quyết định sử dụng nguồn thu nhập chung không?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Có. Theo Điều 18 Luật Bình đẳng giới 2006, vợ chồng bình đẳng với nhau trong quan hệ dân sự và các quan hệ liên quan đến hôn nhân gia đình; có quyền, nghĩa vụ ngang nhau trong sở hữu tài sản chung, sử dụng nguồn thu nhập chung và quyết định các nguồn lực trong gia đình, cũng như bàn bạc lựa chọn biện pháp kế hoạch hóa gia đình.",
+      "expected_articles": [{"doc_id": 15866, "article": "Điều 18"}]
+    },
+    {
+      "id": "hg-104",
+      "question": "Trẻ em có được thuê làm những công việc nặng nhọc, độc hại không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Không. Theo Điều 26 Luật Trẻ em 2016, trẻ em có quyền được bảo vệ dưới mọi hình thức để không bị bóc lột sức lao động; không phải lao động trước tuổi, quá thời gian hoặc làm công việc nặng nhọc, độc hại, nguy hiểm theo quy định pháp luật; không bị bố trí công việc hoặc nơi làm việc ảnh hưởng xấu đến nhân cách và sự phát triển toàn diện của trẻ em.",
+      "expected_articles": [{"doc_id": 303313, "article": "Điều 26"}]
+    },
+    {
+      "id": "hg-105",
+      "question": "Pháp luật cấm những hành vi nào đối với trẻ em?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 6 Luật Trẻ em 2016, pháp luật nghiêm cấm nhiều hành vi đối với trẻ em như: tước đoạt quyền sống; bỏ rơi, bỏ mặc, mua bán, bắt cóc, đánh tráo, chiếm đoạt; xâm hại tình dục, bạo lực, lạm dụng, bóc lột; ép buộc tảo hôn; xúi giục vi phạm pháp luật; kỳ thị, phân biệt đối xử; bán cho trẻ em rượu, bia, thuốc lá, chất kích thích; và nhiều hành vi khác gây hại đến sự phát triển của trẻ em được liệt kê chi tiết tại khoản 1-15.",
+      "expected_articles": [{"doc_id": 303313, "article": "Điều 6"}]
+    },
+    {
+      "id": "hg-106",
+      "question": "Cha dượng muốn nhận con riêng của vợ làm con nuôi thì có bắt buộc phải hơn con nuôi 20 tuổi và đáp ứng điều kiện kinh tế, chỗ ở như người nhận nuôi bình thường không?",
+      "type": "single-hop",
+      "difficulty": "hard",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Không bắt buộc đầy đủ. Theo khoản 3 Điều 14 Luật Nuôi con nuôi 2010, trường hợp cha dượng nhận con riêng của vợ, mẹ kế nhận con riêng của chồng làm con nuôi (hoặc cô, cậu, dì, chú, bác ruột nhận cháu làm con nuôi) thì không áp dụng quy định về việc phải hơn con nuôi từ 20 tuổi trở lên và điều kiện về sức khỏe, kinh tế, chỗ ở tại điểm b, c khoản 1 Điều này.",
+      "expected_articles": [{"doc_id": 108082, "article": "Điều 14"}]
+    },
+    {
+      "id": "hg-201",
+      "question": "Luật Hôn nhân và Gia đình 2000 và Luật Hôn nhân và gia đình 2014 khác nhau như thế nào về việc kết hôn giữa những người cùng giới tính?",
+      "type": "comparison",
+      "difficulty": "hard",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo Điều 10 Luật Hôn nhân và Gia đình 2000, kết hôn giữa những người cùng giới tính là một trong các trường hợp bị CẤM kết hôn. Theo khoản 2 Điều 8 Luật Hôn nhân và gia đình 2014, quy định này được nới lỏng: Nhà nước KHÔNG THỪA NHẬN hôn nhân giữa những người cùng giới tính, tức không còn liệt kê là hành vi bị cấm/xử phạt như luật 2000, mà chỉ đơn thuần không công nhận quan hệ hôn nhân đó về mặt pháp lý.",
+      "expected_articles": [
+        {"doc_id": 46450, "article": "Điều 10"},
+        {"doc_id": 238640, "article": "Điều 8"}
+      ],
+      "notes": "Thay đổi chính sách quan trọng giữa 2 luật: 'cấm' (2000) -> 'không thừa nhận' (2014). Tốt để test khả năng model phân biệt sắc thái pháp lý giữa 2 văn bản có hiệu lực khác thời điểm."
+    },
+    {
+      "id": "hg-301",
+      "question": "Nếu chồng có hành vi bạo lực khiến vợ mất khả năng nhận thức, ai có quyền thay vợ yêu cầu Tòa án cho ly hôn, và người vợ có thể được bảo vệ bằng biện pháp gì trong khi vụ án đang được giải quyết?",
+      "type": "multi-hop",
+      "difficulty": "hard",
+      "legal_sector": "hngd",
+      "expected_behavior": "answer",
+      "ground_truth": "Theo khoản 2 Điều 51 Luật Hôn nhân và gia đình 2014, cha, mẹ hoặc người thân thích khác có quyền yêu cầu Tòa án giải quyết ly hôn thay khi một bên vợ/chồng bị bệnh tâm thần hoặc mắc bệnh khác không thể nhận thức, làm chủ hành vi, đồng thời là nạn nhân bạo lực gia đình do người kia gây ra làm ảnh hưởng nghiêm trọng đến tính mạng, sức khỏe, tinh thần. Song song đó, theo Điều 26 Luật Phòng, chống bạo lực gia đình 2022, trong thời gian Tòa án đang thụ lý/giải quyết vụ án dân sự giữa hai bên, Tòa án có thể tự mình hoặc theo yêu cầu ra quyết định cấm tiếp xúc không quá 04 tháng nếu cần bảo vệ tính mạng người bị bạo lực.",
+      "expected_articles": [
+        {"doc_id": 238640, "article": "Điều 51"},
+        {"doc_id": 490095, "article": "Điều 26"}
+      ]
+    }
+  ]
+}

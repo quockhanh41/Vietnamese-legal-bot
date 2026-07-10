@@ -12,11 +12,55 @@ This is the query-time component of Temporal Versioning.
 
 from __future__ import annotations
 
+import re
 from typing import List, Dict, Optional, Set, Tuple
 from dataclasses import dataclass
 from datetime import date, datetime
 
 from src.data.timeline.date_extractor import LawTimeline
+
+
+# Số hiệu văn bản inside a replacement clause, e.g. "Luật Doanh nghiệp số
+# 68/2014/QH13 ... hết hiệu lực". Covers Quốc hội laws and Chính phủ decrees;
+# tolerates missing diacritics in NĐ-CP (see also
+# src/rag/citation_lookup._DOC_NUMBER_RE, kept separate on purpose: this one
+# scans legal prose, that one parses user questions).
+_DOC_NUM_IN_CLAUSE_RE = re.compile(
+    r"\b(\d{1,3}[a-zA-Z]?/\d{4}/(?:QH\d+|N[ĐD]-?CP))", re.IGNORECASE
+)
+
+
+def _normalize_doc_number(raw: str) -> str:
+    """Uppercase, strip spaces, fold 'ND-CP' -> 'NĐ-CP', drop leading zeros —
+    so numbers compare equal across payload/prose spelling variants."""
+    s = re.sub(r"\s+", "", raw or "").upper()
+    s = s.replace("NDCP", "NĐ-CP").replace("ND-CP", "NĐ-CP").replace("NĐCP", "NĐ-CP")
+    return s.lstrip("0") or s
+
+
+# Marks the boundary after which numbers in a replacement clause refer to
+# laws that AMENDED the replaced law, not to laws being replaced: "Luật BHXH
+# số 58/2014/QH13 ĐÃ ĐƯỢC SỬA ĐỔI, BỔ SUNG một số điều theo Luật số
+# 84/2015/QH13, Bộ luật số 45/2019/QH14..." — only 58/2014 is replaced;
+# 45/2019 is BLLĐ 2019, alive and well (M1.8b: matching it marked the
+# current labor code expired).
+_AMENDED_BY_MARKER_RE = re.compile(
+    r"(?:đã\s+)?được\s+sửa\s+đổi(?:\s*,\s*bổ\s+sung)?", re.IGNORECASE
+)
+
+# Amendment-law titles ("Luật sửa đổi ...", "... sửa đổi 2025", "Nghị định
+# ... sửa đổi, bổ sung ..."): amendments MODIFY a law, they never replace it
+# wholesale — their clauses must not mark anything expired. Same detection
+# ingest uses to route amendment docs to the article-level chunker.
+_AMENDMENT_TITLE_RE = re.compile(r"(?:sửa\s+đổi|bổ\s+sung)", re.IGNORECASE)
+
+
+def _extract_doc_numbers(clause: str) -> Set[str]:
+    """Normalized số hiệu of the laws a replaced_laws clause actually
+    replaces — numbers after the 'đã được sửa đổi...' marker are the
+    replaced law's AMENDERS and are excluded."""
+    target_part = _AMENDED_BY_MARKER_RE.split(clause or "", maxsplit=1)[0]
+    return {_normalize_doc_number(m) for m in _DOC_NUM_IN_CLAUSE_RE.findall(target_part)}
 
 
 @dataclass
@@ -154,19 +198,48 @@ class VersionResolver:
         """
         Find which law replaced this one (if any).
 
-        Scans other timelines' replaced_laws for a match.
+        Scans other timelines' replaced_laws clauses. Two-tier matching
+        (M1.8b — the original name-only substring match misfired at 100-doc
+        scale, marking CURRENT laws expired: _normalize_name strips the year,
+        so 'Luật Doanh nghiệp 2020' matched LDN **2014**'s clause about
+        replacing LDN 2005 and got flagged as replaced by an OLDER law):
+
+        1. Số hiệu match — if this doc's number ("59/2020/QH14") appears in
+           the clause, that's authoritative. If the clause names OTHER
+           specific numbers only, it is NOT about us: skip it.
+        2. Name fallback (clause has no parseable number) — only accepted
+           when the replacing doc is strictly NEWER (direction guard); both
+           effective dates must be known, else conservatively no match
+           (fail-open: docs stay in effect, mirroring the retriever's
+           fail-open on unknown status).
         """
         tl = self._by_id.get(doc_id)
         if not tl:
             return None
 
         norm = self._normalize_name(tl.law_name)
+        own_num = _normalize_doc_number(tl.doc_number) if tl.doc_number else None
+
         for other in self.timelines:
             if other.doc_id == doc_id:
                 continue
+            if _AMENDMENT_TITLE_RE.search(other.law_name or ""):
+                # Amendments modify, they don't replace — e.g. "Luật sửa đổi
+                # BLTTHS 2025" must not mark BLTTHS 2015 expired.
+                continue
             for replaced in (other.replaced_laws or []):
+                clause_nums = _extract_doc_numbers(replaced)
+                if clause_nums:
+                    if own_num and own_num in clause_nums:
+                        return other
+                    continue  # clause names specific other numbers — not us
                 if norm in self._normalize_name(replaced):
-                    return other
+                    if (
+                        tl.effective_date
+                        and other.effective_date
+                        and other.effective_date > tl.effective_date
+                    ):
+                        return other
         return None
 
     def effective_at(self, doc_id: int, when: Optional[date] = None) -> bool:

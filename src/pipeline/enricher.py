@@ -141,6 +141,10 @@ class EnrichmentPipeline:
                     issuance_date=issuance_date,
                     law_name=title,
                 )
+                # Số hiệu văn bản cho exact replacement matching (M1.8b) —
+                # name-based matching alone misfires at multi-version scale
+                # (see VersionResolver.find_replacement).
+                timeline.doc_number = info.get("document_number") or None
                 all_timelines.append(timeline)
 
                 if timeline.effective_date:
@@ -271,6 +275,7 @@ class EnrichmentPipeline:
                         "doc_id": doc_id,
                         "title": payload.get("document_title", ""),
                         "issuance_date": payload.get("issuance_date", ""),
+                        "document_number": payload.get("document_number", ""),
                         "legal_type": payload.get("legal_type", ""),
                         "chunks": [],
                     }
@@ -312,6 +317,7 @@ def _serialize_timeline(tl: LawTimeline) -> Dict[str, Any]:
         "doc_id": tl.doc_id,
         "law_name": tl.law_name,
         "issuance_date": tl.issuance_date,
+        "doc_number": tl.doc_number,
         "effective_date": tl.effective_date.isoformat() if tl.effective_date else None,
         "expiry_date": tl.expiry_date.isoformat() if tl.expiry_date else None,
         "is_in_effect": tl.is_in_effect,

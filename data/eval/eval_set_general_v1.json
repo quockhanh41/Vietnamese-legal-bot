@@ -19,8 +19,11 @@
       "expected_behavior_full": "answer (khi required_laws đã ingest)",
       "ground_truth": "đáp án tham khảo (CHƯA verify với corpus)",
       "ground_truth_verified": "false — phải đối chiếu lại khi ingest",
-      "expected_articles_hint": "điều luật dự kiến (theo kiến thức, chưa map doc_id)"
-    }
+      "expected_articles_hint": "điều luật dự kiến (theo kiến thức, chưa map doc_id)",
+      "flipped_at": "chỉ có ở câu đã chuyển refuse->answer trong đợt M1.5 (2026-07-10) khi required_laws đã có trong corpus_100docs.parquet — xem update_notes"
+    },
+    "updated": "2026-07-10 (M1.5 flip pass)",
+    "update_notes": "M1.5 (2026-07-10): corpus mở rộng 6 -> 100 văn bản. 27 câu có required_laws nay đã có trong corpus_100docs.parquet được flip expected_behavior_current: refuse -> answer (xem field flipped_at trên từng câu). 2 câu còn lại giữ refuse vì required_laws vẫn ngoài corpus (chủ yếu nhóm thuế TNCN). Thêm 12 câu out-of-scope mới id gen-9xx phủ giao thông, thuế, xây dựng, nhà ở/kinh doanh BĐS (bẫy), xuất nhập cảnh, pháp luật nước ngoài, hành chính công vụ, và câu phi pháp lý — dùng đo refusal rate với corpus mở rộng."
   },
   "questions": [
     {
@@ -29,12 +32,18 @@
       "type": "single-hop",
       "difficulty": "easy",
       "legal_sector": "doanh nghiệp",
-      "required_laws": ["Luật Doanh nghiệp 2020"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Doanh nghiệp 2020"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 21 Luật Doanh nghiệp 2020, hồ sơ đăng ký công ty TNHH gồm: giấy đề nghị đăng ký doanh nghiệp; điều lệ công ty; danh sách thành viên (với TNHH 2 thành viên trở lên); bản sao giấy tờ pháp lý của cá nhân/tổ chức là thành viên, người đại diện theo pháp luật.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 21 Luật Doanh nghiệp 2020"]
+      "expected_articles_hint": [
+        "Điều 21 Luật Doanh nghiệp 2020"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Doanh nghiệp 2020 -> 'Luật Doanh nghiệp 2020'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-002",
@@ -42,12 +51,19 @@
       "type": "single-hop",
       "difficulty": "easy",
       "legal_sector": "doanh nghiệp",
-      "required_laws": ["Luật Doanh nghiệp 2020"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Doanh nghiệp 2020"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Luật Doanh nghiệp 2020 không quy định mức vốn điều lệ tối thiểu chung khi thành lập công ty TNHH (trừ ngành nghề kinh doanh có điều kiện yêu cầu vốn pháp định riêng). Chủ sở hữu/thành viên phải góp đủ vốn đã cam kết trong 90 ngày kể từ ngày được cấp Giấy chứng nhận đăng ký doanh nghiệp (Điều 47, Điều 75).",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 47 Luật Doanh nghiệp 2020", "Điều 75 Luật Doanh nghiệp 2020"]
+      "expected_articles_hint": [
+        "Điều 47 Luật Doanh nghiệp 2020",
+        "Điều 75 Luật Doanh nghiệp 2020"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Doanh nghiệp 2020 -> 'Luật Doanh nghiệp 2020'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-003",
@@ -55,12 +71,19 @@
       "type": "comparison",
       "difficulty": "medium",
       "legal_sector": "doanh nghiệp",
-      "required_laws": ["Luật Doanh nghiệp 2020"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Doanh nghiệp 2020"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Khác biệt chính theo Luật Doanh nghiệp 2020: công ty TNHH có tối đa 50 thành viên, vốn chia theo phần vốn góp, không được phát hành cổ phần (trừ chuyển đổi); công ty cổ phần có tối thiểu 3 cổ đông, không giới hạn tối đa, vốn chia thành cổ phần, được phát hành cổ phiếu và trái phiếu để huy động vốn.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 46 Luật Doanh nghiệp 2020", "Điều 111 Luật Doanh nghiệp 2020"]
+      "expected_articles_hint": [
+        "Điều 46 Luật Doanh nghiệp 2020",
+        "Điều 111 Luật Doanh nghiệp 2020"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Doanh nghiệp 2020 -> 'Luật Doanh nghiệp 2020'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-004",
@@ -68,12 +91,18 @@
       "type": "single-hop",
       "difficulty": "easy",
       "legal_sector": "doanh nghiệp",
-      "required_laws": ["Luật Doanh nghiệp 2020"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Doanh nghiệp 2020"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Không. Theo Điều 188 Luật Doanh nghiệp 2020, doanh nghiệp tư nhân là doanh nghiệp do một cá nhân làm chủ, tự chịu trách nhiệm bằng toàn bộ tài sản của mình về mọi hoạt động của doanh nghiệp; doanh nghiệp tư nhân không có tư cách pháp nhân.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 188 Luật Doanh nghiệp 2020"]
+      "expected_articles_hint": [
+        "Điều 188 Luật Doanh nghiệp 2020"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Doanh nghiệp 2020 -> 'Luật Doanh nghiệp 2020'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-005",
@@ -81,12 +110,19 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "doanh nghiệp",
-      "required_laws": ["Luật Doanh nghiệp 2020", "Nghị định 01/2021/NĐ-CP"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Doanh nghiệp 2020",
+        "Nghị định 01/2021/NĐ-CP"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Hộ kinh doanh đăng ký chuyển đổi thành doanh nghiệp tại Phòng Đăng ký kinh doanh nơi doanh nghiệp dự định đặt trụ sở; hồ sơ gồm bản chính Giấy chứng nhận đăng ký hộ kinh doanh, bản sao Giấy chứng nhận đăng ký thuế và các giấy tờ theo loại hình doanh nghiệp chuyển đổi (quy định chi tiết tại Nghị định 01/2021/NĐ-CP về đăng ký doanh nghiệp).",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Nghị định 01/2021/NĐ-CP"]
+      "expected_articles_hint": [
+        "Nghị định 01/2021/NĐ-CP"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Doanh nghiệp 2020 -> 'Luật Doanh nghiệp 2020'; Nghị định 01/2021/NĐ-CP -> 'Nghị định 01/2021/NĐ-CP về đăng ký doanh nghiệp'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-101",
@@ -94,12 +130,18 @@
       "type": "single-hop",
       "difficulty": "easy",
       "legal_sector": "lao động",
-      "required_laws": ["Bộ luật Lao động 2019"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Lao động 2019"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 35 Bộ luật Lao động 2019, người lao động có quyền đơn phương chấm dứt hợp đồng không cần lý do nhưng phải báo trước: ít nhất 45 ngày với hợp đồng không xác định thời hạn; ít nhất 30 ngày với hợp đồng 12-36 tháng; ít nhất 3 ngày làm việc với hợp đồng dưới 12 tháng. Một số trường hợp (bị ngược đãi, không trả lương đúng hạn...) không cần báo trước.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 35 Bộ luật Lao động 2019"]
+      "expected_articles_hint": [
+        "Điều 35 Bộ luật Lao động 2019"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Lao động 2019 -> 'Bộ luật Lao động 2019'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-102",
@@ -107,12 +149,19 @@
       "type": "single-hop",
       "difficulty": "easy",
       "legal_sector": "lao động",
-      "required_laws": ["Bộ luật Lao động 2019"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Lao động 2019"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 113 Bộ luật Lao động 2019, người lao động làm việc đủ 12 tháng được nghỉ hằng năm hưởng nguyên lương: 12 ngày làm việc (điều kiện bình thường); 14 ngày (chưa thành niên, khuyết tật, công việc nặng nhọc độc hại); 16 ngày (công việc đặc biệt nặng nhọc độc hại). Cứ đủ 5 năm làm việc cho một người sử dụng lao động thì được thêm 1 ngày (Điều 114).",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 113 Bộ luật Lao động 2019", "Điều 114 Bộ luật Lao động 2019"]
+      "expected_articles_hint": [
+        "Điều 113 Bộ luật Lao động 2019",
+        "Điều 114 Bộ luật Lao động 2019"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Lao động 2019 -> 'Bộ luật Lao động 2019'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-103",
@@ -120,12 +169,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "lao động",
-      "required_laws": ["Bộ luật Lao động 2019"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Lao động 2019"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 98 Bộ luật Lao động 2019, người lao động làm thêm giờ được trả ít nhất: 150% vào ngày thường; 200% vào ngày nghỉ hằng tuần; 300% vào ngày nghỉ lễ, tết, ngày nghỉ có hưởng lương (chưa kể tiền lương ngày lễ với người hưởng lương ngày). Làm việc ban đêm được trả thêm ít nhất 30%.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 98 Bộ luật Lao động 2019"]
+      "expected_articles_hint": [
+        "Điều 98 Bộ luật Lao động 2019"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Lao động 2019 -> 'Bộ luật Lao động 2019'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-104",
@@ -133,12 +188,19 @@
       "type": "single-hop",
       "difficulty": "easy",
       "legal_sector": "lao động",
-      "required_laws": ["Bộ luật Lao động 2019"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Lao động 2019"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 25 Bộ luật Lao động 2019, thời gian thử việc tối đa: 180 ngày với công việc của người quản lý doanh nghiệp; 60 ngày với công việc cần trình độ cao đẳng trở lên; 30 ngày với công việc cần trình độ trung cấp, công nhân kỹ thuật, nhân viên nghiệp vụ; 6 ngày làm việc với công việc khác. Tiền lương thử việc ít nhất 85% mức lương của công việc đó (Điều 26).",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 25 Bộ luật Lao động 2019", "Điều 26 Bộ luật Lao động 2019"]
+      "expected_articles_hint": [
+        "Điều 25 Bộ luật Lao động 2019",
+        "Điều 26 Bộ luật Lao động 2019"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Lao động 2019 -> 'Bộ luật Lao động 2019'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-105",
@@ -146,12 +208,18 @@
       "type": "multi-hop",
       "difficulty": "hard",
       "legal_sector": "lao động",
-      "required_laws": ["Bộ luật Lao động 2019"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Lao động 2019"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 41 Bộ luật Lao động 2019, khi đơn phương chấm dứt hợp đồng trái pháp luật, người sử dụng lao động phải: nhận người lao động trở lại làm việc; trả tiền lương, đóng BHXH-BHYT-BHTN cho những ngày không được làm việc; trả thêm ít nhất 2 tháng tiền lương theo hợp đồng. Nếu người lao động không muốn trở lại, được nhận thêm trợ cấp thôi việc; nếu công ty không muốn nhận lại và người lao động đồng ý, hai bên thỏa thuận bồi thường thêm ít nhất 2 tháng lương.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 41 Bộ luật Lao động 2019"]
+      "expected_articles_hint": [
+        "Điều 41 Bộ luật Lao động 2019"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Lao động 2019 -> 'Bộ luật Lao động 2019'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-201",
@@ -159,12 +227,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "đất đai",
-      "required_laws": ["Luật Đất đai 2024"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Đất đai 2024"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Luật Đất đai 2024, hộ gia đình, cá nhân được cấp Giấy chứng nhận quyền sử dụng đất lần đầu khi có một trong các căn cứ: có giấy tờ về quyền sử dụng đất theo quy định; sử dụng đất ổn định lâu dài không tranh chấp được UBND xã xác nhận; đất được giao, cho thuê đúng thẩm quyền... (các điều về đăng ký, cấp Giấy chứng nhận trong Luật Đất đai 2024).",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Luật Đất đai 2024 — chương về đăng ký, cấp GCN"]
+      "expected_articles_hint": [
+        "Luật Đất đai 2024 — chương về đăng ký, cấp GCN"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Đất đai 2024 -> 'Luật Đất đai 2024'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-202",
@@ -172,12 +246,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "đất đai",
-      "required_laws": ["Luật Đất đai 2024"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Đất đai 2024"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Luật Đất đai 2024, khi Nhà nước thu hồi đất vì mục đích quốc phòng, an ninh hoặc phát triển kinh tế - xã hội vì lợi ích quốc gia, công cộng, người có đất bị thu hồi được bồi thường về đất (bằng đất cùng mục đích sử dụng hoặc bằng tiền theo giá đất cụ thể), bồi thường chi phí đầu tư vào đất, bồi thường về tài sản gắn liền với đất, và được hỗ trợ ổn định đời sống, đào tạo nghề, tái định cư theo quy định.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Luật Đất đai 2024 — chương bồi thường, hỗ trợ, tái định cư"]
+      "expected_articles_hint": [
+        "Luật Đất đai 2024 — chương bồi thường, hỗ trợ, tái định cư"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Đất đai 2024 -> 'Luật Đất đai 2024'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-203",
@@ -185,12 +265,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "đất đai",
-      "required_laws": ["Luật Đất đai 2024"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Đất đai 2024"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Được, nhưng phải xin phép. Chuyển đất nông nghiệp sang đất ở thuộc trường hợp chuyển mục đích sử dụng đất phải được cơ quan nhà nước có thẩm quyền cho phép, phải phù hợp với quy hoạch, kế hoạch sử dụng đất đã được phê duyệt, và người sử dụng đất phải nộp tiền sử dụng đất theo quy định.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Luật Đất đai 2024 — điều về chuyển mục đích sử dụng đất"]
+      "expected_articles_hint": [
+        "Luật Đất đai 2024 — điều về chuyển mục đích sử dụng đất"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Đất đai 2024 -> 'Luật Đất đai 2024'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-301",
@@ -198,13 +284,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "dân sự",
-      "required_laws": ["Bộ luật Dân sự 2015"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Dân sự 2015"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 468 Bộ luật Dân sự 2015, lãi suất vay do các bên thỏa thuận nhưng không được vượt quá 20%/năm của khoản tiền vay (trừ trường hợp luật khác có liên quan quy định khác). Phần lãi suất vượt quá mức trần không có hiệu lực.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 468 Bộ luật Dân sự 2015"],
-      "notes": "Lưu ý: cho vay lãi nặng trong giao dịch dân sự (gấp 5 lần trần) có thể cấu thành tội theo Điều 201 BLHS — câu hỏi liên ngành tốt cho tương lai."
+      "expected_articles_hint": [
+        "Điều 468 Bộ luật Dân sự 2015"
+      ],
+      "notes": "Lưu ý: cho vay lãi nặng trong giao dịch dân sự (gấp 5 lần trần) có thể cấu thành tội theo Điều 201 BLHS — câu hỏi liên ngành tốt cho tương lai. [FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Dân sự 2015 -> 'Bộ luật dân sự 2015'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]",
+      "flipped_at": "2026-07-10 M1.5"
     },
     {
       "id": "gen-302",
@@ -212,12 +303,19 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "dân sự",
-      "required_laws": ["Bộ luật Dân sự 2015"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Dân sự 2015"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 650, 651 Bộ luật Dân sự 2015, khi không có di chúc, di sản chia theo pháp luật cho các hàng thừa kế: hàng thứ nhất gồm vợ/chồng, cha mẹ đẻ, cha mẹ nuôi, con đẻ, con nuôi của người chết; hàng thứ hai gồm ông bà nội ngoại, anh chị em ruột...; những người cùng hàng được hưởng phần di sản bằng nhau; hàng sau chỉ được hưởng nếu hàng trước không còn ai.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 650 Bộ luật Dân sự 2015", "Điều 651 Bộ luật Dân sự 2015"]
+      "expected_articles_hint": [
+        "Điều 650 Bộ luật Dân sự 2015",
+        "Điều 651 Bộ luật Dân sự 2015"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Dân sự 2015 -> 'Bộ luật dân sự 2015'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-303",
@@ -225,12 +323,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "dân sự",
-      "required_laws": ["Bộ luật Dân sự 2015"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Dân sự 2015"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 630 Bộ luật Dân sự 2015, di chúc hợp pháp khi: người lập di chúc minh mẫn, sáng suốt, không bị lừa dối, đe dọa, cưỡng ép; nội dung không vi phạm điều cấm của luật, không trái đạo đức xã hội; hình thức không trái quy định của luật. Di chúc miệng và di chúc của người 15-18 tuổi có điều kiện riêng.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 630 Bộ luật Dân sự 2015"]
+      "expected_articles_hint": [
+        "Điều 630 Bộ luật Dân sự 2015"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Dân sự 2015 -> 'Bộ luật dân sự 2015'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-304",
@@ -238,12 +342,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "dân sự",
-      "required_laws": ["Bộ luật Dân sự 2015"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Dân sự 2015"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 328 Bộ luật Dân sự 2015 về đặt cọc: nếu bên nhận đặt cọc (bên bán) từ chối giao kết, thực hiện hợp đồng thì phải trả lại tài sản đặt cọc và một khoản tiền tương đương giá trị tài sản đặt cọc (phạt cọc), trừ trường hợp có thỏa thuận khác.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 328 Bộ luật Dân sự 2015"]
+      "expected_articles_hint": [
+        "Điều 328 Bộ luật Dân sự 2015"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Dân sự 2015 -> 'Bộ luật dân sự 2015'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-401",
@@ -251,12 +361,18 @@
       "type": "single-hop",
       "difficulty": "easy",
       "legal_sector": "hôn nhân gia đình",
-      "required_laws": ["Luật Hôn nhân và gia đình 2014"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Hôn nhân và gia đình 2014"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 8 Luật Hôn nhân và gia đình 2014, điều kiện kết hôn: nam từ đủ 20 tuổi trở lên, nữ từ đủ 18 tuổi trở lên; việc kết hôn do nam nữ tự nguyện quyết định; không bị mất năng lực hành vi dân sự; không thuộc các trường hợp cấm kết hôn (kết hôn giả tạo, tảo hôn, cưỡng ép, người đang có vợ/chồng, cùng dòng máu trực hệ...).",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 8 Luật Hôn nhân và gia đình 2014"]
+      "expected_articles_hint": [
+        "Điều 8 Luật Hôn nhân và gia đình 2014"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Hôn nhân và gia đình 2014 -> 'Luật Hôn nhân và gia đình 2014'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-402",
@@ -264,12 +380,19 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "hôn nhân gia đình",
-      "required_laws": ["Luật Hôn nhân và gia đình 2014"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Hôn nhân và gia đình 2014"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 56 Luật Hôn nhân và gia đình 2014, khi một bên yêu cầu ly hôn mà hòa giải tại Tòa án không thành, Tòa án giải quyết cho ly hôn nếu có căn cứ về việc vợ/chồng có hành vi bạo lực gia đình hoặc vi phạm nghiêm trọng quyền, nghĩa vụ của vợ chồng làm cho hôn nhân lâm vào tình trạng trầm trọng, đời sống chung không thể kéo dài, mục đích hôn nhân không đạt được.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 56 Luật Hôn nhân và gia đình 2014", "Điều 51 Luật Hôn nhân và gia đình 2014"]
+      "expected_articles_hint": [
+        "Điều 56 Luật Hôn nhân và gia đình 2014",
+        "Điều 51 Luật Hôn nhân và gia đình 2014"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Hôn nhân và gia đình 2014 -> 'Luật Hôn nhân và gia đình 2014'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-403",
@@ -277,12 +400,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "hôn nhân gia đình",
-      "required_laws": ["Luật Hôn nhân và gia đình 2014"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Hôn nhân và gia đình 2014"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo khoản 3 Điều 81 Luật Hôn nhân và gia đình 2014, con dưới 36 tháng tuổi được giao cho mẹ trực tiếp nuôi, trừ trường hợp người mẹ không đủ điều kiện để trực tiếp trông nom, chăm sóc, nuôi dưỡng, giáo dục con hoặc cha mẹ có thỏa thuận khác phù hợp với lợi ích của con.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 81 Luật Hôn nhân và gia đình 2014"]
+      "expected_articles_hint": [
+        "Điều 81 Luật Hôn nhân và gia đình 2014"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Hôn nhân và gia đình 2014 -> 'Luật Hôn nhân và gia đình 2014'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-404",
@@ -290,12 +419,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "hôn nhân gia đình",
-      "required_laws": ["Luật Hôn nhân và gia đình 2014"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Hôn nhân và gia đình 2014"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Điều 43 Luật Hôn nhân và gia đình 2014, tài sản riêng của vợ/chồng gồm: tài sản mỗi người có trước khi kết hôn; tài sản được thừa kế riêng, tặng cho riêng trong thời kỳ hôn nhân; tài sản được chia riêng từ tài sản chung; tài sản phục vụ nhu cầu thiết yếu của mỗi người và tài sản khác theo quy định của pháp luật.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 43 Luật Hôn nhân và gia đình 2014"]
+      "expected_articles_hint": [
+        "Điều 43 Luật Hôn nhân và gia đình 2014"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Hôn nhân và gia đình 2014 -> 'Luật Hôn nhân và gia đình 2014'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-501",
@@ -303,12 +438,17 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "thuế",
-      "required_laws": ["Luật Thuế thu nhập cá nhân", "Nghị quyết về mức giảm trừ gia cảnh"],
+      "required_laws": [
+        "Luật Thuế thu nhập cá nhân",
+        "Nghị quyết về mức giảm trừ gia cảnh"
+      ],
       "expected_behavior_current": "refuse",
       "expected_behavior_full": "answer",
       "ground_truth": "Mức giảm trừ gia cảnh (theo Nghị quyết 954/2020/UBTVQH14, áp dụng từ kỳ tính thuế 2020): 11 triệu đồng/tháng (132 triệu đồng/năm) cho bản thân người nộp thuế và 4,4 triệu đồng/tháng cho mỗi người phụ thuộc. Lưu ý mức này có thể được điều chỉnh — cần đối chiếu văn bản mới nhất khi ingest.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Nghị quyết 954/2020/UBTVQH14"]
+      "expected_articles_hint": [
+        "Nghị quyết 954/2020/UBTVQH14"
+      ]
     },
     {
       "id": "gen-502",
@@ -316,12 +456,17 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "thuế",
-      "required_laws": ["Luật Thuế thu nhập cá nhân"],
+      "required_laws": [
+        "Luật Thuế thu nhập cá nhân"
+      ],
       "expected_behavior_current": "refuse",
       "expected_behavior_full": "answer",
       "ground_truth": "Có. Thu nhập từ trúng thưởng (bao gồm trúng xổ số) là thu nhập chịu thuế TNCN theo Luật Thuế thu nhập cá nhân; thuế suất 10% áp dụng trên phần giá trị giải thưởng vượt trên 10 triệu đồng cho mỗi lần trúng thưởng.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 3 Luật Thuế TNCN", "biểu thuế toàn phần"]
+      "expected_articles_hint": [
+        "Điều 3 Luật Thuế TNCN",
+        "biểu thuế toàn phần"
+      ]
     },
     {
       "id": "gen-601",
@@ -329,12 +474,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "sở hữu trí tuệ",
-      "required_laws": ["Luật Sở hữu trí tuệ"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Sở hữu trí tuệ"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Luật Sở hữu trí tuệ, Giấy chứng nhận đăng ký nhãn hiệu có hiệu lực 10 năm kể từ ngày nộp đơn, có thể gia hạn nhiều lần liên tiếp, mỗi lần 10 năm — về lý thuyết bảo hộ không giới hạn nếu gia hạn đều đặn.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 93 Luật Sở hữu trí tuệ"]
+      "expected_articles_hint": [
+        "Điều 93 Luật Sở hữu trí tuệ"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Sở hữu trí tuệ -> 'Luật Sở hữu trí tuệ 2005'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-602",
@@ -342,12 +493,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "sở hữu trí tuệ",
-      "required_laws": ["Luật Sở hữu trí tuệ"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Sở hữu trí tuệ"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Luật Sở hữu trí tuệ, quyền tác giả phát sinh tự động kể từ khi tác phẩm được sáng tạo và thể hiện dưới một hình thức vật chất nhất định, không phụ thuộc vào việc đăng ký. Đăng ký quyền tác giả không bắt buộc nhưng có giá trị chứng cứ khi có tranh chấp.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 6 Luật Sở hữu trí tuệ"]
+      "expected_articles_hint": [
+        "Điều 6 Luật Sở hữu trí tuệ"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Sở hữu trí tuệ -> 'Luật Sở hữu trí tuệ 2005'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-701",
@@ -355,12 +512,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "bảo hiểm xã hội",
-      "required_laws": ["Luật Bảo hiểm xã hội 2024"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Bảo hiểm xã hội 2024"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Luật Bảo hiểm xã hội 2024 (hiệu lực 01/7/2025), người lao động đủ tuổi nghỉ hưu và có thời gian đóng BHXH từ đủ 15 năm trở lên thì được hưởng lương hưu (giảm từ mức 20 năm theo luật cũ).",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Luật BHXH 2024 — điều kiện hưởng lương hưu"]
+      "expected_articles_hint": [
+        "Luật BHXH 2024 — điều kiện hưởng lương hưu"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Bảo hiểm xã hội 2024 -> 'Luật Bảo hiểm xã hội 2024'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-702",
@@ -368,12 +531,18 @@
       "type": "single-hop",
       "difficulty": "hard",
       "legal_sector": "bảo hiểm xã hội",
-      "required_laws": ["Luật Bảo hiểm xã hội 2024"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Bảo hiểm xã hội 2024"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Luật BHXH 2024: người bắt đầu tham gia BHXH từ 01/7/2025 về cơ bản không được rút BHXH một lần (trừ các trường hợp đặc biệt: đủ tuổi hưu nhưng chưa đủ 15 năm đóng, ra nước ngoài định cư, bệnh hiểm nghèo...); người tham gia trước 01/7/2025 sau 12 tháng nghỉ việc không tiếp tục đóng vẫn có thể rút một lần theo quy định chuyển tiếp.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Luật BHXH 2024 — điều về BHXH một lần"]
+      "expected_articles_hint": [
+        "Luật BHXH 2024 — điều về BHXH một lần"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Bảo hiểm xã hội 2024 -> 'Luật Bảo hiểm xã hội 2024'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-801",
@@ -381,12 +550,18 @@
       "type": "single-hop",
       "difficulty": "medium",
       "legal_sector": "bảo vệ người tiêu dùng",
-      "required_laws": ["Luật Bảo vệ quyền lợi người tiêu dùng 2023"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Luật Bảo vệ quyền lợi người tiêu dùng 2023"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Theo Luật Bảo vệ quyền lợi người tiêu dùng 2023, người tiêu dùng có quyền yêu cầu bồi thường thiệt hại khi hàng hóa không đúng tiêu chuẩn, chất lượng, khiếu nại, tố cáo, khởi kiện; việc mua phải hàng giả còn có thể tố giác tới cơ quan quản lý thị trường và hành vi sản xuất, buôn bán hàng giả có thể bị xử lý hình sự.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Luật Bảo vệ quyền lợi người tiêu dùng 2023"]
+      "expected_articles_hint": [
+        "Luật Bảo vệ quyền lợi người tiêu dùng 2023"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Luật Bảo vệ quyền lợi người tiêu dùng 2023 -> 'Luật Bảo vệ quyền lợi người tiêu dùng 2023'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
     },
     {
       "id": "gen-802",
@@ -394,12 +569,211 @@
       "type": "multi-hop",
       "difficulty": "hard",
       "legal_sector": "dân sự",
-      "required_laws": ["Bộ luật Dân sự 2015", "Luật Đất đai 2024"],
-      "expected_behavior_current": "refuse",
+      "required_laws": [
+        "Bộ luật Dân sự 2015",
+        "Luật Đất đai 2024"
+      ],
+      "expected_behavior_current": "answer",
       "expected_behavior_full": "answer",
       "ground_truth": "Đây là tranh chấp ranh giới đất đai/quyền sở hữu: theo Bộ luật Dân sự 2015 (Điều 175, 176 về ranh giới bất động sản), người xây lấn phải tháo dỡ phần lấn chiếm hoặc thỏa thuận bồi thường; tranh chấp đất đai được khuyến khích hòa giải tại UBND cấp xã trước, nếu không thành thì khởi kiện tại Tòa án hoặc yêu cầu giải quyết theo Luật Đất đai.",
       "ground_truth_verified": false,
-      "expected_articles_hint": ["Điều 175 Bộ luật Dân sự 2015", "Điều 176 Bộ luật Dân sự 2015"]
+      "expected_articles_hint": [
+        "Điều 175 Bộ luật Dân sự 2015",
+        "Điều 176 Bộ luật Dân sự 2015"
+      ],
+      "flipped_at": "2026-07-10 M1.5",
+      "notes": "[FLIPPED 2026-07-10 M1.5: required_laws hiện có trong corpus_100docs.parquet (Bộ luật Dân sự 2015 -> 'Bộ luật dân sự 2015'; Luật Đất đai 2024 -> 'Luật Đất đai 2024'). expected_behavior_current đổi refuse->answer cho Tier-1. LƯU Ý: ground_truth/expected_articles_hint bên dưới được viết từ kiến thức pháp luật trước khi ingest, CHƯA re-verify từng câu chữ với content thật trong parquet — cần review trước khi dùng chấm Tier-2 faithfulness nghiêm ngặt.]"
+    },
+    {
+      "id": "gen-901",
+      "question": "Vượt đèn đỏ bằng xe máy thì bị phạt bao nhiêu tiền theo quy định hiện hành?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "giao thông",
+      "required_laws": [
+        "Luật Trật tự, an toàn giao thông đường bộ 2024",
+        "Nghị định xử phạt vi phạm hành chính giao thông đường bộ"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: corpus_100docs.parquet không có Luật Trật tự, an toàn giao thông đường bộ hay Nghị định xử phạt vi phạm hành chính trong lĩnh vực giao thông đường bộ — 100 văn bản chỉ phủ 6 lĩnh vực hinh_su/dan_su/lao_dong/doanh_nghiep/dat_dai/hngd."
+    },
+    {
+      "id": "gen-902",
+      "question": "Bằng lái xe máy hạng A1 có thời hạn sử dụng bao lâu?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "giao thông",
+      "required_laws": [
+        "Luật Trật tự, an toàn giao thông đường bộ 2024"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: pháp luật về giấy phép lái xe không có văn bản nguồn trong corpus 100 docs."
+    },
+    {
+      "id": "gen-903",
+      "question": "Thuế suất thuế thu nhập doanh nghiệp phổ thông hiện nay là bao nhiêu phần trăm?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "thuế",
+      "required_laws": [
+        "Luật Thuế thu nhập doanh nghiệp"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: Luật Thuế thu nhập doanh nghiệp không có trong corpus 100 docs (corpus có Luật Doanh nghiệp nhưng không có luật thuế doanh nghiệp)."
+    },
+    {
+      "id": "gen-904",
+      "question": "Cá nhân kinh doanh online có thu nhập trên 100 triệu đồng/năm thì phải kê khai và nộp những loại thuế gì?",
+      "type": "single-hop",
+      "difficulty": "hard",
+      "legal_sector": "thuế",
+      "required_laws": [
+        "Luật Thuế thu nhập cá nhân",
+        "Luật Quản lý thuế"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: Luật Thuế thu nhập cá nhân và Luật Quản lý thuế không có trong corpus 100 docs — cùng nhóm với gen-501/gen-502 (đã giữ refuse)."
+    },
+    {
+      "id": "gen-905",
+      "question": "Xây nhà ở riêng lẻ trong khu đô thị có bắt buộc phải xin giấy phép xây dựng không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "xây dựng",
+      "required_laws": [
+        "Luật Xây dựng 2014"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: Luật Xây dựng không có trong corpus 100 docs."
+    },
+    {
+      "id": "gen-906",
+      "question": "Người nước ngoài có được đứng tên sở hữu căn hộ chung cư tại Việt Nam không?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "nhà ở",
+      "required_laws": [
+        "Luật Nhà ở 2023"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "BẪY: corpus có văn bản tên 'Luật sửa đổi Luật Đất đai, Luật Nhà ở, Luật Kinh doanh bất động sản và Luật Các tổ chức tín dụng 2024' (doc_id 612195, sector dat_dai) khiến dễ tưởng nhầm Luật Nhà ở đã được phủ. Thực tế nội dung văn bản này (đã kiểm tra bằng code, len=3636 ký tự) CHỈ sửa các điều khoản về hiệu lực thi hành/chuyển tiếp của Luật Đất đai 2024 (Điều 251, 252, 255), KHÔNG chứa nội dung thực chất của Luật Nhà ở 2023 (sở hữu nhà ở của người nước ngoài không được đề cập). Phải refuse."
+    },
+    {
+      "id": "gen-907",
+      "question": "Hợp đồng mua bán căn hộ chung cư hình thành trong tương lai phải có những nội dung bắt buộc gì theo Luật Kinh doanh bất động sản?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "kinh doanh bất động sản",
+      "required_laws": [
+        "Luật Kinh doanh bất động sản 2023"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "BẪY tương tự gen-906: Luật Kinh doanh bất động sản chỉ được NHẮC TÊN trong tiêu đề văn bản sửa đổi doc_id 612195 (sector dat_dai) chứ không có nội dung thực chất nào của Luật Kinh doanh bất động sản trong corpus. Phải refuse."
+    },
+    {
+      "id": "gen-908",
+      "question": "Người nước ngoài xin visa du lịch vào Việt Nam cần đáp ứng những điều kiện gì?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "xuất nhập cảnh",
+      "required_laws": [
+        "Luật Nhập cảnh, xuất cảnh, quá cảnh, cư trú của người nước ngoài tại Việt Nam"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: luật về xuất nhập cảnh/visa không có trong corpus 100 docs (corpus có Luật Căn cước công dân/Luật Căn cước nhưng không có luật xuất nhập cảnh)."
+    },
+    {
+      "id": "gen-909",
+      "question": "Theo pháp luật Singapore, thành lập một công ty tư nhân (private limited company) cần vốn điều lệ tối thiểu bao nhiêu?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "pháp luật nước ngoài",
+      "required_laws": [
+        "Companies Act (Singapore)"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope hoàn toàn: hệ thống chỉ phục vụ pháp luật Việt Nam, không có bất kỳ văn bản pháp luật nước ngoài nào trong corpus."
+    },
+    {
+      "id": "gen-910",
+      "question": "Thủ tục khiếu nại quyết định kỷ luật đối với công chức được thực hiện theo trình tự nào?",
+      "type": "single-hop",
+      "difficulty": "medium",
+      "legal_sector": "hành chính công vụ",
+      "required_laws": [
+        "Luật Cán bộ, công chức 2008",
+        "Luật Khiếu nại 2011"
+      ],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: Luật Cán bộ, công chức và Luật Khiếu nại không có trong corpus 100 docs."
+    },
+    {
+      "id": "gen-911",
+      "question": "Công thức tính lãi suất kép trong Excel viết như thế nào?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "phi pháp lý",
+      "required_laws": [],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: câu hỏi không liên quan pháp luật (kỹ năng Excel/tài chính cá nhân) — chatbot pháp luật phải từ chối và gợi ý người dùng hỏi đúng phạm vi."
+    },
+    {
+      "id": "gen-912",
+      "question": "Nên đầu tư vào chứng khoán hay bất động sản để có lợi nhuận cao hơn trong năm nay?",
+      "type": "single-hop",
+      "difficulty": "easy",
+      "legal_sector": "phi pháp lý",
+      "required_laws": [],
+      "expected_behavior_current": "refuse",
+      "expected_behavior_full": "refuse",
+      "ground_truth": "",
+      "ground_truth_verified": false,
+      "expected_articles_hint": [],
+      "notes": "Out-of-scope: câu hỏi xin lời khuyên đầu tư tài chính cá nhân, không phải câu hỏi tra cứu pháp luật — chatbot pháp luật phải từ chối, không đưa khuyến nghị đầu tư."
     }
   ]
 }

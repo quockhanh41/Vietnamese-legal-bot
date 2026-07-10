@@ -1,15 +1,69 @@
 {
-  "total_documents": 6,
-  "amendment_laws": 3,
-  "base_laws": 3,
-  "with_effective_date": 6,
-  "currently_in_effect": 5,
-  "total_graph_nodes": 409,
-  "total_graph_edges": 403,
-  "total_amendments": 182,
-  "total_articles_amended": 166,
-  "last_enriched": "2026-07-08T20:43:05.459630",
+  "total_documents": 100,
+  "amendment_laws": 12,
+  "base_laws": 88,
+  "with_effective_date": 97,
+  "currently_in_effect": 81,
+  "total_graph_nodes": 4970,
+  "total_graph_edges": 4943,
+  "total_amendments": 629,
+  "total_articles_amended": 312,
+  "last_enriched": "2026-07-10T22:47:46.699256",
   "documents": [
+    {
+      "doc_id": 2463,
+      "title": "Bộ luật Dân sự 2005",
+      "is_amendment": false,
+      "effective_date": "2005-06-14",
+      "is_in_effect": false,
+      "ref_count": 117,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 2633,
+      "title": "Luật Thương mại 2005",
+      "is_amendment": false,
+      "effective_date": "2006-01-01",
+      "is_in_effect": true,
+      "ref_count": 51,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 7022,
+      "title": "Luật Sở hữu trí tuệ 2005",
+      "is_amendment": false,
+      "effective_date": "2006-07-01",
+      "is_in_effect": true,
+      "ref_count": 114,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 12981,
+      "title": "Luật Luật sư 2006",
+      "is_amendment": false,
+      "effective_date": "2007-01-01",
+      "is_in_effect": true,
+      "ref_count": 17,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 15865,
+      "title": "Luật người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng năm 2006",
+      "is_amendment": false,
+      "effective_date": null,
+      "is_in_effect": false,
+      "ref_count": 0,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 15866,
+      "title": "Luật Bình đẳng giới 2006",
+      "is_amendment": false,
+      "effective_date": "2007-07-01",
+      "is_in_effect": true,
+      "ref_count": 7,
+      "amendment_count": 0
+    },
     {
       "doc_id": 46056,
       "title": "Bộ Luật Hình sự 1999",
@@ -20,21 +74,354 @@
       "amendment_count": 0
     },
     {
+      "doc_id": 46450,
+      "title": "Luật Hôn nhân và Gia đình 2000",
+      "is_amendment": false,
+      "effective_date": "2001-01-01",
+      "is_in_effect": false,
+      "ref_count": 36,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 82196,
+      "title": "Luật bảo hiểm y tế 2008",
+      "is_amendment": false,
+      "effective_date": "2009-07-01",
+      "is_in_effect": true,
+      "ref_count": 28,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 82197,
+      "title": "Luật thi hành án dân sự 2008",
+      "is_amendment": false,
+      "effective_date": "2009-07-01",
+      "is_in_effect": false,
+      "ref_count": 66,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 108065,
+      "title": "Luật thuế sử dụng đất phi nông nghiệp 2010",
+      "is_amendment": false,
+      "effective_date": "2012-01-01",
+      "is_in_effect": true,
+      "ref_count": 5,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 108082,
+      "title": "Luật nuôi con nuôi 2010",
+      "is_amendment": false,
+      "effective_date": "2011-01-01",
+      "is_in_effect": true,
+      "ref_count": 21,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 108083,
+      "title": "Luật Trọng tài thương mại 2010",
+      "is_amendment": false,
+      "effective_date": "2011-01-01",
+      "is_in_effect": true,
+      "ref_count": 16,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 142186,
+      "title": "Luật Công đoàn 2012",
+      "is_amendment": false,
+      "effective_date": "2013-01-01",
+      "is_in_effect": false,
+      "ref_count": 0,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 142187,
+      "title": "Bộ Luật lao động 2012",
+      "is_amendment": false,
+      "effective_date": "2013-05-01",
+      "is_in_effect": false,
+      "ref_count": 59,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 152716,
+      "title": "Luật hợp tác xã 2012",
+      "is_amendment": false,
+      "effective_date": "2013-07-01",
+      "is_in_effect": false,
+      "ref_count": 22,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 215628,
+      "title": "Luật việc làm 2013",
+      "is_amendment": false,
+      "effective_date": "2015-01-01",
+      "is_in_effect": false,
+      "ref_count": 21,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 215836,
+      "title": "Luật đất đai 2013",
+      "is_amendment": false,
+      "effective_date": "2014-07-01",
+      "is_in_effect": false,
+      "ref_count": 101,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 238640,
+      "title": "Luật Hôn nhân và gia đình 2014",
+      "is_amendment": false,
+      "effective_date": "2015-01-01",
+      "is_in_effect": true,
+      "ref_count": 67,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 238641,
+      "title": "Luật Phá sản 2014",
+      "is_amendment": false,
+      "effective_date": "2015-01-01",
+      "is_in_effect": false,
+      "ref_count": 85,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 259700,
+      "title": "Luật Bảo hiểm xã hội 2014",
+      "is_amendment": false,
+      "effective_date": "2016-01-01",
+      "is_in_effect": false,
+      "ref_count": 113,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 259727,
+      "title": "Luật Hộ tịch 2014",
+      "is_amendment": false,
+      "effective_date": "2016-01-01",
+      "is_in_effect": true,
+      "ref_count": 26,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 259728,
+      "title": "Luật Thi hành án dân sự sửa đổi 2014",
+      "is_amendment": true,
+      "effective_date": "2015-07-01",
+      "is_in_effect": true,
+      "ref_count": 51,
+      "amendment_count": 48
+    },
+    {
+      "doc_id": 259729,
+      "title": "Luật Đầu tư 2014",
+      "is_amendment": false,
+      "effective_date": "2015-07-01",
+      "is_in_effect": true,
+      "ref_count": 53,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 259730,
+      "title": "Luật Doanh nghiệp 2014",
+      "is_amendment": false,
+      "effective_date": "2015-07-01",
+      "is_in_effect": false,
+      "ref_count": 101,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 259782,
+      "title": "Luật Căn cước công dân 2014",
+      "is_amendment": false,
+      "effective_date": "2016-01-01",
+      "is_in_effect": false,
+      "ref_count": 18,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 262379,
+      "title": "Nghị định 126/2014/NĐ-CP hướng dẫn thi hành Luật Hôn nhân và gia đình",
+      "is_amendment": false,
+      "effective_date": "2015-02-15",
+      "is_in_effect": true,
+      "ref_count": 26,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 268405,
+      "title": "Nghị định 28/2015/NĐ-CP hướng dẫn Luật Việc làm về bảo hiểm thất nghiệp",
+      "is_amendment": false,
+      "effective_date": "2015-05-01",
+      "is_in_effect": true,
+      "ref_count": 43,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 280115,
+      "title": "Luật đấu giá tài sản 2016",
+      "is_amendment": false,
+      "effective_date": "2017-07-01",
+      "is_in_effect": true,
+      "ref_count": 62,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 280261,
+      "title": "Nghị định 152/2020/NĐ-CP về người lao động nước ngoài làm việc tại Việt Nam và t",
+      "is_amendment": false,
+      "effective_date": "2021-02-15",
+      "is_in_effect": true,
+      "ref_count": 26,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 281961,
+      "title": "Luật an toàn, vệ sinh lao động 2015",
+      "is_amendment": false,
+      "effective_date": "2016-07-01",
+      "is_in_effect": true,
+      "ref_count": 76,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 283247,
+      "title": "Nghị định 01/2021/NĐ-CP về đăng ký doanh nghiệp",
+      "is_amendment": false,
+      "effective_date": "2021-01-04",
+      "is_in_effect": true,
+      "ref_count": 108,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 284071,
+      "title": "Nghị định 62/2015/NĐ-CP hướng dẫn Luật Thi hành án dân sự",
+      "is_amendment": false,
+      "effective_date": "2015-09-01",
+      "is_in_effect": true,
+      "ref_count": 87,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 285024,
+      "title": "Nghị định 122/2021/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực k",
+      "is_amendment": false,
+      "effective_date": "2022-01-01",
+      "is_in_effect": true,
+      "ref_count": 38,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 296215,
+      "title": "Bộ luật dân sự 2015",
+      "is_amendment": false,
+      "effective_date": "2017-01-01",
+      "is_in_effect": true,
+      "ref_count": 128,
+      "amendment_count": 0
+    },
+    {
       "doc_id": 296661,
       "title": "Bộ luật hình sự 2015",
       "is_amendment": false,
       "effective_date": "2016-07-01",
       "is_in_effect": true,
-      "ref_count": 110,
+      "ref_count": 111,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 296861,
+      "title": "Bộ luật tố tụng dân sự 2015",
+      "is_amendment": false,
+      "effective_date": "2016-07-01",
+      "is_in_effect": true,
+      "ref_count": 270,
       "amendment_count": 0
     },
     {
       "doc_id": 296884,
       "title": "Bộ luật tố tụng hình sự 2015",
       "is_amendment": false,
-      "effective_date": "2015-11-27",
+      "effective_date": "2016-07-01",
       "is_in_effect": true,
       "ref_count": 123,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 298372,
+      "title": "Luật tố tụng hành chính 2015",
+      "is_amendment": false,
+      "effective_date": "2016-07-01",
+      "is_in_effect": true,
+      "ref_count": 168,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 298373,
+      "title": "Luật thi hành tạm giữ, tạm giam 2015",
+      "is_amendment": false,
+      "effective_date": "2016-07-01",
+      "is_in_effect": false,
+      "ref_count": 0,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 303313,
+      "title": "Luật trẻ em 2016",
+      "is_amendment": false,
+      "effective_date": "2017-06-01",
+      "is_in_effect": true,
+      "ref_count": 32,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 313517,
+      "title": "Luật Trách nhiệm bồi thường của Nhà nước 2017",
+      "is_amendment": false,
+      "effective_date": "2018-07-01",
+      "is_in_effect": true,
+      "ref_count": 70,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 320905,
+      "title": "Luật Hỗ trợ doanh nghiệp nhỏ và vừa 2017",
+      "is_amendment": false,
+      "effective_date": "2018-01-01",
+      "is_in_effect": true,
+      "ref_count": 10,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 322219,
+      "title": "Luật Quản lý ngoại thương 2017",
+      "is_amendment": false,
+      "effective_date": "2018-01-01",
+      "is_in_effect": true,
+      "ref_count": 32,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 333670,
+      "title": "Bộ luật Lao động 2019",
+      "is_amendment": false,
+      "effective_date": "2021-01-01",
+      "is_in_effect": true,
+      "ref_count": 131,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 345182,
+      "title": "Luật Cạnh tranh 2018",
+      "is_amendment": false,
+      "effective_date": "2019-07-01",
+      "is_in_effect": true,
+      "ref_count": 69,
       "amendment_count": 0
     },
     {
@@ -47,6 +434,168 @@
       "amendment_count": 143
     },
     {
+      "doc_id": 376934,
+      "title": "Nghị định 30/2018/NĐ-CP về quy định chi tiết việc thành lập và hoạt động của Hội",
+      "is_amendment": false,
+      "effective_date": "2018-05-01",
+      "is_in_effect": true,
+      "ref_count": 14,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 387991,
+      "title": "Luật Thi hành án hình sự 2019",
+      "is_amendment": false,
+      "effective_date": "2020-01-01",
+      "is_in_effect": false,
+      "ref_count": 101,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 392611,
+      "title": "Nghị định 82/2020/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực bổ",
+      "is_amendment": false,
+      "effective_date": "2020-09-01",
+      "is_in_effect": true,
+      "ref_count": 60,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 395767,
+      "title": "Luật Hòa giải, đối thoại tại Tòa án 2020",
+      "is_amendment": false,
+      "effective_date": "2021-01-01",
+      "is_in_effect": true,
+      "ref_count": 36,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 399763,
+      "title": "Luật Chứng khoán 2019",
+      "is_amendment": false,
+      "effective_date": "2021-01-01",
+      "is_in_effect": true,
+      "ref_count": 89,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 406627,
+      "title": "Nghị định 98/2020/NĐ-CP quy định về xử phạt vi phạm hành chính trong hoạt động t",
+      "is_amendment": false,
+      "effective_date": "2020-10-15",
+      "is_in_effect": true,
+      "ref_count": 18,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 425471,
+      "title": "Nghị định 144/2021/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực a",
+      "is_amendment": false,
+      "effective_date": null,
+      "is_in_effect": false,
+      "ref_count": 0,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 427247,
+      "title": "Nghị định 133/2020/NĐ-CP hướng dẫn Luật Thi hành án hình sự",
+      "is_amendment": false,
+      "effective_date": "2020-12-25",
+      "is_in_effect": true,
+      "ref_count": 22,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 427301,
+      "title": "Luật Doanh nghiệp 2020",
+      "is_amendment": false,
+      "effective_date": "2021-01-01",
+      "is_in_effect": true,
+      "ref_count": 136,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 439844,
+      "title": "Luật Người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng 2020",
+      "is_amendment": false,
+      "effective_date": "2022-01-01",
+      "is_in_effect": true,
+      "ref_count": 40,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 445264,
+      "title": "Luật Công đoàn 2024",
+      "is_amendment": false,
+      "effective_date": "2025-07-01",
+      "is_in_effect": true,
+      "ref_count": 1,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 458435,
+      "title": "Luật Sở hữu trí tuệ sửa đổi 2022",
+      "is_amendment": true,
+      "effective_date": "2023-01-01",
+      "is_in_effect": true,
+      "ref_count": 161,
+      "amendment_count": 86
+    },
+    {
+      "doc_id": 459400,
+      "title": "Nghị định 145/2020/NĐ-CP hướng dẫn Bộ luật Lao động về điều kiện lao động và qua",
+      "is_amendment": false,
+      "effective_date": "2021-02-01",
+      "is_in_effect": true,
+      "ref_count": 331,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 461323,
+      "title": "Nghị định 155/2020/NĐ-CP hướng dẫn Luật Chứng khoán",
+      "is_amendment": false,
+      "effective_date": "2021-01-01",
+      "is_in_effect": true,
+      "ref_count": 305,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 462291,
+      "title": "Nghị định 31/2021/NĐ-CP hướng dẫn Luật Đầu tư",
+      "is_amendment": false,
+      "effective_date": "2015-11-12",
+      "is_in_effect": true,
+      "ref_count": 249,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 468069,
+      "title": "Nghị định 21/2021/NĐ-CP hướng dẫn Bộ luật Dân sự về bảo đảm thực hiện nghĩa vụ",
+      "is_amendment": false,
+      "effective_date": "2021-05-15",
+      "is_in_effect": true,
+      "ref_count": 58,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 470561,
+      "title": "Nghị định 47/2021/NĐ-CP hướng dẫn Luật Doanh nghiệp",
+      "is_amendment": false,
+      "effective_date": "2015-09-18",
+      "is_in_effect": true,
+      "ref_count": 30,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 479312,
+      "title": "Nghị định 12/2022/NĐ-CP về xử phạt vi phạm hành chính trong lĩnh vực lao động, b",
+      "is_amendment": false,
+      "effective_date": "2022-01-17",
+      "is_in_effect": true,
+      "ref_count": 108,
+      "amendment_count": 0
+    },
+    {
       "doc_id": 489113,
       "title": "Luật sửa đổi Bộ luật Tố tụng hình sự 2021",
       "is_amendment": true,
@@ -56,13 +605,310 @@
       "amendment_count": 6
     },
     {
+      "doc_id": 490095,
+      "title": "Luật Phòng, chống bạo lực gia đình 2022",
+      "is_amendment": false,
+      "effective_date": "2023-07-01",
+      "is_in_effect": false,
+      "ref_count": 20,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 499239,
+      "title": "Luật Hợp tác xã 2023",
+      "is_amendment": false,
+      "effective_date": "2024-07-01",
+      "is_in_effect": true,
+      "ref_count": 42,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 500102,
+      "title": "Luật Bảo vệ quyền lợi người tiêu dùng 2023",
+      "is_amendment": false,
+      "effective_date": "2024-07-01",
+      "is_in_effect": true,
+      "ref_count": 48,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 505750,
+      "title": "Luật Bảo hiểm y tế sửa đổi 2024",
+      "is_amendment": true,
+      "effective_date": "2025-07-01",
+      "is_in_effect": true,
+      "ref_count": 62,
+      "amendment_count": 35
+    },
+    {
+      "doc_id": 518805,
+      "title": "Luật Đấu thầu 2023",
+      "is_amendment": false,
+      "effective_date": "2024-01-01",
+      "is_in_effect": true,
+      "ref_count": 71,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 523642,
+      "title": "Luật Đất đai 2024",
+      "is_amendment": false,
+      "effective_date": "2025-01-01",
+      "is_in_effect": true,
+      "ref_count": 222,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 530912,
+      "title": "Luật Việc làm 2025",
+      "is_amendment": false,
+      "effective_date": "2026-01-01",
+      "is_in_effect": true,
+      "ref_count": 17,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 542323,
+      "title": "Nghị định 99/2022/NĐ-CP về đăng ký biện pháp bảo đảm",
+      "is_amendment": false,
+      "effective_date": "2023-01-15",
+      "is_in_effect": true,
+      "ref_count": 53,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 550020,
+      "title": "Nghị định 103/2024/NĐ-CP quy định về tiền sử dụng đất, tiền thuê đất",
+      "is_amendment": false,
+      "effective_date": "2024-08-01",
+      "is_in_effect": true,
+      "ref_count": 265,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 552422,
+      "title": "Luật Căn cước 2023",
+      "is_amendment": false,
+      "effective_date": "2024-07-01",
+      "is_in_effect": true,
+      "ref_count": 20,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 557190,
+      "title": "Luật Bảo hiểm xã hội 2024",
+      "is_amendment": false,
+      "effective_date": "2025-07-01",
+      "is_in_effect": true,
+      "ref_count": 182,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 557470,
+      "title": "Nghị định 76/2023/NĐ-CP hướng dẫn Luật Phòng, chống bạo lực gia đình",
+      "is_amendment": false,
+      "effective_date": "2023-12-25",
+      "is_in_effect": true,
+      "ref_count": 41,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 588810,
+      "title": "Luật Đấu giá tài sản sửa đổi 2024",
+      "is_amendment": true,
+      "effective_date": "2025-01-01",
+      "is_in_effect": true,
+      "ref_count": 125,
+      "amendment_count": 46
+    },
+    {
+      "doc_id": 599145,
+      "title": "Nghị định 71/2024/NĐ-CP quy định về giá đất",
+      "is_amendment": false,
+      "effective_date": "2014-05-15",
+      "is_in_effect": true,
+      "ref_count": 48,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 600715,
+      "title": "Nghị định 88/2024/NĐ-CP về bồi thường, hỗ trợ, tái định cư khi Nhà nước thu hồi ",
+      "is_amendment": false,
+      "effective_date": "2024-08-01",
+      "is_in_effect": true,
+      "ref_count": 112,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 603278,
+      "title": "Nghị định 74/2024/NĐ-CP quy định về mức lương tối thiểu đối với người lao động l",
+      "is_amendment": false,
+      "effective_date": "2024-07-01",
+      "is_in_effect": true,
+      "ref_count": 0,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 603982,
+      "title": "Nghị định 102/2024/NĐ-CP hướng dẫn Luật Đất đai",
+      "is_amendment": false,
+      "effective_date": "2024-08-01",
+      "is_in_effect": true,
+      "ref_count": 355,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 612195,
+      "title": "Luật sửa đổi Luật Đất đai, Luật Nhà ở, Luật Kinh doanh bất động sản và Luật Các ",
+      "is_amendment": true,
+      "effective_date": "2024-08-01",
+      "is_in_effect": true,
+      "ref_count": 13,
+      "amendment_count": 4
+    },
+    {
+      "doc_id": 613131,
+      "title": "Nghị định 101/2024/NĐ-CP quy định về điều tra cơ bản đất đai; đăng ký, cấp giấy ",
+      "is_amendment": false,
+      "effective_date": "2024-08-01",
+      "is_in_effect": true,
+      "ref_count": 198,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 625628,
+      "title": "Luật Bảo vệ dữ liệu cá nhân 2025",
+      "is_amendment": false,
+      "effective_date": "2026-01-01",
+      "is_in_effect": true,
+      "ref_count": 8,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 626370,
+      "title": "Nghị định 123/2024/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực đ",
+      "is_amendment": false,
+      "effective_date": "2024-10-04",
+      "is_in_effect": true,
+      "ref_count": 66,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 626392,
+      "title": "Nghị định 118/2024/NĐ-CP hướng dẫn Luật Thi hành án hình sự",
+      "is_amendment": false,
+      "effective_date": "2024-11-15",
+      "is_in_effect": true,
+      "ref_count": 29,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 628717,
+      "title": "Luật Thi hành án dân sự 2025",
+      "is_amendment": false,
+      "effective_date": "2026-07-01",
+      "is_in_effect": true,
+      "ref_count": 102,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 634792,
+      "title": "Nghị định 158/2025/NĐ-CP hướng dẫn Luật Bảo hiểm xã hội về bảo hiểm xã hội bắt b",
+      "is_amendment": false,
+      "effective_date": "2025-07-01",
+      "is_in_effect": true,
+      "ref_count": 161,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 651570,
+      "title": "Luật sửa đổi Bộ luật Tố tụng dân sự, Luật Tố tụng hành chính, Luật Tư pháp người",
+      "is_amendment": true,
+      "effective_date": "2025-07-01",
+      "is_in_effect": true,
+      "ref_count": 121,
+      "amendment_count": 72
+    },
+    {
+      "doc_id": 659899,
+      "title": "Luật Doanh nghiệp sửa đổi 2025",
+      "is_amendment": true,
+      "effective_date": "2025-07-01",
+      "is_in_effect": true,
+      "ref_count": 27,
+      "amendment_count": 28
+    },
+    {
+      "doc_id": 662035,
+      "title": "Luật Thương mại điện tử 2025",
+      "is_amendment": false,
+      "effective_date": "2026-07-01",
+      "is_in_effect": true,
+      "ref_count": 27,
+      "amendment_count": 0
+    },
+    {
       "doc_id": 662377,
       "title": "Luật sửa đổi Bộ luật Hình sự 2025",
       "is_amendment": true,
-      "effective_date": "2025-06-25",
+      "effective_date": "2025-07-01",
       "is_in_effect": true,
       "ref_count": 93,
       "amendment_count": 33
+    },
+    {
+      "doc_id": 662829,
+      "title": "Luật sửa đổi Bộ luật Tố tụng hình sự 2025",
+      "is_amendment": true,
+      "effective_date": "2025-07-01",
+      "is_in_effect": true,
+      "ref_count": 125,
+      "amendment_count": 67
+    },
+    {
+      "doc_id": 664033,
+      "title": "Nghị định 226/2025/NĐ-CP sửa đổi các Nghị định hướng dẫn Luật Đất đai",
+      "is_amendment": true,
+      "effective_date": "2025-08-15",
+      "is_in_effect": true,
+      "ref_count": 178,
+      "amendment_count": 61
+    },
+    {
+      "doc_id": 675210,
+      "title": "Luật Phục hồi, phá sản 2025",
+      "is_amendment": false,
+      "effective_date": "2026-03-01",
+      "is_in_effect": true,
+      "ref_count": 80,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 679014,
+      "title": "Luật Thi hành tạm giữ, tạm giam và cấm đi khỏi nơi cư trú 2025",
+      "is_amendment": false,
+      "effective_date": "2026-07-01",
+      "is_in_effect": true,
+      "ref_count": 22,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 681550,
+      "title": "Luật Đầu tư 2025",
+      "is_amendment": false,
+      "effective_date": null,
+      "is_in_effect": false,
+      "ref_count": 47,
+      "amendment_count": 0
+    },
+    {
+      "doc_id": 686325,
+      "title": "Luật Thi hành án hình sự 2025",
+      "is_amendment": false,
+      "effective_date": "2026-07-01",
+      "is_in_effect": true,
+      "ref_count": 108,
+      "amendment_count": 0
     }
   ]
 }

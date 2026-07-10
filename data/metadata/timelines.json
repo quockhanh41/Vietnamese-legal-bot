@@ -1,8 +1,346 @@
 [
   {
+    "doc_id": 215836,
+    "law_name": "Luật đất đai 2013",
+    "issuance_date": "29/11/2013",
+    "doc_number": "45/2013/QH13",
+    "effective_date": "2014-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật đất đai số 13/2003/QH11 và Nghị quyết số 49/2013/QH13 ngày 21 tháng 6 năm 2013 của Quốc hội về kéo dài thời hạn sử dụng đất trồng cây hàng năm, đất nuôi trồng thủy sản, đất làm muối của hộ gia đình, cá nhân"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2014.\n\nLuật đất đai số 13/2003/QH11 và Nghị quyết số 49/2013/QH13 ngày 21 tháng 6 năm 2013 của Quốc hội về kéo dài thời hạn s"
+  },
+  {
+    "doc_id": 518805,
+    "law_name": "Luật Đấu thầu 2023",
+    "issuance_date": "23/06/2023",
+    "doc_number": "22/2023/QH15",
+    "effective_date": "2024-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Đấu thầu số 43/2013/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 03/2016/QH14, Luật số 04/2017/QH14, Luật số 40/2019/QH14, Luật số 64/2020/QH14 và Luật số 03/2022/QH15 (sau đây gọi là Luật Đấu thầu số 43/2013/QH13)"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2024.\n\n2. Luật Đấu thầu số 43/2013/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 03/2016/QH14, Luật số 04/2017/QH14"
+  },
+  {
+    "doc_id": 238640,
+    "law_name": "Luật Hôn nhân và gia đình 2014",
+    "issuance_date": "19/06/2014",
+    "doc_number": "52/2014/QH13",
+    "effective_date": "2015-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật hôn nhân và gia đình số 22/2000/QH10"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2015.\n\nLuật hôn nhân và gia đình số 22/2000/QH10 hết hiệu lực kể từ ngày Luật này có hiệu lực.\nĐiều 133. Quy định chi tiết và h"
+  },
+  {
+    "doc_id": 283247,
+    "law_name": "Nghị định 01/2021/NĐ-CP về đăng ký doanh nghiệp",
+    "issuance_date": "04/01/2021",
+    "doc_number": "01/2021/NĐ-CP",
+    "effective_date": "2021-01-04",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực từ ngày 04 tháng 01 năm 2021.\n\n2. Nghị định này thay thế Nghị định số 78/2015/NĐ-CP ngày 14 tháng 9 năm 2015 của Chính phủ về đăng ký doanh nghiệp và Ng"
+  },
+  {
+    "doc_id": 333670,
+    "law_name": "Bộ luật Lao động 2019",
+    "issuance_date": "20/11/2019",
+    "doc_number": "45/2019/QH14",
+    "effective_date": "2021-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Lao động số 10/2012/QH13"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Bộ luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2021.\n\nBộ luật Lao động số 10/2012/QH13 hết hiệu lực thi hành kể từ ngày Bộ luật này có hiệu lực.\n\n2. Kể từ ngày Bộ luật "
+  },
+  {
+    "doc_id": 479312,
+    "law_name": "Nghị định 12/2022/NĐ-CP về xử phạt vi phạm hành chính trong lĩnh vực lao động, bảo hiểm xã hội, người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng",
+    "issuance_date": "17/01/2022",
+    "doc_number": "12/2022/NĐ-CP",
+    "effective_date": "2022-01-17",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành kể từ ngày 17 tháng 01 năm 2022.\n\n2. Nghị định số 28/2020/NĐ-CP ngày 01 tháng 3 năm 2020 của Chính phủ quy định xử phạt vi phạm hành chính tron"
+  },
+  {
+    "doc_id": 259730,
+    "law_name": "Luật Doanh nghiệp 2014",
+    "issuance_date": "26/11/2014",
+    "doc_number": "68/2014/QH13",
+    "effective_date": "2015-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật doanh nghiệp số 60/2005/QH11 ngày 29 tháng 11 năm 2005 và Luật sửa đổi, bổ sung Điều 170 của Luật doanh nghiệp số 37/2013/QH13 ngày 20 tháng 6 năm 2013"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2015. Luật doanh nghiệp số 60/2005/QH11 ngày 29 tháng 11 năm 2005 và Luật sửa đổi, bổ sung Điều 170 của Luật doanh nghiệp số "
+  },
+  {
+    "doc_id": 296215,
+    "law_name": "Bộ luật dân sự 2015",
+    "issuance_date": "24/11/2015",
+    "doc_number": "91/2015/QH13",
+    "effective_date": "2017-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật dân sự số 33/2005/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nBộ luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2017.\n\nBộ luật dân sự số 33/2005/QH11 hết hiệu lực kể từ ngày Bộ luật này có hiệu lực.\n\nBộ luật này đã được Quốc hội nước Cộ"
+  },
+  {
+    "doc_id": 461323,
+    "law_name": "Nghị định 155/2020/NĐ-CP hướng dẫn Luật Chứng khoán",
+    "issuance_date": "31/12/2020",
+    "doc_number": "155/2020/NĐ-CP",
+    "effective_date": "2021-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2021.\n\n2. Nghị định này thay thế các văn bản sau:\n\na) Nghị định số 58/2012/NĐ-CP ngày 20 tháng 7 năm 2012 của Chính phủ"
+  },
+  {
+    "doc_id": 108083,
+    "law_name": "Luật Trọng tài thương mại 2010",
+    "issuance_date": "17/06/2010",
+    "doc_number": "54/2010/QH12",
+    "effective_date": "2011-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2011.\n\n2. Pháp lệnh Trọng tài thương mại số 08/2003/PL-UBTVQH11 hết hiệu lực kể từ ngày Luật này có hiệu lực.\n\n3. Các thỏa t"
+  },
+  {
+    "doc_id": 303313,
+    "law_name": "Luật trẻ em 2016",
+    "issuance_date": "05/04/2016",
+    "doc_number": "102/2016/QH13",
+    "effective_date": "2017-06-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật bảo vệ, chăm sóc và giáo dục trẻ em số 25/2004/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 6 năm 2017.\n\n2. Luật bảo vệ, chăm sóc và giáo dục trẻ em số 25/2004/QH11 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành.\nĐiề"
+  },
+  {
+    "doc_id": 296861,
+    "law_name": "Bộ luật tố tụng dân sự 2015",
+    "issuance_date": "25/11/2015",
+    "doc_number": "92/2015/QH13",
+    "effective_date": "2016-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật tố tụng dân sự số 24/2004/QH11 đã được sửa đổi, bổ sung theo Luật số 65/2011/QH12"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Bộ luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2016, trừ các quy định sau đây của Bộ luật này có liên quan đến quy định của Bộ luật dân sự số 91/2015/QH13 thì có hiệu lự"
+  },
+  {
+    "doc_id": 322219,
+    "law_name": "Luật Quản lý ngoại thương 2017",
+    "issuance_date": "12/06/2017",
+    "doc_number": "05/2017/QH14",
+    "effective_date": "2018-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2018.\n\n2. Các pháp lệnh sau đây hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ trường hợp quy định tại Ðiều 113 "
+  },
+  {
+    "doc_id": 681550,
+    "law_name": "Luật Đầu tư 2025",
+    "issuance_date": "11/12/2025",
+    "doc_number": "143/2025/QH15",
+    "effective_date": null,
+    "expiry_date": null,
+    "is_in_effect": false,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "hiệu lực thi hành, Bộ Tài chính chuyển hồ sơ dự án và ý kiến thẩm định dự án (nếu có) cho Chủ tịch Ủy ban nhân dân cấp tỉnh để xử lý theo thẩm quyền quy định tại Luật này;\nChủ tịch Ủy ban nhân dân cấp"
+  },
+  {
+    "doc_id": 259729,
+    "law_name": "Luật Đầu tư 2014",
+    "issuance_date": "26/11/2014",
+    "doc_number": "67/2014/QH13",
+    "effective_date": "2015-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật đầu tư số 59/2005/QH11 và Nghị quyết số 49/2010/QH12 của Quốc hội về dự án, công trình quan trọng quốc gia trình Quốc hội quyết định chủ trương đầu tư"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2015.\n\n2. Luật đầu tư số 59/2005/QH11 và Nghị quyết số 49/2010/QH12 của Quốc hội về dự án, công trình quan trọng quốc gia trì"
+  },
+  {
+    "doc_id": 268405,
+    "law_name": "Nghị định 28/2015/NĐ-CP hướng dẫn Luật Việc làm về bảo hiểm thất nghiệp",
+    "issuance_date": "12/03/2015",
+    "doc_number": "28/2015/NĐ-CP",
+    "effective_date": "2015-05-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành kể từ ngày 01 tháng 5 năm 2015. Các chế độ quy định tại Nghị định này được thực hiện từ ngày 01 tháng 01 năm 2015.\n\n2. Các Nghị định sau đây sẽ"
+  },
+  {
+    "doc_id": 399763,
+    "law_name": "Luật Chứng khoán 2019",
+    "issuance_date": "26/11/2019",
+    "doc_number": "54/2019/QH14",
+    "effective_date": "2021-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Chứng khoán số 70/2006/QH11 và Luật số 62/2010/QH12 sửa đổi, bổ sung một số điều của Luật Chứng khoán"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2021.\n\n2. Luật Chứng khoán số 70/2006/QH11 và Luật số 62/2010/QH12 sửa đổi, bổ sung một số điều của Luật Chứng khoán hết hiệ"
+  },
+  {
+    "doc_id": 387991,
+    "law_name": "Luật Thi hành án hình sự 2019",
+    "issuance_date": "14/06/2019",
+    "doc_number": "41/2019/QH14",
+    "effective_date": "2020-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Thi hành án hình sự số 53/2010/QH12"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2020.\n\n2. Luật Thi hành án hình sự số 53/2010/QH12 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành, trừ trường hợp quy"
+  },
+  {
+    "doc_id": 259782,
+    "law_name": "Luật Căn cước công dân 2014",
+    "issuance_date": "20/11/2014",
+    "doc_number": "59/2014/QH13",
+    "effective_date": "2016-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành và quy định chuyển tiếp\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2016.\n\n2. Chứng minh nhân dân đã được cấp trước ngày Luật này có hiệu lực vẫn có giá trị sử dụng đến"
+  },
+  {
+    "doc_id": 46450,
+    "law_name": "Luật Hôn nhân và Gia đình 2000",
+    "issuance_date": "09/06/2000",
+    "doc_number": "22/2000/QH10",
+    "effective_date": "2001-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành kể từ ngày 01 tháng 01 năm 2001.\n\nLuật này thay thế Luật hôn nhân và gia đình năm 1986.\n\nPháp lệnh hôn nhân và gia đình giữa công dân Việt Nam với ngườ"
+  },
+  {
+    "doc_id": 490095,
+    "law_name": "Luật Phòng, chống bạo lực gia đình 2022",
+    "issuance_date": "14/11/2022",
+    "doc_number": "13/2022/QH15",
+    "effective_date": "2023-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Phòng, chống bạo lực gia đình số 02/2007/QH12"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2023.\n\n2. Luật Phòng, chống bạo lực gia đình số 02/2007/QH12 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành./.\n\nLuật n"
+  },
+  {
+    "doc_id": 523642,
+    "law_name": "Luật Đất đai 2024",
+    "issuance_date": "18/01/2024",
+    "doc_number": "31/2024/QH15",
+    "effective_date": "2025-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật này có hiệu lực thi hành từ ngày Nghị quyết số 61/2022/QH15",
+      "Luật Đất đai số 45/2013/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14 (sau đây gọi là Luật Đất đai số 45/2013/QH13)"
+    ],
+    "article_dates": {
+      "Điều 190": "2024-04-01"
+    },
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2025, trừ trường hợp quy định tại khoản 2 và khoản 3 Điều này.\n\n2. Điều 190 và Điều 248 của Luật này có hiệu lực thi hành từ"
+  },
+  {
     "doc_id": 296661,
     "law_name": "Bộ luật hình sự 2015",
     "issuance_date": "27/11/2015",
+    "doc_number": "100/2015/QH13",
     "effective_date": "2016-07-01",
     "expiry_date": null,
     "is_in_effect": true,
@@ -15,22 +353,160 @@
     "source_text": "Hiệu lực thi hành\n\nBộ luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2016.\n\nBộ luật hình sự số 15/1999/QH10 và Luật số 37/2009/QH12 sửa đổi, bổ sung một số điều của Bộ luật hình sự hết hiệu lực "
   },
   {
-    "doc_id": 296884,
-    "law_name": "Bộ luật tố tụng hình sự 2015",
-    "issuance_date": "27/11/2015",
-    "effective_date": "2015-11-27",
+    "doc_id": 427247,
+    "law_name": "Nghị định 133/2020/NĐ-CP hướng dẫn Luật Thi hành án hình sự",
+    "issuance_date": "09/11/2020",
+    "doc_number": "133/2020/NĐ-CP",
+    "effective_date": "2020-12-25",
     "expiry_date": null,
     "is_in_effect": true,
     "replaced_laws": [],
     "article_dates": {},
     "is_relative": false,
     "relative_days": null,
-    "source_text": "thể áp dụng đối với người bị yêu cầu dẫn độ căn cứ vào tình trạng tài sản của người đó nhằm bảo đảm sự có mặt của họ theo giấy triệu tập của Tòa án.\n\n2. Việc áp dụng biện pháp đặt tiền để bảo đảm thự"
+    "source_text": "Hiệu lực thi hành\n\nNghị định này có hiệu lực thi hành từ ngày 25 tháng 12 năm 2020, thay thế Nghị định số 117/2011/NĐ-CP ngày 15 tháng 12 năm 2011 quy định về tổ chức quản lý phạm nhân và chế độ ăn, m"
+  },
+  {
+    "doc_id": 499239,
+    "law_name": "Luật Hợp tác xã 2023",
+    "issuance_date": "20/06/2023",
+    "doc_number": "17/2023/QH15",
+    "effective_date": "2024-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Hợp tác xã số 23/2012/QH13"
+    ],
+    "article_dates": {
+      "Điều 115": "2023-09-01"
+    },
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Điều khoản thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2024, trừ quy định tại khoản 2 Điều này.\n\n2. Quy định tại khoản 3 và khoản 4 Điều 115 của Luật này có hiệu lực thi hành từ "
+  },
+  {
+    "doc_id": 259700,
+    "law_name": "Luật Bảo hiểm xã hội 2014",
+    "issuance_date": "20/11/2014",
+    "doc_number": "58/2014/QH13",
+    "effective_date": "2016-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật bảo hiểm xã hội số 71/2006/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2016, trừ quy định tại điểm b khoản 1 và khoản 2 Điều 2 của Luật này thì có hiệu lực thi hành kể từ ngày 01 tháng 01 năm 201"
+  },
+  {
+    "doc_id": 2463,
+    "law_name": "Bộ luật Dân sự 2005",
+    "issuance_date": "14/06/2005",
+    "doc_number": "33/2005/QH11",
+    "effective_date": "2005-06-14",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "QUỐC HỘI ****** | CỘNG HOÀ XÃ HỘI CHỦ NGHĨA VIỆT NAM Độc lập - Tự do - Hạnh phúc ********\nSố: 33/2005/QH11 | Hà Nội, ngày 14 tháng 06 năm 2005\n\nBỘ LUẬT DÂN SỰ\n\nCăn cứ vào Hiến pháp nước Cộng hoà xã hộ"
+  },
+  {
+    "doc_id": 82197,
+    "law_name": "Luật thi hành án dân sự 2008",
+    "issuance_date": "14/11/2008",
+    "doc_number": "26/2008/QH12",
+    "effective_date": "2009-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2009.\n\nPháp lệnh Thi hành án dân sự năm 2004 hết hiệu lực kể từ ngày Luật này có hiệu lực.\nĐiều 183. Quy định chi tiết và hướng "
+  },
+  {
+    "doc_id": 298373,
+    "law_name": "Luật thi hành tạm giữ, tạm giam 2015",
+    "issuance_date": "25/11/2015",
+    "doc_number": "94/2015/QH13",
+    "effective_date": "2016-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "NATIONAL ASSEMBLY  | SOCIALIST REPUBLIC OF VIETNAM Independence - Freedom - Happiness\nLaw No: 94/2015/QH13 | Hanoi, 25 November 2015\n\nLAW\n\nON TEMPORARY DETENTION AND CUSTODY\n\nPursuant to the Constitut"
+  },
+  {
+    "doc_id": 626392,
+    "law_name": "Nghị định 118/2024/NĐ-CP hướng dẫn Luật Thi hành án hình sự",
+    "issuance_date": "30/09/2024",
+    "doc_number": "118/2024/NĐ-CP",
+    "effective_date": "2024-11-15",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 15 tháng 11 năm 2024, thay thế Nghị định số 133/2020/NĐ-CP ngày 09 tháng 11 năm 2020 quy định chi tiết thi hành một số điều của Luật Th"
+  },
+  {
+    "doc_id": 552422,
+    "law_name": "Luật Căn cước 2023",
+    "issuance_date": "27/11/2023",
+    "doc_number": "26/2023/QH15",
+    "effective_date": "2024-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Căn cước công dân số 59/2014/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 68/2020/QH14"
+    ],
+    "article_dates": {
+      "Điều 46": "2024-01-15"
+    },
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2024, trừ trường hợp quy định tại khoản 2 Điều này.\n\n2. Quy định tại khoản 3 Điều 46 của Luật này có hiệu lực thi hành từ ngà"
+  },
+  {
+    "doc_id": 285024,
+    "law_name": "Nghị định 122/2021/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực kế hoạch và đầu tư",
+    "issuance_date": "28/12/2021",
+    "doc_number": "122/2021/NĐ-CP",
+    "effective_date": "2022-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nNghị định này có hiệu lực từ ngày 01 tháng 01 năm 2022 và thay thế Nghị định số 50/2016/NĐ-CP ngày 01 tháng 6 năm 2016 của Chính phủ quy định xử phạt vi phạm hành chính trong lĩnh v"
+  },
+  {
+    "doc_id": 392611,
+    "law_name": "Nghị định 82/2020/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực bổ trợ tư pháp; hành chính tư pháp; hôn nhân và gia đình; thi hành án dân sự; phá sản doanh nghiệp, hợp tác xã",
+    "issuance_date": "15/07/2020",
+    "doc_number": "82/2020/NĐ-CP",
+    "effective_date": "2020-09-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nNghị định này có hiệu lực thi hành từ ngày 01 tháng 9 năm 2020 và thay thế Nghị định số 110/2013/NĐ-CP ngày 24 tháng 9 năm 2013 của Chính phủ quy định về xử phạt vi phạm hành chính "
   },
   {
     "doc_id": 46056,
     "law_name": "Bộ Luật Hình sự 1999",
     "issuance_date": "21/12/1999",
+    "doc_number": "15/1999/QH10",
     "effective_date": "1999-12-21",
     "expiry_date": null,
     "is_in_effect": true,
@@ -38,25 +514,961 @@
     "article_dates": {},
     "is_relative": false,
     "relative_days": null,
-    "source_text": "ng hoặc rất nghiêm trọng.\n\n3. Phạm tội trong trường hợp chiến lợi phẩm có giá trị đặc biệt lớn hoặc gây hậu quả đặc biệt nghiêm trọng, thì bị phạt tù từ bảy năm đến mười hai năm.\n1. Người nào có hành "
+    "source_text": " mười hai năm.\nĐiều 338. Tội quấy nhiễu nhân dân\n\n1. Người nào có hành vi quấy nhiễu nhân dân đã bị xử lý kỷ luật về hành vi này mà còn vi phạm hoặc gây hậu quả nghiêm trọng, thì bị phạt cải tạo không"
   },
   {
-    "doc_id": 662377,
-    "law_name": "Luật sửa đổi Bộ luật Hình sự 2025",
-    "issuance_date": "25/06/2025",
-    "effective_date": "2025-06-25",
+    "doc_id": 313517,
+    "law_name": "Luật Trách nhiệm bồi thường của Nhà nước 2017",
+    "issuance_date": "20/06/2017",
+    "doc_number": "10/2017/QH14",
+    "effective_date": "2018-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Trách nhiệm bồi thường của Nhà nước số 35/2009/QH12"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2018.\n\n2. Luật Trách nhiệm bồi thường của Nhà nước số 35/2009/QH12 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành.\nĐiề"
+  },
+  {
+    "doc_id": 557470,
+    "law_name": "Nghị định 76/2023/NĐ-CP hướng dẫn Luật Phòng, chống bạo lực gia đình",
+    "issuance_date": "01/11/2023",
+    "doc_number": "76/2023/NĐ-CP",
+    "effective_date": "2023-12-25",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Phòng, chống bạo lực gia đình"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "1. Nghị định này có hiệu lực kể từ ngày 25 tháng 12 năm 2023.\n\n2. Nghị định số 08/2009/NĐ-CP ngày 04 tháng 02 năm 2009 của Chính phủ quy định chi tiết và hướng dẫn thi hành một số điều của Luật Phòng,"
+  },
+  {
+    "doc_id": 686325,
+    "law_name": "Luật Thi hành án hình sự 2025",
+    "issuance_date": "10/12/2025",
+    "doc_number": "127/2025/QH15",
+    "effective_date": "2026-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Thi hành án hình sự số 41/2019/QH14 đã được sửa đổi, bổ sung một số điều theo Luật số 59/2024/QH15 và Luật số 86/2025/QH15, Nghị quyết số 54/2022/QH15 ngày 16 tháng 6 năm 2022 của Quốc hội thí điểm mô hình tổ chức hoạt động lao động, hướng nghiệp, dạy nghề cho phạm nhân ngoài trại giam"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026.\n\n2. Luật Thi hành án hình sự số 41/2019/QH14 đã được sửa đổi, bổ sung một số điều theo Luật số 59/2024/QH15 và Luật số "
+  },
+  {
+    "doc_id": 427301,
+    "law_name": "Luật Doanh nghiệp 2020",
+    "issuance_date": "17/06/2020",
+    "doc_number": "59/2020/QH14",
+    "effective_date": "2021-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Doanh nghiệp số 68/2014/QH13"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Điều khoản thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2021.\n\n2. Luật Doanh nghiệp số 68/2014/QH13 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành.\n\n3. Thay thế cụm từ “do"
+  },
+  {
+    "doc_id": 298372,
+    "law_name": "Luật tố tụng hành chính 2015",
+    "issuance_date": "25/11/2015",
+    "doc_number": "93/2015/QH13",
+    "effective_date": "2016-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật tố tụng hành chính số 64/2010/QH12"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2016, trừ các quy định sau đây của Luật này có liên quan đến quy định của Bộ luật dân sự số 91/2015/QH13 thì có hiệu lực thi "
+  },
+  {
+    "doc_id": 406627,
+    "law_name": "Nghị định 98/2020/NĐ-CP quy định về xử phạt vi phạm hành chính trong hoạt động thương mại, sản xuất, buôn bán hàng giả, hàng cấm và bảo vệ quyền lợi người tiêu dùng",
+    "issuance_date": "26/08/2020",
+    "doc_number": "98/2020/NĐ-CP",
+    "effective_date": "2020-10-15",
     "expiry_date": null,
     "is_in_effect": true,
     "replaced_laws": [],
     "article_dates": {},
     "is_relative": false,
     "relative_days": null,
-    "source_text": "QU ỐC HỘI  | CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM Độc lập - Tự do - Hạnh phúc\nLuật số: 86/2025/QH15 | Hà Nội, ngày 25 tháng 6 năm 2025\n\nLUẬT\n\nSỬA ĐỔI, BỔ SUNG MỘT SỐ ĐIỀU CỦA BỘ LUẬT HÌNH SỰ\n\nCăn cứ Hiế"
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 15 tháng 10 năm 2020.\n\n2. Nghị định này thay thế:\n\na) Nghị định số 185/2013/NĐ-CP ngày 15 tháng 11 năm 2013 của Chính phủ quy định xử p"
+  },
+  {
+    "doc_id": 459400,
+    "law_name": "Nghị định 145/2020/NĐ-CP hướng dẫn Bộ luật Lao động về điều kiện lao động và quan hệ lao động",
+    "issuance_date": "14/12/2020",
+    "doc_number": "145/2020/NĐ-CP",
+    "effective_date": "2021-02-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành kể từ ngày 01 tháng 02 năm 2021.\n2. Kể từ ngày Nghị định này có hiệu lực thi hành, các Nghị định sau đây hết hiệu lực thi hành:\n\na) Nghị định s"
+  },
+  {
+    "doc_id": 603982,
+    "law_name": "Nghị định 102/2024/NĐ-CP hướng dẫn Luật Đất đai",
+    "issuance_date": "30/07/2024",
+    "doc_number": "102/2024/NĐ-CP",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 8 năm 2024.\n2. Các nghị định sau đây hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành\n\na) Nghị định số 119-CP ngày 1"
+  },
+  {
+    "doc_id": 2633,
+    "law_name": "Luật Thương mại 2005",
+    "issuance_date": "14/06/2005",
+    "doc_number": "36/2005/QH11",
+    "effective_date": "2006-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2006.\n\nLuật này thay thế Luật thương mại ngày 10 tháng 5 năm 1997.\nĐiều 324. Quy định chi tiết và hướng dẫn thi hành\n\nChính phủ"
+  },
+  {
+    "doc_id": 296884,
+    "law_name": "Bộ luật tố tụng hình sự 2015",
+    "issuance_date": "27/11/2015",
+    "doc_number": "101/2015/QH13",
+    "effective_date": "2016-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật tố tụng hình sự số 19/2003/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Bộ luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2016.\n\n2. Bộ luật tố tụng hình sự số 19/2003/QH11 hết hiệu lực kể từ ngày Bộ luật này có hiệu lực.\n\n3. Bãi bỏ quy định "
+  },
+  {
+    "doc_id": 557190,
+    "law_name": "Luật Bảo hiểm xã hội 2024",
+    "issuance_date": "29/06/2024",
+    "doc_number": "41/2024/QH15",
+    "effective_date": "2025-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Bảo hiểm xã hội số 58/2014/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 84/2015/QH13, Luật số 35/2018/QH14, Bộ luật số 45/2019/QH14 (sau đây gọi chung là Luật số 58/2014/QH13) và Nghị quyết số 93/2015/QH13 ngày 22 tháng 6 năm 2015 của Quốc hội về việc thực hiện chính sách hưởng bảo hiểm xã hội một lần đối với người lao động"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025.\n\n2. Luật Bảo hiểm xã hội số 58/2014/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 84/2015/QH13, Luật số 35/201"
+  },
+  {
+    "doc_id": 625628,
+    "law_name": "Luật Bảo vệ dữ liệu cá nhân 2025",
+    "issuance_date": "26/06/2025",
+    "doc_number": "91/2025/QH15",
+    "effective_date": "2026-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2026.\n\n2. Doanh nghiệp nhỏ, doanh nghiệp khởi nghiệp được quyền lựa chọn thực hiện hoặc không thực hiện quy định tại Điều 21"
+  },
+  {
+    "doc_id": 613131,
+    "law_name": "Nghị định 101/2024/NĐ-CP quy định về điều tra cơ bản đất đai; đăng ký, cấp giấy chứng nhận quyền sử dụng đất, quyền sở hữu tài sản gắn liền với đất và hệ thống thông tin đất đai",
+    "issuance_date": "29/07/2024",
+    "doc_number": "101/2024/NĐ-CP",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 8 năm 2024.\n\n2. Các nghị định sau đây hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành:\n\na) Nghị định số 43/2014/NĐ-"
+  },
+  {
+    "doc_id": 152716,
+    "law_name": "Luật hợp tác xã 2012",
+    "issuance_date": "20/11/2012",
+    "doc_number": "23/2012/QH13",
+    "effective_date": "2013-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật hợp tác xã số 18/2003/QH12"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2013.\n\n2. Luật hợp tác xã số 18/2003/QH12 hết hiệu lực kể từ ngày Luật này có hiệu lực.\nĐiều 64. Quy định chi tiết và hướng d"
+  },
+  {
+    "doc_id": 425471,
+    "law_name": "Nghị định 144/2021/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực an ninh, trật tự, an toàn xã hội; phòng, chống tệ nạn xã hội; phòng cháy, chữa cháy; cứu nạn, cứu hộ; phòng, chống bạo lực gia đình",
+    "issuance_date": "31/12/2021",
+    "doc_number": "144/2021/NĐ-CP",
+    "effective_date": null,
+    "expiry_date": null,
+    "is_in_effect": false,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "THE GOVERNMENT OF VIETNAM  | SOCIALIST REPUBLIC OF VIETNAM Independence - Freedom – Happiness\nNo. 144/2021/ND-CP | Hanoi, December 31, 2021\n\nDECREE\n\nADMINISTRATIVE PENALTIES FOR VIOLATIONS AGAINST REG"
+  },
+  {
+    "doc_id": 628717,
+    "law_name": "Luật Thi hành án dân sự 2025",
+    "issuance_date": "05/12/2025",
+    "doc_number": "106/2025/QH15",
+    "effective_date": "2026-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Thi hành án dân sự số 26/2008/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 64/2014/QH13, Luật số 23/2018/QH14, Luật số 67/2020/QH14, Luật số 03/2022/QH15, Luật số 31/2024/QH15, Luật số 43/2024/QH15, Luật số 59/2024/QH15, Luật số 81/2025/QH15 và Luật số 84/2025/QH15 (sau đây gọi là Luật Thi hành án dân sự số 26/2008/QH12)"
+    ],
+    "article_dates": {
+      "Điều 3": "2026-01-20"
+    },
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026, trừ quy định tại khoản 2 Điều này.\n\n2. Khoản 9 và khoản 11 Điều 3; Điều 5; điểm g khoản 2 Điều 11; điểm đ khoản 2 Điều "
+  },
+  {
+    "doc_id": 626370,
+    "law_name": "Nghị định 123/2024/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực đất đai",
+    "issuance_date": "04/10/2024",
+    "doc_number": "123/2024/NĐ-CP",
+    "effective_date": "2024-10-04",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 04 tháng 10 năm 2024.\n\n2. Nghị định số 91/2019/NĐ-CP ngày 19 tháng 11 năm 2019 về xử phạt vi phạm hành chính trong lĩnh vực đất đai; Đi"
+  },
+  {
+    "doc_id": 238641,
+    "law_name": "Luật Phá sản 2014",
+    "issuance_date": "19/06/2014",
+    "doc_number": "51/2014/QH13",
+    "effective_date": "2015-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật phá sản số 21/2004/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành kể từ ngày 01 tháng 01 năm 2015.\n\n2. Luật phá sản số 21/2004/QH11 hết hiệu lực kể từ ngày Luật này có hiệu lực.\nĐiều 133. Quy định chi tiết và hướng"
+  },
+  {
+    "doc_id": 530912,
+    "law_name": "Luật Việc làm 2025",
+    "issuance_date": "16/06/2025",
+    "doc_number": "74/2025/QH15",
+    "effective_date": "2026-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Việc làm số 38/2013/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 41/2024/QH15"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2026.\n\n2. Luật Việc làm số 38/2013/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 41/2024/QH15 hết hiệu lực kể từ ng"
+  },
+  {
+    "doc_id": 550020,
+    "law_name": "Nghị định 103/2024/NĐ-CP quy định về tiền sử dụng đất, tiền thuê đất",
+    "issuance_date": "30/07/2024",
+    "doc_number": "103/2024/NĐ-CP",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 8 năm 2024.\n\n2. Nghị định này thay thế các Nghị định số 45/2014/NĐ-CP ngày 15 tháng 5 năm 2014 về thu tiền sử dụng đất, Nghị đ"
+  },
+  {
+    "doc_id": 600715,
+    "law_name": "Nghị định 88/2024/NĐ-CP về bồi thường, hỗ trợ, tái định cư khi Nhà nước thu hồi đất",
+    "issuance_date": "15/07/2024",
+    "doc_number": "88/2024/NĐ-CP",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 8 năm 2024.\n\n2. Các nghị định sau đây hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành:\n\na) Nghị định số 47/2014/NĐ-"
+  },
+  {
+    "doc_id": 462291,
+    "law_name": "Nghị định 31/2021/NĐ-CP hướng dẫn Luật Đầu tư",
+    "issuance_date": "26/03/2021",
+    "doc_number": "31/2021/NĐ-CP",
+    "effective_date": "2015-11-12",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực từ ngày ký.\n2. Các Nghị định, quy định sau đây hết hiệu lực thi hành kể từ ngày Luật Đầu tư có hiệu lực thi hành:\n\na) Nghị định số 118/2015/NĐ-CP ngày 1"
+  },
+  {
+    "doc_id": 82196,
+    "law_name": "Luật bảo hiểm y tế 2008",
+    "issuance_date": "14/11/2008",
+    "doc_number": "25/2008/QH12",
+    "effective_date": "2009-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2009.\n\n2. Lộ trình thực hiện bảo hiểm y tế toàn dân được quy định như sau:\n\na) Đối tượng quy định từ khoản 1 đến khoản 20 Điề"
+  },
+  {
+    "doc_id": 15865,
+    "law_name": "Luật người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng năm 2006",
+    "issuance_date": "29/11/2006",
+    "doc_number": "72/2006/QH11",
+    "effective_date": null,
+    "expiry_date": null,
+    "is_in_effect": false,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "THE NATIONAL ASSEMBLY  | SOCIALIST REPUBLIC OF VIET NAM Independence - Freedom – Happiness\nNo: 72/2006/QH11 | Hanoi, November 29, 2006\n\nLAW\n\nON VIETNAMESE GUEST WORKERS\n\nPursuant to the 1992 Constitut"
+  },
+  {
+    "doc_id": 320905,
+    "law_name": "Luật Hỗ trợ doanh nghiệp nhỏ và vừa 2017",
+    "issuance_date": "12/06/2017",
+    "doc_number": "04/2017/QH14",
+    "effective_date": "2018-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2018.\nĐiều 35. Quy định chuyển tiếp\n\n1. Kể từ ngày Luật này có hiệu lực thi hành, hoạt động hỗ trợ doanh nghiệp nhỏ và vừa trướ"
+  },
+  {
+    "doc_id": 612195,
+    "law_name": "Luật sửa đổi Luật Đất đai, Luật Nhà ở, Luật Kinh doanh bất động sản và Luật Các tổ chức tín dụng 2024",
+    "issuance_date": "29/06/2024",
+    "doc_number": "43/2024/QH15",
+    "effective_date": "2024-08-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 8 năm 2024.\n\nLuật này được Quốc hội nước Cộng hòa xã hội chủ nghĩa Việt Nam khóa XV, kỳ họp thứ 7 thông qua ngày 29 tháng 6 năm 2024.\n"
+  },
+  {
+    "doc_id": 142187,
+    "law_name": "Bộ Luật lao động 2012",
+    "issuance_date": "18/06/2012",
+    "doc_number": "10/2012/QH13",
+    "effective_date": "2013-05-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "hiệu lực thi hành:\n\na) Các hợp đồng lao động, thoả ước lao động tập thể, những thoả thuận hợp pháp khác đã giao kết và những thoả thuận có lợi hơn cho người lao động so với quy định của Bộ luật này đư"
+  },
+  {
+    "doc_id": 354053,
+    "law_name": "Luật sửa đổi Bộ luật Hình sự 2017",
+    "issuance_date": "20/06/2017",
+    "doc_number": "12/2017/QH14",
+    "effective_date": "2018-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2018.\n\nLuật này được Quốc hội nước Cộng hòa xã hội chủ nghĩa Việt Nam khóa XIV, kỳ họp thứ 3 thông qua ngày 20 tháng 6 năm 2017"
+  },
+  {
+    "doc_id": 542323,
+    "law_name": "Nghị định 99/2022/NĐ-CP về đăng ký biện pháp bảo đảm",
+    "issuance_date": "30/11/2022",
+    "doc_number": "99/2022/NĐ-CP",
+    "effective_date": "2023-01-15",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 15 tháng 01 năm 2023, trừ trường hợp quy định tại khoản 2 Điều này.\n\n2. Quy định tại Nghị định này về thực hiện thủ tục đăng ký trực tu"
+  },
+  {
+    "doc_id": 468069,
+    "law_name": "Nghị định 21/2021/NĐ-CP hướng dẫn Bộ luật Dân sự về bảo đảm thực hiện nghĩa vụ",
+    "issuance_date": "19/03/2021",
+    "doc_number": "21/2021/NĐ-CP",
+    "effective_date": "2021-05-15",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực từ ngày 15 tháng 5 năm 2021.\n\n2. Nghị định số 163/2006/NĐ-CP ngày 29 tháng 12 năm 2006 của Chính phủ về giao dịch bảo đảm, Nghị định số 11/2012/NĐ-CP ng"
+  },
+  {
+    "doc_id": 679014,
+    "law_name": "Luật Thi hành tạm giữ, tạm giam và cấm đi khỏi nơi cư trú 2025",
+    "issuance_date": "10/12/2025",
+    "doc_number": "128/2025/QH15",
+    "effective_date": "2026-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Thi hành tạm giữ, tạm giam số 94/2015/QH13"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026.\n\n2. Luật Thi hành tạm giữ, tạm giam số 94/2015/QH13 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành.\n\nLuật này đư"
+  },
+  {
+    "doc_id": 376934,
+    "law_name": "Nghị định 30/2018/NĐ-CP về quy định chi tiết việc thành lập và hoạt động của Hội đồng định giá tài sản; trình tự, thủ tục định giá tài sản trong tố tụng hình sự",
+    "issuance_date": "07/03/2018",
+    "doc_number": "30/2018/NĐ-CP",
+    "effective_date": "2018-05-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 5 năm 2018.\n\n2. Nghị định này thay thế Nghị định số 26/2005/NĐ-CP ngày 02 tháng 3 năm 2005 của Chính phủ về Hội đồng định giá "
+  },
+  {
+    "doc_id": 500102,
+    "law_name": "Luật Bảo vệ quyền lợi người tiêu dùng 2023",
+    "issuance_date": "20/06/2023",
+    "doc_number": "19/2023/QH15",
+    "effective_date": "2024-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Bảo vệ quyền lợi người tiêu dùng số 59/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH14"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2024.\n\n2. Luật Bảo vệ quyền lợi người tiêu dùng số 59/2010/QH12 đã được sửa đổi, bổ sung một số điều theo Luật số 35/2018/QH1"
+  },
+  {
+    "doc_id": 215628,
+    "law_name": "Luật việc làm 2013",
+    "issuance_date": "16/11/2013",
+    "doc_number": "38/2013/QH13",
+    "effective_date": "2015-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật bảo hiểm xã hội số 71/2006/QH11; Chương IX - Đánh giá, cấp chứng chỉ kỹ năng nghề quốc gia của Luật dạy nghề số 76/2006/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2015.\n\n2. Các quy định về bảo hiểm thất nghiệp của Luật bảo hiểm xã hội số 71/2006/QH11; Chương IX - Đánh giá, cấp chứng chỉ"
+  },
+  {
+    "doc_id": 259727,
+    "law_name": "Luật Hộ tịch 2014",
+    "issuance_date": "20/11/2014",
+    "doc_number": "60/2014/QH13",
+    "effective_date": "2016-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành kể từ ngày 01 tháng 01 năm 2016.\n\n2. Chính phủ, cơ quan có thẩm quyền quy định chi tiết các điều, khoản được giao trong Luật.\n\nLuật này đã được Quốc"
+  },
+  {
+    "doc_id": 662035,
+    "law_name": "Luật Thương mại điện tử 2025",
+    "issuance_date": "10/12/2025",
+    "doc_number": "122/2025/QH15",
+    "effective_date": "2026-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026.\nĐiều 41. Quy định chuyển tiếp\n\n1. Website thương mại điện tử, ứng dụng thương mại điện tử được xác nhận thông báo, đăng ký"
+  },
+  {
+    "doc_id": 15866,
+    "law_name": "Luật Bình đẳng giới 2006",
+    "issuance_date": "29/11/2006",
+    "doc_number": "73/2006/QH11",
+    "effective_date": "2007-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2007.\nĐiều 44. Hướng dẫn thi hành\n\nChính phủ quy định chi tiết và hướng dẫn thi hành Luật này.\n\nLuật này đã được Quốc hội nước C"
+  },
+  {
+    "doc_id": 12981,
+    "law_name": "Luật Luật sư 2006",
+    "issuance_date": "29/06/2006",
+    "doc_number": "65/2006/QH11",
+    "effective_date": "2007-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật sư năm 2001"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2007.\n\nPháp lệnh luật sư năm 2001 hết hiệu lực kể từ ngày Luật này có hiệu lực.\nĐiều 94. Hướng dẫn thi hành\n\nChính phủ, Toà án "
+  },
+  {
+    "doc_id": 7022,
+    "law_name": "Luật Sở hữu trí tuệ 2005",
+    "issuance_date": "29/11/2005",
+    "doc_number": "50/2005/QH11",
+    "effective_date": "2006-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2006.\nĐiều 222. Hướng dẫn thi hành\n\nChính phủ, Toà án nhân dân tối cao quy định chi tiết và hướng dẫn thi hành Luật này.\n\nLuật n"
+  },
+  {
+    "doc_id": 634792,
+    "law_name": "Nghị định 158/2025/NĐ-CP hướng dẫn Luật Bảo hiểm xã hội về bảo hiểm xã hội bắt buộc",
+    "issuance_date": "25/06/2025",
+    "doc_number": "158/2025/NĐ-CP",
+    "effective_date": "2025-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025.\n2. Kể từ ngày Nghị định này có hiệu lực thi hành, các Nghị định của Chính phủ và các điều khoản sau đây hết hiệu l"
+  },
+  {
+    "doc_id": 470561,
+    "law_name": "Nghị định 47/2021/NĐ-CP hướng dẫn Luật Doanh nghiệp",
+    "issuance_date": "01/04/2021",
+    "doc_number": "47/2021/NĐ-CP",
+    "effective_date": "2015-09-18",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "hiệu lực thi hành kể từ ngày ký ban hành.\n\n2. Nghị định này thay thế và bãi bỏ các văn bản sau:\n\na) Nghị định số 81/2015/NĐ-CP ngày 18 tháng 9 năm 2015 của Chính phủ về công bố thông tin doanh nghiệp "
+  },
+  {
+    "doc_id": 284071,
+    "law_name": "Nghị định 62/2015/NĐ-CP hướng dẫn Luật Thi hành án dân sự",
+    "issuance_date": "18/07/2015",
+    "doc_number": "62/2015/NĐ-CP",
+    "effective_date": "2015-09-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành và điều khoản chuyển tiếp\n\n1. Nghị định này có hiệu lực thi hành từ ngày 01 tháng 9 năm 2015 và thay thế Nghị định số 74/2009/NĐ-CP ngày 09 tháng 9 năm 2009 của Chính phủ quy định ch"
+  },
+  {
+    "doc_id": 280261,
+    "law_name": "Nghị định 152/2020/NĐ-CP về người lao động nước ngoài làm việc tại Việt Nam và tuyển dụng, quản lý người lao động Việt Nam làm việc cho tổ chức, cá nhân nước ngoài tại Việt Nam",
+    "issuance_date": "30/12/2020",
+    "doc_number": "152/2020/NĐ-CP",
+    "effective_date": "2021-02-15",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Lao động về lao động nước ngoài làm việc tại Việt Nam (sau đây gọi là Nghị định số 11/2016/NĐ-CP) đã được sửa đổi, bổ sung tại Nghị định số 140/2018/NĐ-CP ngày 08 tháng 10 năm 2018 của Chính phủ sửa đổi, bổ sung các Nghị định liên quan đến điều kiện đầu tư kinh doanh và thủ tục hành chính thuộc phạm vi quản lý nhà nước của Bộ Lao động - Thương binh và Xã hội (sau đây gọi là Nghị định số 140/2018/NĐ-CP) và Nghị định số 75/2014/NĐ-CP ngày 28 tháng 7 năm 2014 của Chính phủ quy định chi tiết thi hành một số điều của Bộ luật Lao động về tuyển dụng, quản lý người lao động Việt Nam làm việc cho tổ chức, cá nhân nước ngoài tại Việt Nam"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "1. Nghị định này có hiệu lực thi hành kể từ ngày 15 tháng 02 năm 2021.\n\n2. Nghị định số 11/2016/NĐ-CP ngày 03 tháng 02 năm 2016 của Chính phủ quy định chi tiết thi hành một số điều của Bộ luật Lao độn"
+  },
+  {
+    "doc_id": 675210,
+    "law_name": "Luật Phục hồi, phá sản 2025",
+    "issuance_date": "11/12/2025",
+    "doc_number": "142/2025/QH15",
+    "effective_date": "2026-03-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Phá sản số 51/2014/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 85/2025/QH15"
+    ],
+    "article_dates": {
+      "Điều 38": "2026-07-01"
+    },
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 3 năm 2026, trừ trường hợp quy định tại khoản 3 Điều 38 của Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2026.\n\n2. Luật Phá"
+  },
+  {
+    "doc_id": 259728,
+    "law_name": "Luật Thi hành án dân sự sửa đổi 2014",
+    "issuance_date": "25/11/2014",
+    "doc_number": "64/2014/QH13",
+    "effective_date": "2015-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "hiệu lực thi hành từ ngày 01 tháng 7 năm 2015.\n\n2. Chính phủ, Tòa án nhân dân tối cao, Viện kiểm sát nhân dân tối cao, Bộ Tư pháp trong phạm vi nhiệm vụ, quyền hạn của mình quy định chi tiết thi hành "
+  },
+  {
+    "doc_id": 108082,
+    "law_name": "Luật nuôi con nuôi 2010",
+    "issuance_date": "17/06/2010",
+    "doc_number": "52/2010/QH12",
+    "effective_date": "2011-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2011.\n\n2. Chính phủ quy định chi tiết và hướng dẫn thi hành các điều, khoản được giao trong Luật; hướng dẫn những nội dung c"
+  },
+  {
+    "doc_id": 142186,
+    "law_name": "Luật Công đoàn 2012",
+    "issuance_date": "20/06/2012",
+    "doc_number": "12/2012/QH13",
+    "effective_date": "2013-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Công đoàn năm 1990"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2013.\n\nLuật Công đoàn năm 1990 hết hiệu lực kể từ ngày Luật này có hiệu lực.\nĐiều 33. Quy định chi tiết và hướng dẫn thi hành\n\n"
+  },
+  {
+    "doc_id": 262379,
+    "law_name": "Nghị định 126/2014/NĐ-CP hướng dẫn thi hành Luật Hôn nhân và gia đình",
+    "issuance_date": "31/12/2014",
+    "doc_number": "126/2014/NĐ-CP",
+    "effective_date": "2015-02-15",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Nghị định này có hiệu lực thi hành kể từ ngày 15 tháng 02 năm 2015.\n2. Bãi bỏ Nghị định số 70/2001/NĐ-CP ngày 03 tháng 10 năm 2001 của Chính phủ quy định chi tiết thi hành Luật H"
+  },
+  {
+    "doc_id": 599145,
+    "law_name": "Nghị định 71/2024/NĐ-CP quy định về giá đất",
+    "issuance_date": "27/06/2024",
+    "doc_number": "71/2024/NĐ-CP",
+    "effective_date": "2014-05-15",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "1. Nghị định này có hiệu lực thi hành kể từ ngày Luật Đất đai số 31/2024/QH15 có hiệu lực thi hành, trừ trường hợp quy định tại khoản 2 Điều này.\n\n2. Điều 37 của Nghị định này có hiệu lực kể từ ngày N"
+  },
+  {
+    "doc_id": 281961,
+    "law_name": "Luật an toàn, vệ sinh lao động 2015",
+    "issuance_date": "25/06/2015",
+    "doc_number": "84/2015/QH13",
+    "effective_date": "2016-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật bảo hiểm xã hội số 58/2014/QH13"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2016.\n\n2. Các quy định về bảo hiểm tai nạn lao động, bệnh nghề nghiệp tại Mục 3 Chương III, khoản 4 Điều 84, điểm b khoản 1 v"
+  },
+  {
+    "doc_id": 439844,
+    "law_name": "Luật Người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng 2020",
+    "issuance_date": "13/11/2020",
+    "doc_number": "69/2020/QH14",
+    "effective_date": "2022-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng số 72/2006/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2022.\n\n2. Luật Người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng số 72/2006/QH11 hết hiệu lực kể từ ngày Luật n"
+  },
+  {
+    "doc_id": 280115,
+    "law_name": "Luật đấu giá tài sản 2016",
+    "issuance_date": "17/11/2016",
+    "doc_number": "01/2016/QH14",
+    "effective_date": "2017-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2017, trừ quy định tại khoản 2 Điều này.\n\n2. Khoản 4 Điều 80 của Luật này có hiệu lực thi hành kể từ ngày 01 tháng 01 năm 201"
+  },
+  {
+    "doc_id": 345182,
+    "law_name": "Luật Cạnh tranh 2018",
+    "issuance_date": "12/06/2018",
+    "doc_number": "23/2018/QH14",
+    "effective_date": "2019-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Cạnh tranh số 27/2004/QH11"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2019.\n\n2. Luật Cạnh tranh số 27/2004/QH11 hết hiệu lực kể từ ngày Luật này có hiệu lực thi hành.\nĐiều 118. Điều khoản chuyển "
+  },
+  {
+    "doc_id": 664033,
+    "law_name": "Nghị định 226/2025/NĐ-CP sửa đổi các Nghị định hướng dẫn Luật Đất đai",
+    "issuance_date": "15/08/2025",
+    "doc_number": "226/2025/NĐ-CP",
+    "effective_date": "2025-08-15",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "1. Nghị định này có hiệu lực thi hành từ ngày 15 tháng 8 năm 2025.\n\n2. Các quy định sau đây hết hiệu lực kể từ ngày Nghị định này có hiệu lực thi hành:\n\na) Nghị định số 96/2019/NĐ-CP ngày 19 tháng 12 "
+  },
+  {
+    "doc_id": 445264,
+    "law_name": "Luật Công đoàn 2024",
+    "issuance_date": "27/11/2024",
+    "doc_number": "50/2024/QH15",
+    "effective_date": "2025-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật Công đoàn số 12/2012/QH13"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025.\n\nLuật Công đoàn số 12/2012/QH13 hết hiệu lực từ ngày Luật này có hiệu lực thi hành.\n\nLuật này được Quốc hội nước Cộng hòa "
+  },
+  {
+    "doc_id": 505750,
+    "law_name": "Luật Bảo hiểm y tế sửa đổi 2024",
+    "issuance_date": "27/11/2024",
+    "doc_number": "51/2024/QH15",
+    "effective_date": "2025-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {
+      "Điều 1": "2025-01-01"
+    },
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Điều khoản thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025, trừ quy định tại khoản 2 và khoản 3 Điều này.\n\n2. Quy định liên quan đến cấp chuyên môn kỹ thuật trong khám bệnh, chữ"
+  },
+  {
+    "doc_id": 662829,
+    "law_name": "Luật sửa đổi Bộ luật Tố tụng hình sự 2025",
+    "issuance_date": "27/06/2025",
+    "doc_number": "99/2025/QH15",
+    "effective_date": "2025-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025.\n\nLuật này được Quốc hội nước Cộng hòa xã hội chủ nghĩa Việt Nam khóa XV, kỳ họp thứ 9 thông qua ngày 27 tháng 6 năm 2025.\n"
+  },
+  {
+    "doc_id": 108065,
+    "law_name": "Luật thuế sử dụng đất phi nông nghiệp 2010",
+    "issuance_date": "17/06/2010",
+    "doc_number": "48/2010/QH12",
+    "effective_date": "2012-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [
+      "Luật sau đây"
+    ],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2012.\n\n2. Các văn bản quy phạm pháp luật sau đây hết hiệu lực thi hành kể từ ngày Luật này có hiệu lực:\n\na) Pháp lệnh thuế n"
+  },
+  {
+    "doc_id": 395767,
+    "law_name": "Luật Hòa giải, đối thoại tại Tòa án 2020",
+    "issuance_date": "16/06/2020",
+    "doc_number": "58/2020/QH14",
+    "effective_date": "2021-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2021.\n\nLuật này được Quốc hội nước Cộng hòa xã hội chủ nghĩa Việt Nam khóa XIV, kỳ họp thứ 9 thông qua ngày 16 tháng 6 năm 2020"
+  },
+  {
+    "doc_id": 458435,
+    "law_name": "Luật Sở hữu trí tuệ sửa đổi 2022",
+    "issuance_date": "16/06/2022",
+    "doc_number": "07/2022/QH15",
+    "effective_date": "2023-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\n1. Luật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2023, trừ trường hợp quy định tại khoản 2 và khoản 3 Điều này.\n\n2. Quy định về bảo hộ nhãn hiệu là dấu hiệu âm thanh có hiệu"
+  },
+  {
+    "doc_id": 662377,
+    "law_name": "Luật sửa đổi Bộ luật Hình sự 2025",
+    "issuance_date": "25/06/2025",
+    "doc_number": "86/2025/QH15",
+    "effective_date": "2025-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025.\nĐiều 4. Điều khoản chuyển tiếp\n\n1. Kể từ ngày 01 tháng 7 năm 2025, Luật này được áp dụng như sau:\n\na) Các quy định tại Điề"
+  },
+  {
+    "doc_id": 603278,
+    "law_name": "Nghị định 74/2024/NĐ-CP quy định về mức lương tối thiểu đối với người lao động làm việc theo hợp đồng lao động",
+    "issuance_date": "30/06/2024",
+    "doc_number": "74/2024/NĐ-CP",
+    "effective_date": "2024-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "hiệu lực thi hành từ ngày 01 tháng 7 năm 2024.\n\n2. Nghị định số 38/2022/NĐ-CP ngày 12 tháng 6 năm 2022 của Chính phủ quy định mức lương tối thiểu đối với người lao động làm việc theo hợp đồng lao động"
+  },
+  {
+    "doc_id": 588810,
+    "law_name": "Luật Đấu giá tài sản sửa đổi 2024",
+    "issuance_date": "27/06/2024",
+    "doc_number": "37/2024/QH15",
+    "effective_date": "2025-01-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2025, trừ trường hợp quy định tại Điều 3 của Luật này.\nĐiều 3. Quy định chuyển tiếp\n\n1. Trường hợp người có tài sản đấu giá đã "
+  },
+  {
+    "doc_id": 651570,
+    "law_name": "Luật sửa đổi Bộ luật Tố tụng dân sự, Luật Tố tụng hành chính, Luật Tư pháp người chưa thành niên, Luật Phá sản và Luật Hòa giải, đối thoại tại tòa án 2025",
+    "issuance_date": "25/06/2025",
+    "doc_number": "85/2025/QH15",
+    "effective_date": "2025-07-01",
+    "expiry_date": null,
+    "is_in_effect": true,
+    "replaced_laws": [],
+    "article_dates": {},
+    "is_relative": false,
+    "relative_days": null,
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025, trừ trường hợp Luật Tư pháp người chưa thành niên có quy định khác.\n\nLuật này được Quốc hội nước Cộng hòa xã hội chủ nghĩa"
   },
   {
     "doc_id": 489113,
     "law_name": "Luật sửa đổi Bộ luật Tố tụng hình sự 2021",
     "issuance_date": "12/11/2021",
+    "doc_number": "02/2021/QH15",
     "effective_date": "2021-12-01",
     "expiry_date": null,
     "is_in_effect": true,
@@ -67,16 +1479,17 @@
     "source_text": "hiệu lực thi hành từ ngày 01 tháng 12 năm 2021.\n\nLuật này được Quốc hội nước Cộng hòa xã hội chủ nghĩa Việt Nam khóa XV, kỳ họp thứ 2 thông qua ngày 12 tháng 11 năm 2021.\n\nCHỦ TỊCH QUỐC HỘI Vương Đình"
   },
   {
-    "doc_id": 354053,
-    "law_name": "Luật sửa đổi Bộ luật Hình sự 2017",
-    "issuance_date": "20/06/2017",
-    "effective_date": "2018-01-01",
+    "doc_id": 659899,
+    "law_name": "Luật Doanh nghiệp sửa đổi 2025",
+    "issuance_date": "17/06/2025",
+    "doc_number": "76/2025/QH15",
+    "effective_date": "2025-07-01",
     "expiry_date": null,
     "is_in_effect": true,
     "replaced_laws": [],
     "article_dates": {},
     "is_relative": false,
     "relative_days": null,
-    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 01 năm 2018.\n\nLuật này được Quốc hội nước Cộng hòa xã hội chủ nghĩa Việt Nam khóa XIV, kỳ họp thứ 3 thông qua ngày 20 tháng 6 năm 2017"
+    "source_text": "Hiệu lực thi hành\n\nLuật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025.\nĐiều 3. Điều khoản chuyển tiếp\n\n1. Đối với doanh nghiệp được đăng ký thành lập trước thời điểm Luật này có hiệu lực thi hà"
   }
 ]
