@@ -1,0 +1,4834 @@
+{
+  "config": {
+    "set": "criminal",
+    "limit": null,
+    "collection": "luat_law_ctx_v2",
+    "tier": "tier1_retrieval",
+    "generated_at_utc": "2026-07-10T08:08:55.798507+00:00"
+  },
+  "tier1": {
+    "n_questions_total": 41,
+    "n_questions_eligible": 34,
+    "n_questions_skipped": 7,
+    "modes": {
+      "dense": {
+        "n": 34,
+        "recall@5_strict": 0.8186,
+        "recall@5_lenient": 0.8186,
+        "recall@10_strict": 0.902,
+        "recall@10_lenient": 0.902,
+        "mrr_strict": 0.7034,
+        "mrr_lenient": 0.7034,
+        "by_type": {
+          "amendment": {
+            "n": 5,
+            "recall@5_strict": 0.8,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 0.8,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.625,
+            "mrr_lenient": 0.625
+          },
+          "citation-lookup": {
+            "n": 8,
+            "recall@5_strict": 0.5,
+            "recall@10_strict": 0.625,
+            "recall@5_lenient": 0.5,
+            "recall@10_lenient": 0.625,
+            "mrr_strict": 0.3698,
+            "mrr_lenient": 0.3698
+          },
+          "comparison": {
+            "n": 2,
+            "recall@5_strict": 0.75,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 0.75,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.75,
+            "mrr_lenient": 0.75
+          },
+          "multi-hop": {
+            "n": 2,
+            "recall@5_strict": 0.6667,
+            "recall@10_strict": 0.8333,
+            "recall@5_lenient": 0.6667,
+            "recall@10_lenient": 0.8333,
+            "mrr_strict": 0.75,
+            "mrr_lenient": 0.75
+          },
+          "single-hop": {
+            "n": 17,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.8725,
+            "mrr_lenient": 0.8725
+          }
+        }
+      },
+      "hybrid": {
+        "n": 34,
+        "recall@5_strict": 0.8627,
+        "recall@5_lenient": 0.8627,
+        "recall@10_strict": 0.9069,
+        "recall@10_lenient": 0.9069,
+        "mrr_strict": 0.7225,
+        "mrr_lenient": 0.7225,
+        "by_type": {
+          "amendment": {
+            "n": 5,
+            "recall@5_strict": 0.8,
+            "recall@10_strict": 0.9,
+            "recall@5_lenient": 0.8,
+            "recall@10_lenient": 0.9,
+            "mrr_strict": 0.7,
+            "mrr_lenient": 0.7
+          },
+          "citation-lookup": {
+            "n": 8,
+            "recall@5_strict": 0.75,
+            "recall@10_strict": 0.75,
+            "recall@5_lenient": 0.75,
+            "recall@10_lenient": 0.75,
+            "mrr_strict": 0.5875,
+            "mrr_lenient": 0.5875
+          },
+          "comparison": {
+            "n": 2,
+            "recall@5_strict": 0.75,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 0.75,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.6667,
+            "mrr_lenient": 0.6667
+          },
+          "multi-hop": {
+            "n": 2,
+            "recall@5_strict": 0.4167,
+            "recall@10_strict": 0.6667,
+            "recall@5_lenient": 0.4167,
+            "recall@10_lenient": 0.6667,
+            "mrr_strict": 0.75,
+            "mrr_lenient": 0.75
+          },
+          "single-hop": {
+            "n": 17,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.7961,
+            "mrr_lenient": 0.7961
+          }
+        }
+      },
+      "routed": {
+        "n": 34,
+        "recall@5_strict": 0.9216,
+        "recall@5_lenient": 0.9216,
+        "recall@10_strict": 0.9657,
+        "recall@10_lenient": 0.9657,
+        "mrr_strict": 0.8049,
+        "mrr_lenient": 0.8049,
+        "by_type": {
+          "amendment": {
+            "n": 5,
+            "recall@5_strict": 0.8,
+            "recall@10_strict": 0.9,
+            "recall@5_lenient": 0.8,
+            "recall@10_lenient": 0.9,
+            "mrr_strict": 0.8,
+            "mrr_lenient": 0.8
+          },
+          "citation-lookup": {
+            "n": 8,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 1.0,
+            "mrr_lenient": 1.0
+          },
+          "comparison": {
+            "n": 2,
+            "recall@5_strict": 0.75,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 0.75,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.6667,
+            "mrr_lenient": 0.6667
+          },
+          "multi-hop": {
+            "n": 2,
+            "recall@5_strict": 0.4167,
+            "recall@10_strict": 0.6667,
+            "recall@5_lenient": 0.4167,
+            "recall@10_lenient": 0.6667,
+            "mrr_strict": 0.5,
+            "mrr_lenient": 0.5
+          },
+          "single-hop": {
+            "n": 17,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.7667,
+            "mrr_lenient": 0.7667
+          }
+        }
+      }
+    },
+    "rows": {
+      "dense": [
+        {
+          "id": "crim-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6395
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6211
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.6162
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 313. Tội che giấu tội phạm",
+              "score": 0.6067
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6037
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6104
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.5994
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 33. Kiểm tra, giám sát trong tố tụng hình sự",
+              "score": 0.5987
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 417. Xác định tuổi của người bị buộc tội, người bị hại là người dưới 18 tuổi",
+              "score": 0.596
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.5929
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-003",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 51"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 0.6879
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.635
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 0.6338
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6318
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.627
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-004",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 119"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 46. Các biện pháp tư pháp",
+              "score": 0.5606
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 109. Các biện pháp ngăn chặn",
+              "score": 0.5459
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 0.5444
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5412
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 0.5409
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "crim-005",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 123"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 9. Phân loại tội phạm",
+              "score": 0.6345
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.6254
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.6238
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.6226
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 9. Phân loại tội phạm",
+              "score": 0.621
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-006",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.5926
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.5776
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5727
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 0.5694
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 2. Sửa đổi, bổ sung một số điều của các luật có liên quan",
+              "score": 0.5671
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.125,
+          "rr_lenient": 0.125
+        },
+        {
+          "id": "crim-007",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 0.6602
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 367. Thủ tục xem xét bản án tử hình trước khi thi hành",
+              "score": 0.5778
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 35. Tử hình",
+              "score": 0.5771
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 0.5639
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 39. Tù chung thân",
+              "score": 0.5551
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-008",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 85"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.629
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 32. Bảo đảm quyền khiếu nại, tố cáo trong tố tụng hình sự",
+              "score": 0.6061
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6004
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 55. Người tham gia tố tụng",
+              "score": 0.5968
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.5926
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-101",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 12"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.8064
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.7976
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.7696
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 90. Áp dụng Bộ luật hình sự đối với người dưới 18 tuổi phạm tội",
+              "score": 0.7336
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 14. Chuẩn bị phạm tội",
+              "score": 0.718
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-102",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6966
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.6845
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6816
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6795
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.6678
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-103",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.7378
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.7277
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.727
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.7226
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.713
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-104",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 168"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 133. Tội cướp tài sản",
+              "score": 0.7069
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 168. Tội cướp tài sản",
+              "score": 0.6987
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 133. Tội cướp tài sản",
+              "score": 0.6889
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 168. Tội cướp tài sản",
+              "score": 0.6846
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 171. Tội cướp giật tài sản",
+              "score": 0.6787
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-105",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.6998
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.6904
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.6705
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.6676
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 66. Tha tù trước thời hạn có điều kiện",
+              "score": 0.6187
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-106",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.705
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.6874
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.6771
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.6716
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 66. Tha tù trước thời hạn có điều kiện",
+              "score": 0.621
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-107",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 36"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 73. Cải tạo không giam giữ",
+              "score": 0.7333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 31. Cải tạo không giam giữ",
+              "score": 0.7284
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 36. Cải tạo không giam giữ",
+              "score": 0.7278
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 31. Cải tạo không giam giữ",
+              "score": 0.7276
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 36. Cải tạo không giam giữ",
+              "score": 0.7238
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "crim-108",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 29"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 29. Căn cứ miễn trách nhiệm hình sự",
+              "score": 0.7676
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 25. Miễn trách nhiệm hình sự",
+              "score": 0.7429
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 29. Căn cứ miễn trách nhiệm hình sự",
+              "score": 0.7213
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 62. Miễn chấp hành hình phạt",
+              "score": 0.7072
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 59. Miễn hình phạt",
+              "score": 0.7014
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-109",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 17"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 17. Đồng phạm",
+              "score": 0.6976
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 20. Đồng phạm",
+              "score": 0.6928
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 53. Quyết định hình phạt trong trường hợp đồng phạm",
+              "score": 0.5507
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 58. Quyết định hình phạt trong trường hợp đồng phạm",
+              "score": 0.5479
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 8. Khái niệm tội phạm",
+              "score": 0.5299
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-110",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 321"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 248. Tội đánh bạc",
+              "score": 0.758
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 321. Tội đánh bạc",
+              "score": 0.7471
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 249. Tội tổ chức đánh bạc hoặc gá bạc",
+              "score": 0.7344
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 322. Tội tổ chức đánh bạc hoặc gá bạc",
+              "score": 0.729
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 322. Tội tổ chức đánh bạc hoặc gá bạc",
+              "score": 0.7106
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-111",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 174"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7481
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.747
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7467
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7457
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7335
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-112",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.7455
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.7325
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.7119
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 0.702
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.6937
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-113",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 172"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 0.7854
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 460. Điều tra",
+              "score": 0.7378
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 174. Thời hạn phục hồi điều tra, điều tra bổ sung, điều tra lại",
+              "score": 0.7302
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.7154
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 174. Thời hạn phục hồi điều tra, điều tra bổ sung, điều tra lại",
+              "score": 0.7068
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-114",
+          "type": "single-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 119"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 0.6793
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 120. Việc chăm nom người thân thích và bảo quản tài sản của người bị tạm giữ, tạm giam",
+              "score": 0.6051
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 35. Tử hình",
+              "score": 0.5858
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 61. Hoãn chấp hành hình phạt tù",
+              "score": 0.5767
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 0.5745
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-115",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 73"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 73. Quyền và nghĩa vụ của người bào chữa",
+              "score": 0.7649
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 73. Quyền và nghĩa vụ của người bào chữa",
+              "score": 0.7394
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 72. Người bào chữa",
+              "score": 0.7272
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 16. Bảo đảm quyền bào chữa của người bị buộc tội, bảo vệ quyền và lợi ích hợp pháp của bị hại, đương sự",
+              "score": 0.7243
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 61. Bị cáo",
+              "score": 0.7182
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-116",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 229"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 229. Tạm đình chỉ điều tra",
+              "score": 0.666
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 443. Tạm đình chỉ điều tra, đình chỉ điều tra, đình chỉ vụ án, đình chỉ bị can, bị cáo",
+              "score": 0.6532
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 229. Tạm đình chỉ điều tra",
+              "score": 0.6522
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 443. Tạm đình chỉ điều tra, đình chỉ điều tra, đình chỉ vụ án, đình chỉ bị can, bị cáo",
+              "score": 0.6515
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 230. Đình chỉ điều tra",
+              "score": 0.6424
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-117",
+          "type": "single-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 54"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 54. Quyết định hình phạt dưới mức thấp nhất của khung hình phạt được áp dụng",
+              "score": 0.7268
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 47. Quyết định hình phạt nhẹ hơn quy định của Bộ luật",
+              "score": 0.696
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 63. Giảm mức hình phạt đã tuyên",
+              "score": 0.6241
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 58. Giảm mức hình phạt đã tuyên",
+              "score": 0.6213
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 370. Tội ra bản án trái pháp luật",
+              "score": 0.6211
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-201",
+          "type": "multi-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 12"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 9"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6428
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6251
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6217
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 176. Tội chiếm giữ trái phép tài sản",
+              "score": 0.6215
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 171. Tội cướp giật tài sản",
+              "score": 0.615
+            }
+          ],
+          "recall@5_strict": 0.3333333333333333,
+          "recall@5_lenient": 0.3333333333333333,
+          "recall@10_strict": 0.6666666666666666,
+          "recall@10_lenient": 0.6666666666666666,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-202",
+          "type": "comparison",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 174"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7168
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7158
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7153
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7148
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7089
+            }
+          ],
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-203",
+          "type": "comparison",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 46056,
+              "article": "Điều 93"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 123"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 93. Tội giết người",
+              "score": 0.6612
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.6568
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 93. Tội giết người",
+              "score": 0.6529
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.6214
+            },
+            {
+              "document_id": 46056,
+              "article": null,
+              "score": 0.6192
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-204",
+          "type": "multi-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.7122
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.705
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.6858
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.6755
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6459
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-301",
+          "type": "amendment",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 354053,
+              "article": "Điều 3"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 3. Hiệu lực thi hành",
+              "score": 0.7698
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 426. Hiệu lực thi hành",
+              "score": 0.7216
+            },
+            {
+              "document_id": 354053,
+              "article": "",
+              "score": 0.7159
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.6894
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.6769
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-302",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 662377,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.6911
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Hình sự",
+              "score": 0.6528
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.6436
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 0.6234
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.6223
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-303",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 489113,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296884,
+              "article": "Điều 146"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 489113,
+              "article": "Điều 2. Điều khoản thi hành",
+              "score": 0.7212
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 146. Thủ tục tiếp nhận tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.6895
+            },
+            {
+              "document_id": 489113,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Tố tụng hình sự",
+              "score": 0.6895
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 145. Trách nhiệm tiếp nhận và thẩm quyền giải quyết tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.6275
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 145. Trách nhiệm tiếp nhận và thẩm quyền giải quyết tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.6084
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-304",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 662377,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 2. Bổ sung, thay thế, bỏ một số từ, cụm từ, dấu chấm, dấu phẩy, dấu chấm phẩy tại một số điều, khoản, điểm của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5878
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.5786
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5767
+            },
+            {
+              "document_id": 354053,
+              "article": "",
+              "score": 0.569
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 2. Sửa đổi, bổ sung một số điều của các luật có liên quan",
+              "score": 0.5625
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.125,
+          "rr_lenient": 0.125
+        },
+        {
+          "id": "crim-305",
+          "type": "amendment",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 354053,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 354053,
+              "article": "Điều 2"
+            },
+            {
+              "doc_id": 354053,
+              "article": "Điều 3"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.7142
+            },
+            {
+              "document_id": 354053,
+              "article": "",
+              "score": 0.7125
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 2. Bổ sung, thay thế, bỏ một số từ, cụm từ, dấu chấm, dấu phẩy, dấu chấm phẩy tại một số điều, khoản, điểm của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.6731
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.6428
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 3. Hiệu lực thi hành",
+              "score": 0.6341
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        }
+      ],
+      "hybrid": [
+        {
+          "id": "crim-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.3125
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.75
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 33. Kiểm tra, giám sát trong tố tụng hình sự",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-003",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 51"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 0.75
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 0.6111
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.381
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 51. Thay đổi Điều tra viên, Cán bộ điều tra",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.2526
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-004",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 119"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 0.75
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 46. Các biện pháp tư pháp",
+              "score": 0.6429
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 0.4242
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 109. Các biện pháp ngăn chặn",
+              "score": 0.4048
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-005",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 123"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 9. Phân loại tội phạm",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 9. Phân loại tội phạm",
+              "score": 0.2576
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 32. Các hình phạt đối với người phạm tội",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-006",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 315. Tội vi phạm quy định về khám bệnh, chữa bệnh, sản xuất, pha chế thuốc, cấp phát thuốc, bán thuốc hoặc dịch vụ y tế khác",
+              "score": 0.5
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 1. Nhiệm vụ của Bộ luật hình sự",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 65. Người có quyền lợi, nghĩa vụ liên quan đến vụ án",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "crim-007",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 0.45
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.4333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 367. Thủ tục xem xét bản án tử hình trước khi thi hành",
+              "score": 0.4242
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 35. Tử hình",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-008",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 85"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 510. Quy định chi tiết",
+              "score": 0.6111
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.5
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 32. Bảo đảm quyền khiếu nại, tố cáo trong tố tụng hình sự",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 85. Các tình tiết tăng nặng trách nhiệm hình sự áp dụng đối với pháp nhân thương mại",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 85. Những vấn đề phải chứng minh trong vụ án hình sự",
+              "score": 0.3026
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.2,
+          "rr_lenient": 0.2
+        },
+        {
+          "id": "crim-101",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 12"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 14. Chuẩn bị phạm tội",
+              "score": 0.4167
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 90. Áp dụng Bộ luật hình sự đối với người dưới 18 tuổi phạm tội",
+              "score": 0.3667
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-102",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.3667
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-103",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 1.0
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.5333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.3333
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-104",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 168"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 133. Tội cướp tài sản",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 168. Tội cướp tài sản",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 168. Tội cướp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 133. Tội cướp tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 171. Tội cướp giật tài sản",
+              "score": 0.3095
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-105",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.4
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 70. Đương nhiên được xóa án tích",
+              "score": 0.225
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-106",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.45
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 66. Tha tù trước thời hạn có điều kiện",
+              "score": 0.3095
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-107",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 36"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 73. Cải tạo không giam giữ",
+              "score": 0.75
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 100. Cải tạo không giam giữ",
+              "score": 0.625
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 31. Cải tạo không giam giữ",
+              "score": 0.5333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 31. Cải tạo không giam giữ",
+              "score": 0.5333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 36. Cải tạo không giam giữ",
+              "score": 0.4167
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.2,
+          "rr_lenient": 0.2
+        },
+        {
+          "id": "crim-108",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 29"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 29. Căn cứ miễn trách nhiệm hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 25. Miễn trách nhiệm hình sự",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 29. Căn cứ miễn trách nhiệm hình sự",
+              "score": 0.3929
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 2. Cơ sở của trách nhiệm hình sự",
+              "score": 0.25
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 91. Nguyên tắc xử lý đối với người dưới 18 tuổi phạm tội",
+              "score": 0.2361
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-109",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 17"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 17. Đồng phạm",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 20. Đồng phạm",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 8. Khái niệm tội phạm",
+              "score": 0.375
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 8. Khái niệm tội phạm",
+              "score": 0.3667
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 49. Tái phạm, tái phạm nguy hiểm",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-110",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 321"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 248. Tội đánh bạc",
+              "score": 0.5909
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 293. Tội truy cứu trách nhiệm hình sự người không có tội",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 321. Tội đánh bạc",
+              "score": 0.4048
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 368. Tội truy cứu trách nhiệm hình sự người không có tội",
+              "score": 0.3333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 249. Tội tổ chức đánh bạc hoặc gá bạc",
+              "score": 0.3088
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "crim-111",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 174"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.6667
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.4167
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-112",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.45
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.4167
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 0.2833
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-113",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 172"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 460. Điều tra",
+              "score": 0.4583
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 169. Chuyển vụ án để điều tra",
+              "score": 0.3929
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 174. Thời hạn phục hồi điều tra, điều tra bổ sung, điều tra lại",
+              "score": 0.3269
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-114",
+          "type": "single-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 119"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 120. Việc chăm nom người thân thích và bảo quản tài sản của người bị tạm giữ, tạm giam",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.25
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 35. Tử hình",
+              "score": 0.25
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 113. Bắt bị can, bị cáo để tạm giam",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-115",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 73"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 73. Quyền và nghĩa vụ của người bào chữa",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 73. Quyền và nghĩa vụ của người bào chữa",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 61. Bị cáo",
+              "score": 0.5
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 72. Người bào chữa",
+              "score": 0.45
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 72. Người bào chữa",
+              "score": 0.2679
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-116",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 229"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 229. Tạm đình chỉ điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 443. Tạm đình chỉ điều tra, đình chỉ điều tra, đình chỉ vụ án, đình chỉ bị can, bị cáo",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 247. Tạm đình chỉ vụ án",
+              "score": 0.3929
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 229. Tạm đình chỉ điều tra",
+              "score": 0.3929
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 181. Tạm đình chỉ chức vụ bị can đang đảm nhiệm",
+              "score": 0.3111
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-117",
+          "type": "single-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 54"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 54. Quyết định hình phạt dưới mức thấp nhất của khung hình phạt được áp dụng",
+              "score": 1.0
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 47. Quyết định hình phạt nhẹ hơn quy định của Bộ luật",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 63. Giảm mức hình phạt đã tuyên",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 58. Giảm mức hình phạt đã tuyên",
+              "score": 0.3667
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 58. Giảm mức hình phạt đã tuyên",
+              "score": 0.325
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-201",
+          "type": "multi-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 12"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 9"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.6429
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.386
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.3409
+            }
+          ],
+          "recall@5_strict": 0.3333333333333333,
+          "recall@5_lenient": 0.3333333333333333,
+          "recall@10_strict": 0.3333333333333333,
+          "recall@10_lenient": 0.3333333333333333,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-202",
+          "type": "comparison",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 174"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.4167
+            }
+          ],
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "crim-203",
+          "type": "comparison",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 46056,
+              "article": "Điều 93"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 123"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 93. Tội giết người",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.45
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 93. Tội giết người",
+              "score": 0.35
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 126. Tội giết người do vượt quá giới hạn phòng vệ chính đáng hoặc do vượt quá mức cần thiết khi bắt giữ người phạm tội",
+              "score": 0.3429
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-204",
+          "type": "multi-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.325
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 71. Xóa án tích theo quyết định của Tòa án",
+              "score": 0.3
+            }
+          ],
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-301",
+          "type": "amendment",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 354053,
+              "article": "Điều 3"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 3. Hiệu lực thi hành",
+              "score": 1.0
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 426. Hiệu lực thi hành",
+              "score": 0.4762
+            },
+            {
+              "document_id": 354053,
+              "article": "",
+              "score": 0.375
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.3667
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-302",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 662377,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 1.0
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Hình sự",
+              "score": 0.6667
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 2. Sửa đổi, bổ sung một số điều của các luật có liên quan",
+              "score": 0.3929
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.3125
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 246. Tội nhập khẩu, phát tán các loài ngoại lai xâm hại",
+              "score": 0.2769
+            }
+          ],
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-303",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 489113,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296884,
+              "article": "Điều 146"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 489113,
+              "article": "Điều 2. Điều khoản thi hành",
+              "score": 1.0
+            },
+            {
+              "document_id": 489113,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Tố tụng hình sự",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 146. Thủ tục tiếp nhận tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 145. Trách nhiệm tiếp nhận và thẩm quyền giải quyết tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.4
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 145. Trách nhiệm tiếp nhận và thẩm quyền giải quyết tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.3333
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-304",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 662377,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 2. Bổ sung, thay thế, bỏ một số từ, cụm từ, dấu chấm, dấu phẩy, dấu chấm phẩy tại một số điều, khoản, điểm của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.6429
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Hình sự",
+              "score": 0.6111
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.4583
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.45
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.4048
+            }
+          ],
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 0.5,
+          "recall@10_lenient": 0.5,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-305",
+          "type": "amendment",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 354053,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 354053,
+              "article": "Điều 2"
+            },
+            {
+              "doc_id": 354053,
+              "article": "Điều 3"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.8333
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 3. Hiệu lực thi hành",
+              "score": 0.6667
+            },
+            {
+              "document_id": 354053,
+              "article": "",
+              "score": 0.5333
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 2. Bổ sung, thay thế, bỏ một số từ, cụm từ, dấu chấm, dấu phẩy, dấu chấm phẩy tại một số điều, khoản, điểm của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.325
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        }
+      ],
+      "routed": [
+        {
+          "id": "crim-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6395
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6211
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 1.0
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-003",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 51"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 51. Các tình tiết giảm nhẹ trách nhiệm hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.635
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-004",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 119"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 46. Các biện pháp tư pháp",
+              "score": 0.5606
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 109. Các biện pháp ngăn chặn",
+              "score": 0.5459
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-005",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 123"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 9. Phân loại tội phạm",
+              "score": 0.6345
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 76. Phạm vi chịu trách nhiệm hình sự của pháp nhân thương mại",
+              "score": 0.6226
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 9. Phân loại tội phạm",
+              "score": 0.621
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-006",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 1.0
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.5926
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.5776
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5727
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-007",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 367. Thủ tục xem xét bản án tử hình trước khi thi hành",
+              "score": 0.5778
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 35. Tử hình",
+              "score": 0.5771
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 39. Tù chung thân",
+              "score": 0.5551
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-008",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 85"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 85. Những vấn đề phải chứng minh trong vụ án hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.629
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 32. Bảo đảm quyền khiếu nại, tố cáo trong tố tụng hình sự",
+              "score": 0.6061
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 389. Tội che giấu tội phạm",
+              "score": 0.6004
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 55. Người tham gia tố tụng",
+              "score": 0.5968
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-101",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 12"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 12. Tuổi chịu trách nhiệm hình sự",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 14. Chuẩn bị phạm tội",
+              "score": 0.4167
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 90. Áp dụng Bộ luật hình sự đối với người dưới 18 tuổi phạm tội",
+              "score": 0.3667
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-102",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.3667
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-103",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.5333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.3333
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-104",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 168"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 133. Tội cướp tài sản",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 168. Tội cướp tài sản",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 168. Tội cướp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 133. Tội cướp tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 171. Tội cướp giật tài sản",
+              "score": 0.3095
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-105",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.4
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 70. Đương nhiên được xóa án tích",
+              "score": 0.225
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-106",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.45
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 66. Tha tù trước thời hạn có điều kiện",
+              "score": 0.3095
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-107",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 36"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 73. Cải tạo không giam giữ",
+              "score": 0.75
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 100. Cải tạo không giam giữ",
+              "score": 0.625
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 31. Cải tạo không giam giữ",
+              "score": 0.5333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 31. Cải tạo không giam giữ",
+              "score": 0.5333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 36. Cải tạo không giam giữ",
+              "score": 0.4167
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.2,
+          "rr_lenient": 0.2
+        },
+        {
+          "id": "crim-108",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 29"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 29. Căn cứ miễn trách nhiệm hình sự",
+              "score": 1.0
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 25. Miễn trách nhiệm hình sự",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 29. Căn cứ miễn trách nhiệm hình sự",
+              "score": 0.3929
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 2. Cơ sở của trách nhiệm hình sự",
+              "score": 0.25
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 91. Nguyên tắc xử lý đối với người dưới 18 tuổi phạm tội",
+              "score": 0.2361
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-109",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 17"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 17. Đồng phạm",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 20. Đồng phạm",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 8. Khái niệm tội phạm",
+              "score": 0.375
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 8. Khái niệm tội phạm",
+              "score": 0.3667
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 53. Quyết định hình phạt trong trường hợp đồng phạm",
+              "score": 0.25
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-110",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 321"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 248. Tội đánh bạc",
+              "score": 0.5909
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 293. Tội truy cứu trách nhiệm hình sự người không có tội",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 321. Tội đánh bạc",
+              "score": 0.4048
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 368. Tội truy cứu trách nhiệm hình sự người không có tội",
+              "score": 0.3333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 249. Tội tổ chức đánh bạc hoặc gá bạc",
+              "score": 0.3088
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "crim-111",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 174"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.6667
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.4167
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-112",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.45
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.4167
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 0.2833
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-113",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 172"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 460. Điều tra",
+              "score": 0.4583
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 169. Chuyển vụ án để điều tra",
+              "score": 0.3929
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 172. Thời hạn điều tra",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 174. Thời hạn phục hồi điều tra, điều tra bổ sung, điều tra lại",
+              "score": 0.3269
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-114",
+          "type": "single-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 119"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 119. Tạm giam",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 120. Việc chăm nom người thân thích và bảo quản tài sản của người bị tạm giữ, tạm giam",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 173. Thời hạn tạm giam để điều tra",
+              "score": 0.25
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 35. Tử hình",
+              "score": 0.25
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 113. Bắt bị can, bị cáo để tạm giam",
+              "score": 0.25
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-115",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 73"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 73. Quyền và nghĩa vụ của người bào chữa",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 73. Quyền và nghĩa vụ của người bào chữa",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 61. Bị cáo",
+              "score": 0.5
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 72. Người bào chữa",
+              "score": 0.45
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 72. Người bào chữa",
+              "score": 0.2679
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-116",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296884,
+              "article": "Điều 229"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296884,
+              "article": "Điều 229. Tạm đình chỉ điều tra",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 443. Tạm đình chỉ điều tra, đình chỉ điều tra, đình chỉ vụ án, đình chỉ bị can, bị cáo",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 229. Tạm đình chỉ điều tra",
+              "score": 0.3929
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 247. Tạm đình chỉ vụ án",
+              "score": 0.3929
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 181. Tạm đình chỉ chức vụ bị can đang đảm nhiệm",
+              "score": 0.3111
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-117",
+          "type": "single-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 54"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 54. Quyết định hình phạt dưới mức thấp nhất của khung hình phạt được áp dụng",
+              "score": 1.0
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 47. Quyết định hình phạt nhẹ hơn quy định của Bộ luật",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 63. Giảm mức hình phạt đã tuyên",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 58. Giảm mức hình phạt đã tuyên",
+              "score": 0.3667
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 58. Giảm mức hình phạt đã tuyên",
+              "score": 0.325
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-201",
+          "type": "multi-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 12"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 9"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.6429
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.5833
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 138. Tội trộm cắp tài sản",
+              "score": 0.386
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 173. Tội trộm cắp tài sản",
+              "score": 0.3409
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 0.3333333333333333,
+          "recall@5_lenient": 0.3333333333333333,
+          "recall@10_strict": 0.3333333333333333,
+          "recall@10_lenient": 0.3333333333333333,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-202",
+          "type": "comparison",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 174"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.8333
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 139. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.7
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.45
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 174. Tội lừa đảo chiếm đoạt tài sản",
+              "score": 0.4167
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "crim-203",
+          "type": "comparison",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 46056,
+              "article": "Điều 93"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 123"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 93. Tội giết người",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 123. Tội giết người",
+              "score": 0.45
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 93. Tội giết người",
+              "score": 0.35
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 126. Tội giết người do vượt quá giới hạn phòng vệ chính đáng hoặc do vượt quá mức cần thiết khi bắt giữ người phạm tội",
+              "score": 0.3429
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-204",
+          "type": "multi-hop",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 296661,
+              "article": "Điều 65"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 173"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 65. Án treo",
+              "score": 0.5
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 60. Án treo",
+              "score": 0.325
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 71. Xóa án tích theo quyết định của Tòa án",
+              "score": 0.3
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-301",
+          "type": "amendment",
+          "difficulty": "easy",
+          "expected_articles": [
+            {
+              "doc_id": 354053,
+              "article": "Điều 3"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 3. Hiệu lực thi hành",
+              "score": 1.0
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 426. Hiệu lực thi hành",
+              "score": 0.4762
+            },
+            {
+              "document_id": 354053,
+              "article": "",
+              "score": 0.375
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 0.3667
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-302",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 662377,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 662377,
+              "article": "Điều 4. Điều khoản chuyển tiếp",
+              "score": 1.0
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Hình sự",
+              "score": 0.6667
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 2. Sửa đổi, bổ sung một số điều của các luật có liên quan",
+              "score": 0.3929
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.3125
+            },
+            {
+              "document_id": 662377,
+              "article": "Điều 246. Tội nhập khẩu, phát tán các loài ngoại lai xâm hại",
+              "score": 0.2769
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-303",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 489113,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296884,
+              "article": "Điều 146"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 489113,
+              "article": "Điều 2. Điều khoản thi hành",
+              "score": 1.0
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 146. Thủ tục tiếp nhận tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.5833
+            },
+            {
+              "document_id": 489113,
+              "article": "Điều 1. Sửa đổi, bổ sung một số điều của Bộ luật Tố tụng hình sự",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 145. Trách nhiệm tiếp nhận và thẩm quyền giải quyết tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.4
+            },
+            {
+              "document_id": 296884,
+              "article": "Điều 145. Trách nhiệm tiếp nhận và thẩm quyền giải quyết tố giác, tin báo về tội phạm, kiến nghị khởi tố",
+              "score": 0.3333
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        },
+        {
+          "id": "crim-304",
+          "type": "amendment",
+          "difficulty": "hard",
+          "expected_articles": [
+            {
+              "doc_id": 662377,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 296661,
+              "article": "Điều 40"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 1.0
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 40. Tử hình",
+              "score": 1.0
+            },
+            {
+              "document_id": 46056,
+              "article": "Điều 40. Tịch thu tài sản",
+              "score": 1.0
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 2. Bổ sung, thay thế, bỏ một số từ, cụm từ, dấu chấm, dấu phẩy, dấu chấm phẩy tại một số điều, khoản, điểm của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5878
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.5786
+            }
+          ],
+          "route": "lookup",
+          "recall@5_strict": 0.5,
+          "recall@5_lenient": 0.5,
+          "recall@10_strict": 0.5,
+          "recall@10_lenient": 0.5,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "crim-305",
+          "type": "amendment",
+          "difficulty": "medium",
+          "expected_articles": [
+            {
+              "doc_id": 354053,
+              "article": "Điều 1"
+            },
+            {
+              "doc_id": 354053,
+              "article": "Điều 2"
+            },
+            {
+              "doc_id": 354053,
+              "article": "Điều 3"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 354053,
+              "article": "Điều 1. Sửa đổi, bổ sung, bãi bỏ một số điều của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.8333
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 3. Hiệu lực thi hành",
+              "score": 0.6667
+            },
+            {
+              "document_id": 354053,
+              "article": "",
+              "score": 0.5333
+            },
+            {
+              "document_id": 354053,
+              "article": "Điều 2. Bổ sung, thay thế, bỏ một số từ, cụm từ, dấu chấm, dấu phẩy, dấu chấm phẩy tại một số điều, khoản, điểm của Bộ luật Hình sự số 100/2015/QH13",
+              "score": 0.5
+            },
+            {
+              "document_id": 662377,
+              "article": "",
+              "score": 0.325
+            }
+          ],
+          "route": "hybrid",
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        }
+      ]
+    }
+  }
+}

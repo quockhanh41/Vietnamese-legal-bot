@@ -29,10 +29,15 @@ ALL_LEGAL_TYPES: list[str] = [
 MIN_CONTENT_LENGTH: int = 500  # characters — skip empty/short docs
 
 # --- Collection Defaults ---
-# "luat_law_ctx" = contextual retrieval collection (metadata header prepended
-# to the embedded text — see src/data/contextualizer.py). The original
-# "luat_law" collection is kept in Qdrant for before/after comparison.
-DEFAULT_COLLECTION_NAME: str = "luat_law_ctx"
+# "luat_law_ctx_v2" (M0.5, 2026-07-10) = contextual retrieval + chunker
+# misalignment fixes (WRONG_LABEL 126→0, 178 Điều khôi phục — see
+# docs/notes/chunker-misalignment-diagnosis-2026-07-10.md) + deterministic
+# point IDs + int8 scalar quantization with fp32 on-disk. 2,242 points.
+# Tier-1 gate vs old collection: recall@5 routed 0.9216 (baseline 0.922),
+# per-type recall unchanged, lenient==strict (labels now align with text).
+# Older collections "luat_law_ctx" (1,670) and "luat_law" are kept in
+# Qdrant for before/after comparison.
+DEFAULT_COLLECTION_NAME: str = "luat_law_ctx_v2"
 
 # --- Date Filter ---
 # No date restriction — we keep all years for temporal versioning and
