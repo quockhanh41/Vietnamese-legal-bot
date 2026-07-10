@@ -16,12 +16,13 @@ class ArticleLevelChunker(BaseChunker):
     """
     Article-level chunker — one chunk per Điều.
 
-    Preserves complete semantic units. Articles that are very short
-    (< min_article_length) are merged with adjacent articles.
+    Preserves complete semantic units. Every real Điều is kept regardless of
+    length; only unattributed preamble text (before the first Điều) shorter
+    than min_article_length is dropped.
 
     Parameters:
-        min_article_length: Minimum characters for a standalone article chunk.
-                            Shorter articles get merged with neighbors.
+        min_article_length: Minimum characters for keeping unattributed
+                            (non-Điều) preamble text as a chunk.
     """
 
     ARTICLE_PATTERN = re.compile(
@@ -51,7 +52,14 @@ class ArticleLevelChunker(BaseChunker):
         def flush_article():
             nonlocal current_article_text
             text = current_article_text.strip()
-            if text and len(text) >= self.min_article_length:
+            # A buffer belonging to a real Điều header must be kept even if
+            # short (e.g. "Điều 3. Hiệu lực thi hành", 85 chars) — dropping
+            # it silently removes that Điều from the index. Same invariant
+            # as HierarchicalChunker's Bug 3 fix, see
+            # docs/notes/chunker-misalignment-diagnosis-2026-07-10.md.
+            # Only unattributed preamble text is length-filtered.
+            if text and (current_article_header is not None
+                         or len(text) >= self.min_article_length):
                 articles.append({
                     "header": current_article_header or "",
                     "chapter": current_chapter,

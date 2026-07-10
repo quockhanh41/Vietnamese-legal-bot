@@ -104,17 +104,42 @@ class HierarchicalChunker(BaseChunker):
         buffer = ""
         article_buffer = ""
 
+        # Bug 4 fix: article_buffer is reset every time a new Điều starts, so
+        # a parent_text snapshot taken at flush time only ever sees the
+        # partial text accumulated *so far* (e.g. header + Khoản 1, missing
+        # Khoản 2+). We instead record, for every Điều label, the FULL text
+        # accumulated by the time we leave it — then do a second pass after
+        # scanning the whole document to stamp that full text onto every
+        # chunk belonging to that Điều (see chunk_document's caller below).
+        article_full_text: dict = {}
+
+        def close_article():
+            """Snapshot the current article's fully-accumulated text before
+            current_article/article_buffer get reset for the next Điều (or
+            cleared by a Chương/Mục boundary)."""
+            if current_article is not None:
+                article_full_text[current_article] = article_buffer.strip()
+
         def flush_buffer():
             nonlocal buffer, article_buffer
             text = buffer.strip()
-            if text and len(text) >= self.min_chunk_size // 2:
-                chunks.append({
-                    "text": text,
-                    "chapter": current_chapter,
-                    "article": current_article,
-                    "clause": current_clause,
-                    "parent_text": article_buffer.strip() if current_article else text,
-                })
+            if text:
+                # Bug 3 fix: any non-empty buffer that belongs to a real
+                # Điều must be kept even if short (e.g. a one-line "hiệu lực
+                # thi hành" article) — dropping it would silently remove
+                # that Điều from the index. Only unattributed scraps that
+                # aren't part of any Điều (e.g. stray text before the first
+                # Điều) are still filtered by the minimum-length heuristic.
+                if current_article is not None or len(text) >= self.min_chunk_size // 2:
+                    chunks.append({
+                        "text": text,
+                        "chapter": current_chapter,
+                        "article": current_article,
+                        "clause": current_clause,
+                        # Placeholder — overwritten below in the second pass
+                        # once article_full_text is complete (Bug 4).
+                        "parent_text": text,
+                    })
             buffer = ""
 
         for line in lines:
@@ -129,6 +154,7 @@ class HierarchicalChunker(BaseChunker):
             chapter_match = self.CHAPTER_PATTERN.match(stripped)
             if chapter_match:
                 flush_buffer()
+                close_article()
                 current_chapter = stripped
                 current_section = None
                 current_article = None
@@ -138,6 +164,7 @@ class HierarchicalChunker(BaseChunker):
             section_match = self.SECTION_PATTERN.match(stripped)
             if section_match:
                 flush_buffer()
+                close_article()
                 current_section = stripped
                 current_article = None
                 current_clause = None
@@ -146,6 +173,7 @@ class HierarchicalChunker(BaseChunker):
             article_match = self.ARTICLE_PATTERN.match(stripped)
             if article_match:
                 flush_buffer()
+                close_article()
                 current_article = stripped
                 current_clause = None
                 article_buffer = stripped
@@ -170,6 +198,7 @@ class HierarchicalChunker(BaseChunker):
                 article_buffer += "\n" + stripped if article_buffer else stripped
 
         flush_buffer()
+        close_article()
 
         if not chunks:
             chunks.append({
@@ -179,6 +208,15 @@ class HierarchicalChunker(BaseChunker):
                 "clause": None,
                 "parent_text": content.strip(),
             })
+            return chunks
+
+        # Second pass (Bug 4): stamp every chunk belonging to a given Điều
+        # with that Điều's full accumulated text, so all chunks of the same
+        # Điều share one identical, complete parent_text.
+        for chunk in chunks:
+            article = chunk.get("article")
+            if article is not None and article in article_full_text:
+                chunk["parent_text"] = article_full_text[article]
 
         return chunks
 
@@ -186,42 +224,69 @@ class HierarchicalChunker(BaseChunker):
         if not chunks:
             return []
 
+        def start_buffer(chunk: dict) -> dict:
+            clause = chunk.get("clause")
+            return {
+                "text": chunk["text"],
+                "chapter": chunk.get("chapter"),
+                "article": chunk.get("article"),
+                "parent_text": chunk.get("parent_text"),
+                # Bug 1 fix: track every distinct clause folded into this
+                # buffer so we can tell, at flush time, whether the merged
+                # chunk still represents exactly one Khoản (keep its label)
+                # or several (the chunk is now Điều-level — no single
+                # clause label is correct for it, so use None).
+                "_clauses": {clause} if clause is not None else set(),
+            }
+
+        def finalize(buf: dict) -> dict:
+            clauses = buf.pop("_clauses")
+            buf["clause"] = next(iter(clauses)) if len(clauses) == 1 else None
+            return buf
+
         result = []
-        buffer = {
-            "text": "",
-            "chapter": None,
-            "article": None,
-            "clause": None,
-            "parent_text": None,
-        }
+        buffer = None
 
         for chunk in chunks:
             text = chunk["text"]
+            # Bug 1 fix: only merge consecutive structural chunks that
+            # belong to the SAME Điều (None == None covers preamble text
+            # that precedes the first Điều). Merging across an Điều
+            # boundary is exactly what produced the WRONG_LABEL chunks
+            # diagnosed in docs/notes/chunker-misalignment-diagnosis-2026-07-10.md
+            # — a chunk's article label must never span text from more
+            # than one Điều.
+            same_article = buffer is not None and chunk.get("article") == buffer.get("article")
+            fits = buffer is not None and len(buffer["text"]) + len(text) <= self.max_chunk_size
 
-            if buffer["text"] and len(buffer["text"]) + len(text) <= self.max_chunk_size:
+            if buffer is not None and same_article and fits:
                 buffer["text"] += "\n\n" + text
-                buffer["chapter"] = chunk.get("chapter") or buffer.get("chapter")
-                buffer["article"] = chunk.get("article") or buffer.get("article")
-                buffer["clause"] = chunk.get("clause") or buffer.get("clause")
-                buffer["parent_text"] = chunk.get("parent_text") or buffer.get("parent_text")
+                buffer["chapter"] = buffer.get("chapter") or chunk.get("chapter")
+                buffer["parent_text"] = buffer.get("parent_text") or chunk.get("parent_text")
+                clause = chunk.get("clause")
+                if clause is not None:
+                    buffer["_clauses"].add(clause)
             else:
-                if buffer["text"]:
-                    result.append(dict(buffer))
-                buffer = {
-                    "text": text,
-                    "chapter": chunk.get("chapter"),
-                    "article": chunk.get("article"),
-                    "clause": chunk.get("clause"),
-                    "parent_text": chunk.get("parent_text"),
-                }
+                if buffer is not None:
+                    result.append(finalize(buffer))
+                buffer = start_buffer(chunk)
 
-        if buffer["text"]:
-            result.append(dict(buffer))
+        if buffer is not None:
+            result.append(finalize(buffer))
 
         final_result = []
         for chunk in result:
             if len(chunk["text"]) > self.max_chunk_size:
                 sub_texts = self.text_splitter.split_text(chunk["text"])
+                # Bug 2 (self-heals once Bug 1 is fixed): every sub_texts
+                # piece comes from a chunk that is now guaranteed to belong
+                # to a single Điều, so copying "article"/"parent_text" onto
+                # each sub-chunk is safe. "clause" can still be imprecise
+                # here (a sub-chunk born from splitting a multi-Khoản,
+                # clause=None buffer may land entirely inside one Khoản,
+                # but we don't re-derive a tighter label) — acceptable per
+                # the diagnosis, since the article label (what drove the
+                # WRONG_LABEL bug) is always correct.
                 for sub in sub_texts:
                     sub_chunk = dict(chunk)
                     sub_chunk["text"] = sub

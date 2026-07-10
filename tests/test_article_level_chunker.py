@@ -50,3 +50,57 @@ def test_parent_chunk_text_equals_own_article_not_whole_document():
         # other article's content.
         other_marker = "y" * 300 if chunk.article == "Điều 1. Sửa đổi Điều 173" else "x" * 300
         assert other_marker not in chunk.parent_chunk_text
+
+
+def test_short_article_is_kept_not_dropped():
+    """Regression (M0.4b sibling of HierarchicalChunker Bug 3): a real Điều
+    shorter than min_article_length used to be silently dropped from the
+    output — "Điều 3. Hiệu lực thi hành" (85 chars) of Luật sửa đổi BLHS 2025
+    was missing from the production index entirely. Every real Điều must be
+    kept regardless of length."""
+    row = {
+        "id": 2,
+        "title": "Luật sửa đổi Bộ luật Hình sự 2025",
+        "content": (
+            "Điều 1. Sửa đổi, bổ sung một số điều\n"
+            "Nội dung sửa đổi " + ("x" * 200) + "\n\n"
+            "Điều 3. Hiệu lực thi hành\n"
+            "Luật này có hiệu lực thi hành từ ngày 01 tháng 7 năm 2025.\n"
+        ),
+        "document_number": "01/2025/QH15",
+        "legal_type": "Luật",
+        "issuing_authority": "Quốc hội",
+        "issuance_date": "2025-06-01",
+        "url": "",
+    }
+    chunks = ArticleLevelChunker(min_article_length=100).chunk_document(row)
+    labels = [c.article for c in chunks]
+    assert any(a.startswith("Điều 3.") for a in labels), (
+        f"Điều 3 (short article) was dropped; labels: {labels}"
+    )
+    short = next(c for c in chunks if c.article.startswith("Điều 3."))
+    assert "hiệu lực thi hành" in short.chunk_text.lower()
+    assert short.parent_chunk_text == short.chunk_text
+
+
+def test_short_preamble_before_first_article_still_dropped():
+    """The length filter must still apply to unattributed preamble text —
+    only real Điều buffers are exempt."""
+    row = {
+        "id": 3,
+        "title": "Luật test",
+        "content": (
+            "Căn cứ Hiến pháp;\n\n"  # short preamble, no Điều header → drop
+            "Điều 1. Phạm vi điều chỉnh\n"
+            "Nội dung " + ("z" * 200) + "\n"
+        ),
+        "document_number": "",
+        "legal_type": "Luật",
+        "issuing_authority": "",
+        "issuance_date": "",
+        "url": "",
+    }
+    chunks = ArticleLevelChunker(min_article_length=100).chunk_document(row)
+    assert all(c.article.startswith("Điều") for c in chunks), (
+        f"preamble scrap leaked into chunks: {[c.article for c in chunks]}"
+    )
