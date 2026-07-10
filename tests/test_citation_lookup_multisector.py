@@ -202,20 +202,32 @@ _ABBREV_CASES = [
 
 
 def test_new_abbreviations_expand_and_match_real_titles():
+    """The target law must rank FIRST. Guiding decrees whose title quotes
+    the law name (e.g. "Nghị định 126/2014/NĐ-CP hướng dẫn thi hành Luật
+    Hôn nhân và gia đình" — which also carries "2014" in its số hiệu, so
+    the year filter can't drop it) are allowed to follow, ranked after —
+    resolve_doc ranks prefix-match > amendment > referencing instead of
+    excluding, because amendment docs carry quoted suffixed articles
+    ("Điều 12a") that lookup must still be able to scan (M1.2b)."""
     lookup = _lookup_with_fake_index()
     for abbrev, expected_year_doc in _ABBREV_CASES:
         year = int(REAL_TITLES[expected_year_doc].strip()[-4:])
         resolved = lookup.resolve_doc(abbrev, year)
-        assert resolved == [expected_year_doc], f"{abbrev!r} (year={year}) -> {resolved}, want [{expected_year_doc}]"
+        assert resolved[0] == expected_year_doc, (
+            f"{abbrev!r} (year={year}) -> {resolved}, want [{expected_year_doc}] first"
+        )
 
 
 def test_new_abbreviations_without_year_are_ambiguous_among_real_matches():
     """Without a year, an abbreviation that has multiple corpus versions
-    (e.g. BLLĐ 2012 and 2019) must resolve to *all* of them, not just one —
-    same ambiguous-fallback contract as the existing BLHS/TTHS tests."""
+    (e.g. BLLĐ 2012 and 2019) must resolve to *all* of them — the two law
+    versions ranked ahead of the guiding decree (NĐ 145/2020) whose title
+    merely references the code."""
     lookup = _lookup_with_fake_index()
     resolved = lookup.resolve_doc("bllđ", None)
-    assert set(resolved) == {142187, 333670}
+    assert set(resolved) == {142187, 333670, 459400}
+    assert set(resolved[:2]) == {142187, 333670}  # laws first
+    assert resolved[2] == 459400                  # referencing decree last
 
 
 # ── full-name doc-hint pattern: "bộ luật X" / "luật X", multisector ────────
@@ -249,7 +261,12 @@ def test_parse_and_resolve_luat_hon_nhan_va_gia_dinh_hint():
 
     lookup = _lookup_with_fake_index()
     resolved = lookup.resolve_doc(parsed.doc_hint, parsed.year)
-    assert set(resolved) == {46450, 238640}
+    # Both law versions rank first; NĐ 126/2014 (title references the law)
+    # is a candidate too but must come last — its own "Điều 27" is about a
+    # different subject than the law's Điều 27.
+    assert set(resolved) == {46450, 238640, 262379}
+    assert set(resolved[:2]) == {46450, 238640}
+    assert resolved[2] == 262379
 
 
 def test_parse_and_resolve_nghi_dinh_by_doc_number_ignores_missing_hint():

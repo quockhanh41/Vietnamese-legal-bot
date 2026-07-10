@@ -729,7 +729,11 @@ Các câu liên quan (giữ nguyên văn):"""
         if parsed_citation is not None:
             complexity = "lookup"
             citation_lookup = self._get_citation_lookup()
-            doc_ids = citation_lookup.resolve_doc(parsed_citation.doc_hint, parsed_citation.year)
+            doc_ids = citation_lookup.resolve_doc(
+                parsed_citation.doc_hint,
+                parsed_citation.year,
+                doc_number=parsed_citation.doc_number,
+            )
             aliases = citation_lookup._get_alias_index()
             resolved_titles = [aliases.get(d, str(d)) for d in doc_ids[:3]]
             article_label = f"Điều {parsed_citation.primary.number}"

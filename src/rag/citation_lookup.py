@@ -67,6 +67,10 @@ def _normalize_doc_number(raw: str) -> Optional[str]:
     if not m:
         return None
     num, year, suffix = m.group(1), m.group(2), m.group(3)
+    # Official numbers zero-pad ("01/2021/NĐ-CP") but users often type
+    # "1/2021/NĐ-CP" — strip leading zeros on BOTH sides so they compare
+    # equal ("0" alone can't occur: numbering starts at 1).
+    num = num.lstrip("0") or num
     suffix_upper = suffix.upper()
     canonical_suffix = suffix_upper if suffix_upper.startswith("QH") else "NĐ-CP"
     return f"{num}/{year}/{canonical_suffix}"
@@ -364,7 +368,29 @@ class CitationLookup:
         hint_norm = hint.strip().lower()
         expanded = _ABBREV_EXPANSIONS.get(hint_norm.replace(" ", ""), hint_norm)
 
-        matched = [doc_id for doc_id, title in aliases.items() if expanded in title.lower()]
+        # Multi-sector corpus hazard (M1.3): guiding-decree titles CONTAIN
+        # the law name they implement ("Nghị định 126/2014/NĐ-CP hướng dẫn
+        # thi hành Luật Hôn nhân và gia đình"), so a bare substring test
+        # can't tell the law itself from documents merely referencing it —
+        # and both may define their own "Điều 27" with unrelated content.
+        # Rank instead of exclude (excluding would lose amendment laws,
+        # whose chunks carry the quoted suffixed articles like "Điều 12a"
+        # recovered in M1.2b):
+        #   1. title STARTS with the expansion  -> the law itself
+        #   2. contains it + "sửa đổi" in title -> amendment of that law
+        #   3. merely contains it               -> decree/other reference
+        prefix, amendment, referencing = [], [], []
+        for doc_id, title in aliases.items():
+            t = title.lower()
+            if expanded not in t:
+                continue
+            if t.startswith(expanded):
+                prefix.append(doc_id)
+            elif "sửa đổi" in t:
+                amendment.append(doc_id)
+            else:
+                referencing.append(doc_id)
+        matched = prefix + amendment + referencing
 
         if year is not None and matched:
             year_str = str(year)
