@@ -4,6 +4,7 @@ Qdrant vector database client for hybrid search (dense + sparse).
 Compatible with Qdrant >= 1.18.x (query_points API).
 """
 
+import hashlib
 import os
 import uuid
 import time
@@ -26,6 +27,48 @@ from qdrant_client.models import (
 )
 
 from src.data.constants import DEFAULT_COLLECTION_NAME
+from src.eval.metrics import artnum
+
+# Fixed namespace for uuid5-derived point IDs (Việc 1 — deterministic point
+# IDs so re-running ingest is idempotent instead of duplicating points on
+# every run). Any valid UUID works as a namespace; this one was generated
+# once via uuid.uuid4() and is now frozen — DO NOT regenerate it, doing so
+# would change every point ID ever derived from it.
+_POINT_ID_NAMESPACE = uuid.UUID("2b9e6f3a-8c1d-4a7e-9f2b-3d5c6e7a8b9c")
+
+
+def compute_point_id(metadata: Dict, chunk_text: str) -> str:
+    """
+    Deterministic point ID (uuid5) for a chunk, so upserting the same chunk
+    twice (resuming after a crash, re-running ingest/reindex) overwrites the
+    same Qdrant point instead of creating a duplicate.
+
+    Identity is derived from the chunk's OWN metadata — never from its
+    position within the current upsert_chunks() call/batch. Batches can mix
+    chunks from multiple documents (scripts/reindex_contextual.py upserts
+    fixed-size slices that cross document boundaries), so an
+    enumerate()-based index would not be stable across runs.
+
+    Preferred key: f"{document_id}:{chunk_index}", where chunk_index is this
+    chunk's 0-based position within ITS document (set by the chunker — see
+    LegalChunk.chunk_index in src/data/chunker.py). Falls back to a content
+    hash of the chunk text when chunk_index is absent from metadata (e.g.
+    legacy payloads ingested before this field existed).
+
+    Caveat: determinism only holds within a fixed chunker/config version —
+    changing chunking strategy or parameters shifts chunk boundaries (and
+    therefore these IDs). That's expected: this project already versions
+    collections per chunking strategy (see DEFAULT_COLLECTION_NAME) rather
+    than mutating an existing collection's chunk boundaries in place.
+    """
+    document_id = metadata.get("document_id")
+    chunk_index = metadata.get("chunk_index")
+    if chunk_index is not None:
+        key = f"{document_id}:{chunk_index}"
+    else:
+        content_hash = hashlib.sha1(chunk_text.encode("utf-8")).hexdigest()
+        key = f"{document_id}:{content_hash}"
+    return str(uuid.uuid5(_POINT_ID_NAMESPACE, key))
 
 
 @dataclass
@@ -91,7 +134,37 @@ class LegalVectorStore:
                 self.SPARSE_VECTOR_NAME: SparseVectorParams(),
             },
         )
+        self._create_payload_indexes()
         print(f"Created collection '{self.collection_name}'")
+
+    def _create_payload_indexes(self):
+        """
+        Create payload indexes for fields used in filtered/scoped search.
+
+        Only called from the "collection didn't exist yet" branch of
+        create_collection() above — that method early-returns when the
+        collection already exists, so this never re-runs against a
+        collection that already has these indexes. That makes
+        create_collection() idempotent as a whole (safe to call repeatedly).
+
+        is_in_effect is not written into any chunk payload yet (that lands
+        in a later milestone — temporal/amendment wiring), but Qdrant allows
+        indexing a field before any point sets it, so we create the index
+        now (forward-looking) rather than needing a second migration later.
+        """
+        index_fields = [
+            ("document_id", models.PayloadSchemaType.INTEGER),
+            ("article_number", models.PayloadSchemaType.KEYWORD),
+            ("legal_type", models.PayloadSchemaType.KEYWORD),
+            ("issuance_date", models.PayloadSchemaType.KEYWORD),
+            ("is_in_effect", models.PayloadSchemaType.BOOL),
+        ]
+        for field_name, schema_type in index_fields:
+            self.client.create_payload_index(
+                collection_name=self.collection_name,
+                field_name=field_name,
+                field_schema=schema_type,
+            )
 
     def upsert_chunks(
         self,
@@ -113,11 +186,18 @@ class LegalVectorStore:
         """
         points = []
         for i in range(len(chunk_texts)):
-            point_id = str(uuid.uuid4())
+            point_id = compute_point_id(metadata_list[i], chunk_texts[i])
             payload = {
                 "chunk_text": chunk_texts[i],
                 **metadata_list[i],
             }
+            # Derived keyword field for article-scoped filtering (Việc 2).
+            # Vietnamese law articles can have letter suffixes (Điều 123a,
+            # 51b) — artnum() keeps those, so this MUST stay a string, never
+            # cast to int. Kept alongside `article` (payload.get above)
+            # rather than replacing it, matching the existing pattern of
+            # always-present-but-possibly-None metadata fields in this dict.
+            payload["article_number"] = artnum(payload.get("article"))
 
             # Convert sparse dict to Qdrant SparseVector format
             indices = list(sparse_vectors[i].keys())
@@ -145,6 +225,8 @@ class LegalVectorStore:
         if points:
             self._upsert_with_retry(points)
 
+        print(f"Indexed {len(chunk_texts)} chunks")
+
     def _upsert_with_retry(self, points: List[PointStruct], max_retries: int = 3):
         """Upsert points with exponential backoff for cloud resilience."""
         for attempt in range(max_retries):
@@ -162,8 +244,6 @@ class LegalVectorStore:
                 print(f"  ⚠️  Upsert failed (attempt {attempt+1}/{max_retries}), "
                       f"retrying in {wait_s}s... ({e})")
                 time.sleep(wait_s)
-
-        print(f"Indexed {len(chunk_texts)} chunks")
 
     def search_dense(
         self,
