@@ -227,6 +227,7 @@ def test_create_collection_creates_expected_payload_indexes():
         "legal_type",
         "issuance_date",
         "is_in_effect",
+        "sector",  # M1.2: curated-corpus sector label (see qdrant_client.py)
     }
 
 
@@ -246,7 +247,7 @@ def test_create_collection_recreate_drops_and_recreates_indexes():
 
     assert store.client.deleted_collections == ["test_collection"]
     assert store.client.created_collections == ["test_collection"]
-    assert len(store.client.created_indexes) == 5
+    assert len(store.client.created_indexes) == 6
 
 
 def test_create_collection_default_is_not_quantized():

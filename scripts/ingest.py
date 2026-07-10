@@ -26,6 +26,7 @@ from src.data.chunker import LegalDocumentChunker
 from src.data.chunking.article_level import ArticleLevelChunker
 from src.data.contextualizer import build_context_header, build_contextual_text
 from src.data.embedder import BGEEmbedder
+from src.data.ingest_checkpoint import IngestCheckpoint
 from src.db.qdrant_client import LegalVectorStore
 from src.data.constants import (
     LEGAL_TYPES,
@@ -54,23 +55,36 @@ def parse_date(date_str):
     return None
 
 
-def filter_row(row: dict) -> bool:
-    """Check if a single row passes filters. Fast, no pandas needed."""
-    # Legal type filter — only process configured types (currently "Luật")
-    if row.get("legal_type") not in LEGAL_TYPES:
-        return False
+def filter_row(row: dict, curated: bool = False) -> bool:
+    """Check if a single row passes filters. Fast, no pandas needed.
 
-    # Date filter (optional — currently disabled for full history)
-    if DATE_FILTER_MIN_YEAR is not None or DATE_FILTER_MAX_YEAR is not None:
-        date = parse_date(row.get("issuance_date"))
-        if date is None:
-            return False
-        if DATE_FILTER_MIN_YEAR is not None and date[0] < DATE_FILTER_MIN_YEAR:
-            return False
-        if DATE_FILTER_MAX_YEAR is not None and date[0] > DATE_FILTER_MAX_YEAR:
+    Args:
+        row: Parquet row as a dict.
+        curated: True for hand-curated corpora (e.g.
+            data/raw/corpus_100docs.parquet, auto-detected in ingest() via
+            the presence of a `sector` column). Curated files were already
+            manually selected by scripts/select_corpus.py — they
+            deliberately include legal_type values outside LEGAL_TYPES
+            (e.g. "Nghị định") and don't need the date filter, so both are
+            skipped. Only the minimal content guard still applies, since a
+            curated corpus must never lose documents silently.
+    """
+    if not curated:
+        # Legal type filter — only process configured types (currently "Luật")
+        if row.get("legal_type") not in LEGAL_TYPES:
             return False
 
-    # Content length
+        # Date filter (optional — currently disabled for full history)
+        if DATE_FILTER_MIN_YEAR is not None or DATE_FILTER_MAX_YEAR is not None:
+            date = parse_date(row.get("issuance_date"))
+            if date is None:
+                return False
+            if DATE_FILTER_MIN_YEAR is not None and date[0] < DATE_FILTER_MIN_YEAR:
+                return False
+            if DATE_FILTER_MAX_YEAR is not None and date[0] > DATE_FILTER_MAX_YEAR:
+                return False
+
+    # Content length (always enforced — curated or not)
     content = row.get("content")
     if not content or not isinstance(content, str) or len(content) < MIN_CONTENT_LENGTH:
         return False
@@ -86,6 +100,7 @@ def ingest(
     device: str = "cpu",
     collection: str = DEFAULT_COLLECTION_NAME,
     quantized: bool = False,
+    resume: bool = False,
 ):
     """
     Run ingestion with STREAMING — pyarrow.dataset batch iteration.
@@ -94,6 +109,15 @@ def ingest(
     """
     dataset = ds.dataset(data_path, format="parquet")
     print(f"Dataset: ~{dataset.count_rows():,} rows")
+
+    # Curated corpora (e.g. corpus_100docs.parquet, built by
+    # scripts/select_corpus.py) carry a `sector` column that
+    # legal_docs_merged.parquet doesn't have. Auto-detect it to switch
+    # filter_row() into curated mode (see its docstring).
+    curated = "sector" in dataset.schema.names
+    if curated:
+        print("Detected curated corpus ('sector' column present): "
+              "legal_type/date filters disabled, content-length guard only.")
 
     # Init components
     # S3 Hierarchical: best from Round 1 eval (R@5=97.3%, MRR=0.889)
@@ -104,10 +128,28 @@ def ingest(
     store = LegalVectorStore(collection_name=collection, timeout=120)
     store.create_collection(recreate=recreate, quantized=quantized)
 
+    # Checkpoint is always written (so a later run CAN resume), regardless
+    # of whether --resume is passed on THIS run. --recreate wipes stale
+    # progress from a dropped/recreated collection — see IngestCheckpoint.
+    checkpoint = IngestCheckpoint(collection, recreate=recreate)
+    if resume:
+        already_done = checkpoint.stats()["documents_done"]
+        print(f"--resume: {already_done:,} documents already marked done in "
+              f"checkpoint '{checkpoint.path}' will be skipped.")
+
     total_docs = 0
     total_chunks = 0
+    skipped_docs = 0
+    dropped_curated_docs = 0
     chunk_buffer = []      # (text, dense_vec, sparse_vec, metadata)
     embed_text_buffer = []  # Texts waiting to be embedded
+    # (document_id, n_chunks) for documents whose chunks are currently
+    # sitting in chunk_buffer — marked done in the checkpoint only after
+    # the flush that upserts them succeeds. A document's chunks are never
+    # split across two flushes (the buffer check below runs once per
+    # document, after all of its chunks are appended), so this list is
+    # always safe to mark done wholesale at each flush.
+    pending_docs = []
 
     READ_BATCH = 200  # Read 200 rows at a time from parquet
 
@@ -123,7 +165,20 @@ def ingest(
                 break
 
             row_dict = row.to_dict()
-            if not filter_row(row_dict):
+            if not filter_row(row_dict, curated=curated):
+                if curated:
+                    # Curated corpora were hand-selected — a doc getting
+                    # dropped here means it failed the content guard, which
+                    # should be rare. Never fail silently.
+                    dropped_curated_docs += 1
+                    print(f"  ⚠️  Dropped curated doc id={row_dict.get('id')} "
+                          f"title={str(row_dict.get('title', ''))[:60]!r} "
+                          f"(content guard: missing/short content)")
+                continue
+
+            doc_id = row_dict.get("id")
+            if resume and checkpoint.is_done(doc_id):
+                skipped_docs += 1
                 continue
 
             total_docs += 1
@@ -135,11 +190,15 @@ def ingest(
             # Chunk this document (article-level for amendment laws, hierarchical for the rest)
             active_chunker = amendment_chunker if is_amend else chunker
             chunks = active_chunker.chunk_document(row_dict)
+            doc_n_chunks = 0
             for chunk in chunks:
                 total_chunks += 1
+                doc_n_chunks += 1
                 meta = chunk.to_dict()
                 if is_amend:
                     meta["is_amendment_chunk"] = True
+                if curated:
+                    meta["sector"] = row_dict.get("sector")
                 # Contextual retrieval (rule-based, no LLM — see
                 # src/data/contextualizer.py): embed a metadata header +
                 # chunk body, but keep the stored chunk_text unchanged.
@@ -149,6 +208,7 @@ def ingest(
                     "text": chunk.chunk_text,
                     "metadata": meta,
                 })
+            pending_docs.append((doc_id, doc_n_chunks))
 
             # Embed + index when buffer has enough texts
             if len(embed_text_buffer) >= embed_batch_size * 4:
@@ -170,8 +230,12 @@ def ingest(
                     metadata_list=[b["metadata"] for b in chunk_buffer],
                     batch_size=25,  # Smaller batch for high-latency connections
                 )
+                # Upsert succeeded (would have raised otherwise) — safe to
+                # record these documents as done.
+                checkpoint.mark_done_many(pending_docs)
                 chunk_buffer = []
                 embed_text_buffer = []
+                pending_docs = []
 
         # Progress
         if total_docs % 500 == 0 and total_docs > 0:
@@ -197,6 +261,10 @@ def ingest(
             metadata_list=[b["metadata"] for b in chunk_buffer],
             batch_size=25,
         )
+        checkpoint.mark_done_many(pending_docs)
+        pending_docs = []
+
+    checkpoint.close()
 
     # Verify
     info = store.get_collection_info()
@@ -204,6 +272,10 @@ def ingest(
     print(f"✅ Ingestion complete!")
     print(f"   Documents: {total_docs:,}")
     print(f"   Chunks:    {total_chunks:,}")
+    if resume:
+        print(f"   Skipped (already done, --resume): {skipped_docs:,}")
+    if curated and dropped_curated_docs:
+        print(f"   ⚠️  Dropped (curated, content guard): {dropped_curated_docs:,}")
     print(f"   Qdrant:    {info['points_count']:,} vectors in '{info['name']}'")
 
 
@@ -217,8 +289,13 @@ def ingest(
               help="Tên Qdrant collection đích (mặc định: DEFAULT_COLLECTION_NAME)")
 @click.option("--quantized", is_flag=True, default=False,
               help="Bật int8 scalar quantization + fp32 on-disk khi TẠO collection mới")
-def main(data_path, recreate, limit, embed_batch_size, device, collection, quantized):
-    ingest(data_path, recreate, limit, embed_batch_size, device, collection, quantized)
+@click.option("--resume", is_flag=True, default=False,
+              help="Bỏ qua các document đã ingest xong theo checkpoint SQLite "
+                   "(data/ingest_progress/{collection}.sqlite) — dùng khi chạy "
+                   "lại sau khi rớt mạng/session. Checkpoint luôn được ghi dù "
+                   "có --resume hay không.")
+def main(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume):
+    ingest(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume)
 
 
 if __name__ == "__main__":

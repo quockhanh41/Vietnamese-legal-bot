@@ -1,0 +1,47 @@
+# Minimal dependencies to run scripts/ingest.py standalone (M1.2) — for
+# environments with free GPU (Kaggle notebooks, Google Colab) that don't
+# have the full repo installed via `pip install -e .` / pyproject.toml.
+#
+# Deliberately EXCLUDES app-only deps not touched by the ingest path:
+# streamlit, fastapi/uvicorn/sse-starlette, litellm, langchain (full),
+# langchain-community, sentence-transformers, rank-bm25, networkx,
+# ragas/deepeval, langfuse, pytest, transformers-based rerankers, etc.
+#
+# torch is intentionally NOT listed here: Kaggle and Colab GPU runtimes
+# ship a CUDA-matched torch preinstalled, and pip-installing a generic
+# torch wheel on top of it usually breaks the CUDA build. FlagEmbedding
+# depends on torch/transformers and will pull compatible versions of
+# those in if genuinely missing, but on Kaggle/Colab they already are.
+#
+# See docs/notes/kaggle-ingest-guide.md for the full notebook walkthrough.
+#
+# Usage:
+#   pip install -r requirements-ingest.txt
+
+# BGE-M3 embedder (dense + sparse in one pass) — src/data/embedder.py
+FlagEmbedding>=1.2.0
+
+# Qdrant Cloud client (hybrid search, payload indexes) — src/db/qdrant_client.py
+qdrant-client>=1.11.0
+
+# Streaming parquet reads (pyarrow.dataset batch iteration) — scripts/ingest.py
+pyarrow>=16.0.0
+# batch.to_pandas() inside the streaming loop — scripts/ingest.py
+pandas>=2.2.0
+
+# CLI (click.command / click.option) — scripts/ingest.py
+click>=8.0.0
+# Imported at module level (progress bar utility) — scripts/ingest.py
+tqdm>=4.66.0
+
+# .env loading for QDRANT_URL / QDRANT_API_KEY — scripts/ingest.py
+python-dotenv>=1.0.0
+
+# RecursiveCharacterTextSplitter used by the hierarchical chunker —
+# src/data/chunking/hierarchical.py (imported transitively via
+# LegalDocumentChunker in scripts/ingest.py)
+langchain-text-splitters>=0.3.0
+
+# Explicit top-level import in the embedder (also a FlagEmbedding
+# transitive dependency, but listed for clarity) — src/data/embedder.py
+numpy>=1.26.0

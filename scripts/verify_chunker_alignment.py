@@ -59,26 +59,26 @@ HEADER_RE = re.compile(r'(?:^|\n)\s*Điều\s+(\d+[a-z]?)\s*[\.:]', re.IGNORECAS
 LABEL_NUM_RE = re.compile(r'Điều\s+(\d+[a-z]?)', re.IGNORECASE)
 
 
-def load_documents():
-    """Load the 6 raw documents from the local parquet snapshot. Returns
-    (rows, error) — error is a human-readable string if loading failed or
-    fewer than 6 docs were found; rows is a list of dicts either way (may
-    be shorter/empty on failure)."""
-    if not os.path.exists(DATA_PATH):
-        return [], f"raw data file not found: {DATA_PATH}"
+def load_documents(data_path=DATA_PATH):
+    """Load raw documents from a local parquet snapshot (default: the
+    6-doc criminal-law snapshot this gate was built around). Returns
+    (rows, error) — error is a human-readable string if loading failed;
+    rows is a list of dicts either way (may be shorter/empty on failure)."""
+    if not os.path.exists(data_path):
+        return [], f"raw data file not found: {data_path}"
 
     try:
         import pyarrow.parquet as pq
     except ImportError as e:
         return [], f"pyarrow not available: {e}"
 
-    table = pq.read_table(DATA_PATH)
+    table = pq.read_table(data_path)
     df = table.to_pandas()
     rows = [row.to_dict() for _, row in df.iterrows()]
 
-    if len(rows) < 6:
+    if data_path == DATA_PATH and len(rows) < 6:
         return rows, (
-            f"expected 6 documents, found {len(rows)} in {DATA_PATH} — "
+            f"expected 6 documents, found {len(rows)} in {data_path} — "
             f"report below covers only what was found."
         )
     return rows, None
@@ -154,8 +154,8 @@ def check_parent_homogeneity(chunks):
     return violations
 
 
-def run():
-    rows, load_error = load_documents()
+def run(data_path=DATA_PATH, quiet=False):
+    rows, load_error = load_documents(data_path)
     if load_error:
         print(f"WARNING: {load_error}\n")
     if not rows:
@@ -229,6 +229,14 @@ def run():
                 non_gating_notes.extend(
                     f"[{title}] ({chunker_name}, out of scope) {v}" for v in parent_violations
                 )
+
+        # In quiet mode (large corpora) only documents with a finding get
+        # a per-doc block; clean docs are folded into the TOTAL section.
+        has_finding = bool(
+            counts["WRONG_LABEL"] or missing or parent_violations
+        )
+        if quiet and not has_finding:
+            continue
 
         print(f"\n--- {title}  ({chunker_name}) ---")
         print(f"  chunks: {len(chunks)}")
@@ -309,4 +317,17 @@ def run():
 
 
 if __name__ == "__main__":
-    sys.exit(run())
+    import argparse
+
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--data-path", default=DATA_PATH,
+        help="Parquet snapshot to gate (default: the 6-doc criminal set; "
+             "M1 dùng data/raw/corpus_100docs.parquet)",
+    )
+    parser.add_argument(
+        "--quiet", action="store_true",
+        help="Chỉ in per-doc block cho document có finding (dùng cho corpus lớn)",
+    )
+    args = parser.parse_args()
+    sys.exit(run(data_path=args.data_path, quiet=args.quiet))

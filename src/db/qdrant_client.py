@@ -179,6 +179,13 @@ class LegalVectorStore:
             ("legal_type", models.PayloadSchemaType.KEYWORD),
             ("issuance_date", models.PayloadSchemaType.KEYWORD),
             ("is_in_effect", models.PayloadSchemaType.BOOL),
+            # M1.2: curated corpora (e.g. corpus_100docs.parquet) carry a
+            # `sector` label (hinh_su/dan_su/lao_dong/doanh_nghiep/dat_dai/
+            # hngd) for per-sector filtering/eval. Older, non-curated
+            # collections simply never set this field on their points —
+            # indexing it before any point sets it is fine (Qdrant allows
+            # that), matching the is_in_effect precedent above.
+            ("sector", models.PayloadSchemaType.KEYWORD),
         ]
         for field_name, schema_type in index_fields:
             self.client.create_payload_index(

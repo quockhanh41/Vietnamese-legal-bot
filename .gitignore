@@ -12,6 +12,7 @@ venv/
 # Data
 data/raw/
 data/processed/
+data/ingest_progress/
 
 # IDE
 .vscode/
