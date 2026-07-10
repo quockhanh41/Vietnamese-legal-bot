@@ -83,18 +83,26 @@ assert os.path.exists(DATA_PATH), "Dataset chưa được attach vào notebook"
 ```python
 !python scripts/ingest.py \
     --data-path "{DATA_PATH}" \
-    --collection <ten_collection> \
+    --collection luat_law_ctx_v3 \
+    --quantized \
     --device cuda \
     --embed-batch-size 128 \
     --resume
 ```
 
 Ghi chú:
-- `--collection <ten_collection>`: đặt tên rõ ràng (vd. `luat_law_ctx_v3`)
-  — khớp với collection bạn định dùng ở app. Lần chạy **đầu tiên** không
-  cần `--recreate` nếu collection chưa tồn tại (script tự tạo); chỉ dùng
-  `--recreate` khi cố ý xoá sạch làm lại từ đầu (và nó cũng xoá luôn
-  checkpoint cũ của collection đó — xem `src/data/ingest_checkpoint.py`).
+- `--collection luat_law_ctx_v3`: tên collection M1 (corpus 100 docs); v2
+  (corpus 6 docs hình sự) giữ nguyên làm baseline so sánh M0→M1.
+- `--quantized`: **BẮT BUỘC có mặt ngay lần chạy đầu tiên** — int8 scalar
+  quantization (`always_ram`) + dense fp32 on-disk chỉ áp được lúc TẠO
+  collection (quyết định M0.5, xem `create_collection` trong
+  `src/db/qdrant_client.py`); quên rồi thêm sau là phải `--recreate` ingest
+  lại từ đầu. Các lần chạy lại (resume) giữ nguyên cờ này — nó vô hại khi
+  collection đã tồn tại.
+- Lần chạy **đầu tiên** không cần `--recreate` nếu collection chưa tồn tại
+  (script tự tạo); chỉ dùng `--recreate` khi cố ý xoá sạch làm lại từ đầu
+  (và nó cũng xoá luôn checkpoint cũ của collection đó — xem
+  `src/data/ingest_checkpoint.py`).
 - `--device cuda`: bắt buộc để BGE-M3 chạy trên GPU thay vì CPU.
 - `--embed-batch-size 128`: tăng so với mặc định CPU (32) vì GPU rảnh VRAM
   hơn — hạ xuống nếu gặp CUDA OOM (thử 64, 32).
@@ -113,7 +121,7 @@ Ghi chú:
 
 Chạy lại **đúng lệnh Cell 5 ở trên, y nguyên** (giữ `--resume`, KHÔNG thêm
 `--recreate`). Script sẽ:
-1. Mở lại checkpoint SQLite tại `data/ingest_progress/<ten_collection>.sqlite`
+1. Mở lại checkpoint SQLite tại `data/ingest_progress/luat_law_ctx_v3.sqlite`
    (nằm trong container Kaggle — mất khi session kết thúc, xem lưu ý bên
    dưới).
 2. In ra số document đã có sẵn trong checkpoint, sẽ bị skip.
@@ -133,7 +141,7 @@ session (tùy chọn nâng cao, không bắt buộc cho corpus 100 docs).
 ```python
 from src.db.qdrant_client import LegalVectorStore
 
-store = LegalVectorStore(collection_name="<ten_collection>")
+store = LegalVectorStore(collection_name="luat_law_ctx_v3")
 info = store.get_collection_info()
 print(f"Collection: {info['name']}")
 print(f"Points:     {info['points_count']:,}")
