@@ -112,8 +112,15 @@ class LegalVectorStore:
         else:
             self.client = QdrantClient(url=self.url, api_key=self.api_key, timeout=timeout)
 
-    def create_collection(self, recreate: bool = False):
-        """Create the collection with dense + sparse vector support."""
+    def create_collection(self, recreate: bool = False, quantized: bool = False):
+        """Create the collection with dense + sparse vector support.
+
+        quantized=True enables int8 scalar quantization (kept in RAM) with
+        the original fp32 vectors on disk — ~4x less cluster RAM, which is
+        what keeps free-tier 1GB Qdrant Cloud viable as the corpus scales
+        (Plan Giai Đoạn Cuối §2.2). Must be chosen at creation time:
+        switching later means re-indexing the whole collection.
+        """
         if recreate:
             self.client.delete_collection(self.collection_name)
 
@@ -122,17 +129,31 @@ class LegalVectorStore:
             print(f"Collection '{self.collection_name}' already exists.")
             return
 
+        quantization_config = None
+        dense_on_disk = None
+        if quantized:
+            quantization_config = models.ScalarQuantization(
+                scalar=models.ScalarQuantizationConfig(
+                    type=models.ScalarType.INT8,
+                    quantile=0.99,
+                    always_ram=True,
+                )
+            )
+            dense_on_disk = True
+
         self.client.create_collection(
             collection_name=self.collection_name,
             vectors_config={
                 self.DENSE_VECTOR_NAME: VectorParams(
                     size=self.VECTOR_DIM,
                     distance=Distance.COSINE,
+                    on_disk=dense_on_disk,
                 ),
             },
             sparse_vectors_config={
                 self.SPARSE_VECTOR_NAME: SparseVectorParams(),
             },
+            quantization_config=quantization_config,
         )
         self._create_payload_indexes()
         print(f"Created collection '{self.collection_name}'")

@@ -84,6 +84,8 @@ def ingest(
     limit: int = None,
     embed_batch_size: int = 32,
     device: str = "cpu",
+    collection: str = DEFAULT_COLLECTION_NAME,
+    quantized: bool = False,
 ):
     """
     Run ingestion with STREAMING — pyarrow.dataset batch iteration.
@@ -99,8 +101,8 @@ def ingest(
     # S5 Article-level: for amendment laws (different structure — no chapters, quoted replacement text)
     amendment_chunker = ArticleLevelChunker(min_article_length=100)
     embedder = None  # Lazy load (BGE-M3 is heavy — ~2GB)
-    store = LegalVectorStore(collection_name=DEFAULT_COLLECTION_NAME, timeout=120)
-    store.create_collection(recreate=recreate)
+    store = LegalVectorStore(collection_name=collection, timeout=120)
+    store.create_collection(recreate=recreate, quantized=quantized)
 
     total_docs = 0
     total_chunks = 0
@@ -211,8 +213,12 @@ def ingest(
 @click.option("--limit", type=int, default=None, help="Max documents to ingest")
 @click.option("--embed-batch-size", type=int, default=32, help="Embedding batch size")
 @click.option("--device", default="cpu", help="Device: cpu or cuda")
-def main(data_path, recreate, limit, embed_batch_size, device):
-    ingest(data_path, recreate, limit, embed_batch_size, device)
+@click.option("--collection", default=DEFAULT_COLLECTION_NAME,
+              help="Tên Qdrant collection đích (mặc định: DEFAULT_COLLECTION_NAME)")
+@click.option("--quantized", is_flag=True, default=False,
+              help="Bật int8 scalar quantization + fp32 on-disk khi TẠO collection mới")
+def main(data_path, recreate, limit, embed_batch_size, device, collection, quantized):
+    ingest(data_path, recreate, limit, embed_batch_size, device, collection, quantized)
 
 
 if __name__ == "__main__":

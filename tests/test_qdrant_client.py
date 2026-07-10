@@ -49,9 +49,12 @@ class _FakeQdrantClient:
         if name in self._existing_collections:
             self._existing_collections.remove(name)
 
-    def create_collection(self, collection_name, vectors_config=None, sparse_vectors_config=None):
+    def create_collection(self, collection_name, vectors_config=None,
+                          sparse_vectors_config=None, quantization_config=None):
         self.created_collections.append(collection_name)
         self._existing_collections.append(collection_name)
+        self.last_vectors_config = vectors_config
+        self.last_quantization_config = quantization_config
 
     def create_payload_index(self, collection_name, field_name, field_schema):
         self.created_indexes.append((field_name, field_schema))
@@ -244,3 +247,29 @@ def test_create_collection_recreate_drops_and_recreates_indexes():
     assert store.client.deleted_collections == ["test_collection"]
     assert store.client.created_collections == ["test_collection"]
     assert len(store.client.created_indexes) == 5
+
+
+def test_create_collection_default_is_not_quantized():
+    store = _make_store(existing_collections=[])
+    store.create_collection()
+
+    assert store.client.last_quantization_config is None
+    dense = store.client.last_vectors_config[LegalVectorStore.DENSE_VECTOR_NAME]
+    assert dense.on_disk is None
+
+
+def test_create_collection_quantized_enables_int8_and_on_disk():
+    """quantized=True must set int8 scalar quantization (always_ram) and put
+    original fp32 dense vectors on disk — the free-tier RAM budget of Plan
+    Giai Đoạn Cuối §2.2 depends on both."""
+    from qdrant_client.http import models as qmodels
+
+    store = _make_store(existing_collections=[])
+    store.create_collection(quantized=True)
+
+    qc = store.client.last_quantization_config
+    assert isinstance(qc, qmodels.ScalarQuantization)
+    assert qc.scalar.type == qmodels.ScalarType.INT8
+    assert qc.scalar.always_ram is True
+    dense = store.client.last_vectors_config[LegalVectorStore.DENSE_VECTOR_NAME]
+    assert dense.on_disk is True
