@@ -182,6 +182,17 @@ Riêng hybrid thuần (không route): citation-lookup r@5 0.125 → 0.625 — ch
 
 Đã verify: câu hỏi tự nhiên không bị parser hijack (route field ghi nhận); "Điều 999" → 0 hits; "Điều 173" không kèm tên luật → trả về đúng cả 3 bộ luật (ambiguity xử lý đúng). Lưu ý nhỏ khi đọc MRR: Qdrant tie-break không ổn định với các hit đồng điểm RRF → MRR dao động nhẹ giữa các lần chạy. TODO scale: thêm payload index `article_number` lúc ingest khi corpus lớn.
 
+### ✅ Trạng thái M0 — Plan Giai Đoạn Cuối (cập nhật 2026-07-10)
+
+Giai đoạn cuối chạy theo [`Plan_Giai_Doan_Cuoi_2026-07-10.md`](Plan_Giai_Doan_Cuoi_2026-07-10.md). Tiến độ M0:
+
+- **✅ M0.4a (commit `5dd8f43`)**: point ID deterministic `uuid5(document_id:chunk_index)` + fallback content-hash; payload `article_number` (keyword, giữ hậu tố "123a", parse bằng `artnum()` dùng chung); payload index 5 field trong `create_collection`. 20 tests mới.
+- **✅ M0.4b (commit `8c202a1`)**: chunker misalignment — chẩn đoán tại [`notes/chunker-misalignment-diagnosis-2026-07-10.md`](notes/chunker-misalignment-diagnosis-2026-07-10.md): 126/1670 chunk production nhãn Điều SAI (merge xuyên ranh giới Điều trong `_control_chunk_sizes`) và **178 Điều MẤT HẲN khỏi index** (flush drop text ngắn). Fix HierarchicalChunker (merge cùng-Điều-mới-gộp, giữ Điều ngắn, parent_text two-pass đồng nhất) + ArticleLevelChunker (Fable follow-up: "Điều 3. Hiệu lực thi hành" 2025 từng bị drop). Gate script `scripts/verify_chunker_alignment.py`: WRONG_LABEL 126→0, Điều mất 178→0, HEADER_OK 193→1288. Chunks 1670→2242.
+- **✅ M0.5 (commits `4d2c9e7`, `9a17f17`)**: collection mới **`luat_law_ctx_v2`** (2.242 points) — int8 scalar quantization `always_ram` + fp32 dense on-disk (xác nhận sống trên Qdrant Cloud), ingest có `--collection`/`--quantized`. Gate Tier-1 (report `20260710T080938Z`): recall@5 routed **0.9216** (baseline 0.922, per-type giống hệt baseline ở mọi loại câu), **lenient == strict** (gap về 0 — nhãn khớp text, đúng gate M0). MRR 0.863→0.805 là xáo trộn hạng top-10 (RRF tie-break + nhiễu quantization), recall không đổi — theo dõi ở M0.3. `DEFAULT_COLLECTION_NAME` → `luat_law_ctx_v2`; `luat_law_ctx`/`luat_law` giữ để so sánh.
+- **🔄 M0.1 đang làm** (Sonnet): NLI premise per-claim (thay `context[:2000]`, verifier.py) + self-eval rubric (ceiling 0.85-1.00, confidence.py/prompts.py).
+- **⏭ Còn lại**: M0.2 (grounding thành weighted signal) → M0.3 (Tier-2 full + recalibrate threshold — một lần duy nhất cuối M0).
+- ⚠️ Phát hiện ngoài lề: nightly eval CI fail `Connection refused` — secrets `QDRANT_URL`/`QDRANT_API_KEY` chưa set trong repo GitHub (workflow wiring đúng); cần user set bằng `gh secret set`.
+
 ## 2. Gap so với production (plan hứa nhưng chưa có)
 
 | # | Gap | Chi tiết |
