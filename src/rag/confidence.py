@@ -137,15 +137,20 @@ REFUSAL_ANSWER = (
 # complexity-classifier LLM call — see src/llm/prompts.py
 # COMPLEXITY_CLASSIFIER_PROMPT) decides the question cannot be answered from
 # this corpus at all — no confidence score involved, since retrieval was
-# never even run. `{corpus_summary}` is interpolated with the actual document
-# titles (CitationLookup.corpus_summary()) so the message is never generic.
+# never even run. `{corpus_summary}` is interpolated with the corpus
+# inventory (CitationLookup.corpus_summary_compact() — sector names + counts
+# on sector-labeled collections, full title list on older ones) so the
+# message is never generic yet stays readable at 100+ docs (M1.4).
 OUT_OF_SCOPE_ANSWER_TEMPLATE = (
     "⚠️ **Câu hỏi này nằm ngoài phạm vi dữ liệu hiện có của tôi.**\n\n"
-    "Cơ sở dữ liệu hiện tại chỉ bao gồm các văn bản pháp luật sau:\n\n"
+    "Cơ sở dữ liệu hiện tại bao gồm:\n\n"
     "{corpus_summary}\n\n"
     "💡 **Gợi ý:**\n"
-    "- Hãy đặt câu hỏi trong phạm vi các văn bản nêu trên (ví dụ: về trách nhiệm hình sự, tội danh, hình phạt)\n"
-    "- Tham khảo ý kiến luật sư hoặc cơ quan chuyên môn để được tư vấn chính xác về lĩnh vực này"
+    "- Hãy đặt câu hỏi trong phạm vi các lĩnh vực nêu trên (ví dụ: tội danh và "
+    "hình phạt, hợp đồng dân sự, quyền lợi người lao động, thành lập doanh "
+    "nghiệp, sử dụng đất, ly hôn và nuôi con)\n"
+    "- Tham khảo ý kiến luật sư hoặc cơ quan chuyên môn để được tư vấn chính "
+    "xác về lĩnh vực này"
 )
 
 

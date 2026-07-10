@@ -150,6 +150,18 @@ _DOC_HINT_PATTERNS: List[re.Pattern] = [
 # the amendment-law pollution problem this whole module exists to avoid).
 _CHUNK_OPEN_WINDOW = 100
 
+# Display names for the curated-corpus `sector` payload labels
+# (scripts/select_corpus.py assigns them at selection time; ingest stamps
+# them onto every chunk). Used by corpus_summary()/corpus_summary_compact().
+_SECTOR_DISPLAY: Dict[str, str] = {
+    "hinh_su": "Hình sự",
+    "dan_su": "Dân sự - Tố tụng dân sự",
+    "lao_dong": "Lao động - Bảo hiểm",
+    "doanh_nghiep": "Doanh nghiệp - Thương mại - Đầu tư",
+    "dat_dai": "Đất đai",
+    "hngd": "Hôn nhân và gia đình",
+}
+
 
 @dataclass
 class ArticleRef:
@@ -238,8 +250,10 @@ class CitationLookup:
         self.vector_store = vector_store
         self._alias_index: Optional[Dict[int, str]] = None
         self._doc_number_index: Optional[Dict[int, str]] = None
+        self._sector_index: Optional[Dict[int, str]] = None
         self._chunks_by_doc: Optional[Dict[int, List]] = None
         self._corpus_summary: Optional[str] = None
+        self._corpus_summary_compact: Optional[str] = None
 
     # ── Alias index + chunk cache ───────────────────────────────────
     #
@@ -279,6 +293,7 @@ class CitationLookup:
         (document_id -> [chunks]) on the instance."""
         aliases: Dict[int, str] = {}
         doc_numbers: Dict[int, str] = {}
+        sectors: Dict[int, str] = {}
         chunks_by_doc: Dict[int, List] = {}
         client = self.vector_store.client
         collection = self.vector_store.collection_name
@@ -304,26 +319,95 @@ class CitationLookup:
                     normalized = _normalize_doc_number(payload.get("document_number", ""))
                     if normalized is not None:
                         doc_numbers[doc_id] = normalized
+                if doc_id not in sectors and payload.get("sector"):
+                    sectors[doc_id] = payload["sector"]
                 chunks_by_doc.setdefault(doc_id, []).append(p)
             if offset is None:
                 break
         self._alias_index = aliases
         self._doc_number_index = doc_numbers
+        self._sector_index = sectors
         self._chunks_by_doc = chunks_by_doc
 
     def corpus_summary(self) -> str:
         """
-        Bullet list of document titles currently in the collection, for use
-        in the SCOPE-gate prompt (src/llm/prompts.py COMPLEXITY_CLASSIFIER_PROMPT)
-        so it never hardcodes doc titles — the corpus can grow without a
-        prompt edit. Built once from the alias index (same source as
-        citation-lookup doc resolution) and cached on the instance.
+        Document inventory for the SCOPE-gate prompt (src/llm/prompts.py
+        COMPLEXITY_CLASSIFIER_PROMPT) — never hardcodes doc titles, so the
+        corpus can grow without a prompt edit. Built once from the alias
+        index (same source as citation-lookup doc resolution) and cached.
+
+        Two shapes (M1.4):
+        - collection has `sector` payloads (curated corpora, luat_law_ctx_v3+):
+          titles grouped under sector headings — the scope gate reads "what
+          fields does this corpus cover" at a glance instead of scanning a
+          flat 100-line list;
+        - no sector info (older collections, e.g. luat_law_ctx_v2): the
+          original flat "- title" bullet list, unchanged.
         """
         if self._corpus_summary is None:
             aliases = self._get_alias_index()
+            sectors = self._sector_index or {}
             titles = sorted({t for t in aliases.values() if t})
-            self._corpus_summary = "\n".join(f"- {t}" for t in titles) if titles else "(không có văn bản nào)"
+            if not titles:
+                self._corpus_summary = "(không có văn bản nào)"
+            elif not sectors:
+                self._corpus_summary = "\n".join(f"- {t}" for t in titles)
+            else:
+                by_sector: Dict[str, List[str]] = {}
+                for doc_id, title in aliases.items():
+                    if not title:
+                        continue
+                    label = _SECTOR_DISPLAY.get(sectors.get(doc_id), "Khác")
+                    by_sector.setdefault(label, []).append(title)
+                lines = []
+                # Stable order: theo _SECTOR_DISPLAY, nhóm lạ xếp cuối.
+                known_order = list(_SECTOR_DISPLAY.values()) + ["Khác"]
+                for label in known_order:
+                    group = by_sector.pop(label, None)
+                    if not group:
+                        continue
+                    lines.append(f"◆ {label} ({len(group)} văn bản):")
+                    lines.extend(f"  - {t}" for t in sorted(group))
+                for label in sorted(by_sector):  # bất kỳ nhãn nào ngoài known_order
+                    group = by_sector[label]
+                    lines.append(f"◆ {label} ({len(group)} văn bản):")
+                    lines.extend(f"  - {t}" for t in sorted(group))
+                self._corpus_summary = "\n".join(lines)
         return self._corpus_summary
+
+    def corpus_summary_compact(self) -> str:
+        """
+        One-paragraph inventory for USER-FACING text (the out-of-scope
+        refusal answer, src/rag/confidence.py OUT_OF_SCOPE_ANSWER_TEMPLATE).
+        At 100 docs the full title list is unreadable in a chat message —
+        show sector names + counts instead. Falls back to the full bullet
+        list when the collection has no sector info (small corpora, where
+        listing titles IS the more helpful message).
+        """
+        if self._corpus_summary_compact is None:
+            aliases = self._get_alias_index()
+            sectors = self._sector_index or {}
+            if not sectors:
+                self._corpus_summary_compact = self.corpus_summary()
+            else:
+                counts: Dict[str, int] = {}
+                for doc_id, title in aliases.items():
+                    if not title:
+                        continue
+                    label = _SECTOR_DISPLAY.get(sectors.get(doc_id), "Khác")
+                    counts[label] = counts.get(label, 0) + 1
+                known_order = list(_SECTOR_DISPLAY.values()) + ["Khác"]
+                parts = [
+                    f"{label} ({counts[label]} văn bản)"
+                    for label in known_order
+                    if counts.get(label)
+                ]
+                total = sum(counts.values())
+                self._corpus_summary_compact = (
+                    f"**{total} văn bản luật và nghị định** thuộc {len(parts)} lĩnh vực: "
+                    + ", ".join(parts) + "."
+                )
+        return self._corpus_summary_compact
 
     # ── Doc resolution ─────────────────────────────────────────────
 

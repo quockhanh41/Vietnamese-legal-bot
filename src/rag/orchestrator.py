@@ -380,7 +380,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
     def _out_of_scope_response(self, question: str, start_time: float) -> RAGResponse:
         """Refuse immediately, WITHOUT retrieval/generation — the SCOPE gate
         already determined this corpus cannot answer the question at all."""
-        corpus_summary = self._get_citation_lookup().corpus_summary()
+        corpus_summary = self._get_citation_lookup().corpus_summary_compact()
         answer = OUT_OF_SCOPE_ANSWER_TEMPLATE.format(corpus_summary=corpus_summary)
         return RAGResponse(
             answer=answer,
@@ -749,7 +749,7 @@ Các câu liên quan (giữ nguyên văn):"""
             yield f'__STEP__{json.dumps({"step": "Classification", "result": f"{complexity.upper()} (scope={scope_label})"})}'
 
             if not in_scope:
-                corpus_summary = self._get_citation_lookup().corpus_summary()
+                corpus_summary = self._get_citation_lookup().corpus_summary_compact()
                 answer = OUT_OF_SCOPE_ANSWER_TEMPLATE.format(corpus_summary=corpus_summary)
                 yield f'__STEP__{json.dumps({"step": "Routing", "result": "Out of Scope — refused before retrieval/generation"})}'
                 # Yield the refusal text as normal tokens so the UI displays
