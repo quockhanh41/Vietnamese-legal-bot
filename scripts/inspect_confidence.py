@@ -119,15 +119,18 @@ def main():
             for c, lbl in zip(ver.claims, ver.entailment_labels):
                 print(f"  [{lbl}] {c[:120]}")
             print(f"entailment_ratio={ver.entailment_ratio} contradiction_ratio={ver.contradiction_ratio}")
+            print(f"grounding_ratio={ver.grounding_ratio} grounded_claims={ver.grounded_claims}")
+            print(f"invalid_block_refs={ver.invalid_block_refs} ungrounded_article_citations={ver.ungrounded_article_citations}")
             print(f"warnings: {ver.warnings}")
 
         if conf is not None:
             print(f"\n--- Confidence breakdown ---")
-            print(f"  retriever_score       = {conf.retriever_score:.4f}  (weight 0.25)")
+            print(f"  retriever_score       = {conf.retriever_score:.4f}  (weight 0.20)")
             print(f"  reranker_score        = {conf.reranker_score:.4f}  (weight 0.20, available={captured.get('rerank_scores') is not None})")
-            print(f"  llm_self_eval_score   = {conf.llm_self_eval_score:.4f}  (weight 0.30)")
+            print(f"  llm_self_eval_score   = {conf.llm_self_eval_score:.4f}  (weight 0.25)")
             print(f"  context_overlap_score = {conf.context_overlap_score:.4f}  (weight 0.15)")
             print(f"  entailment_score      = {conf.entailment_score:.4f}  (weight 0.10, available={ver.entailment_labels != [] if ver else False})")
+            print(f"  grounding_score       = {conf.grounding_score:.4f}  (weight 0.10, available={bool(ver.grounded_claims) if ver else False})")
             print(f"  => weighted score = {conf.score:.4f}  refused={conf.refused} (threshold={pipeline._confidence_scorer.refusal_threshold})")
 
         results_out[qid] = {
@@ -146,6 +149,10 @@ def main():
                 "entailment_labels": ver.entailment_labels if ver else None,
                 "entailment_ratio": ver.entailment_ratio if ver else None,
                 "contradiction_ratio": ver.contradiction_ratio if ver else None,
+                "grounding_ratio": ver.grounding_ratio if ver else None,
+                "grounded_claims": ver.grounded_claims if ver else None,
+                "invalid_block_refs": ver.invalid_block_refs if ver else None,
+                "ungrounded_article_citations": ver.ungrounded_article_citations if ver else None,
                 "warnings": ver.warnings if ver else None,
             } if ver else None,
             "confidence": {
@@ -154,6 +161,7 @@ def main():
                 "llm_self_eval_score": conf.llm_self_eval_score,
                 "context_overlap_score": conf.context_overlap_score,
                 "entailment_score": conf.entailment_score,
+                "grounding_score": conf.grounding_score,
                 "score": conf.score,
                 "refused": conf.refused,
             } if conf else None,

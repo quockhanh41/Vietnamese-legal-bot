@@ -13,7 +13,8 @@ from unittest.mock import MagicMock
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.db.qdrant_client import SearchResult
-from src.rag.orchestrator import NaiveRAGPipeline
+from src.rag.orchestrator import NaiveRAGPipeline, AdaptiveRAGPipeline
+from src.rag.verifier import VerificationResult
 
 
 def _sr(point_id, document_id=1, article=None, chunk_text="chunk", parent_chunk_text=None, score=0.9):
@@ -160,3 +161,67 @@ def test_build_citations_defaults_without_annotations():
     citations = pipeline._build_citations(results)
     assert citations[0]["is_amended"] is False
     assert citations[0]["amending_laws"] == []
+
+
+# ── _post_process: grounding_ratio wiring into ConfidenceScorer (M0.2) ─────
+#
+# `_post_process` runs `HallucinationVerifier.verify()` BEFORE
+# `ConfidenceScorer.score()`, so it can hand the verifier's grounding_ratio
+# straight to the scorer — same convention already used for entailment_ratio.
+# These tests mock BOTH collaborators so they can assert on the exact kwargs
+# `_post_process` passes through, without loading the real NLI/reranker models.
+
+def _make_adaptive_pipeline() -> AdaptiveRAGPipeline:
+    return AdaptiveRAGPipeline(
+        vector_store=MagicMock(), embedder=MagicMock(), llm_gateway=MagicMock(),
+    )
+
+
+def test_post_process_passes_grounding_ratio_when_claims_present():
+    """When the verifier found groundable claims, its grounding_ratio must
+    flow into ConfidenceScorer.score(grounding_ratio=...) verbatim."""
+    pipeline = _make_adaptive_pipeline()
+
+    mock_verifier = MagicMock()
+    mock_verifier.verify.return_value = VerificationResult(
+        grounded_claims=[True, False],
+        grounding_ratio=0.5,
+        entailment_labels=["ENTAILMENT", "NEUTRAL"],
+        entailment_ratio=0.5,
+    )
+    pipeline._verifier = mock_verifier
+
+    mock_scorer = MagicMock()
+    mock_scorer.score.return_value = MagicMock(refused=False)
+    pipeline._confidence_scorer = mock_scorer
+
+    pipeline._post_process("Q?", "answer text", [], "context text")
+
+    assert mock_scorer.score.call_args.kwargs["grounding_ratio"] == 0.5
+
+
+def test_post_process_passes_none_when_no_groundable_claims():
+    """When the answer had no groundable ("Chi tiết" bullet) claims at all —
+    `grounded_claims` stays the empty-list default — the signal must be
+    reported as unavailable (None), not as a spurious 0.0 (which would be
+    indistinguishable from '0% grounded' and unfairly penalize the score)."""
+    pipeline = _make_adaptive_pipeline()
+
+    mock_verifier = MagicMock()
+    mock_verifier.verify.return_value = VerificationResult(
+        grounded_claims=[],
+        grounding_ratio=0.0,  # verifier's early-return default — must NOT leak through
+        entailment_labels=[],
+        entailment_ratio=0.0,
+    )
+    pipeline._verifier = mock_verifier
+
+    mock_scorer = MagicMock()
+    mock_scorer.score.return_value = MagicMock(refused=False)
+    pipeline._confidence_scorer = mock_scorer
+
+    pipeline._post_process("Q?", "answer text", [], "context text")
+
+    assert mock_scorer.score.call_args.kwargs["grounding_ratio"] is None
+    # Same convention must already hold for entailment (pre-existing behavior).
+    assert mock_scorer.score.call_args.kwargs["entailment_ratio"] is None

@@ -1,18 +1,22 @@
 """
 F16: Confidence Scoring — Multi-signal weighted scoring + refusal gate.
 
-Signals (from plan §4.3):
-  ① Retriever Score (0.25): max cosine similarity from search results
+Signals (from plan §4.3, weights updated M0.2 — see DEFAULT_WEIGHTS below):
+  ① Retriever Score (0.20): max cosine similarity from search results
   ② Reranker Score (0.20): max cross-encoder score (or 0 if no reranker)
-  ③ LLM Self-Eval  (0.30): LLM rates own answer on 0-100 scale
+  ③ LLM Self-Eval  (0.25): LLM rates own answer on 0-100 scale
   ④ Context Overlap (0.15): keyword overlap between answer and context
   ⑤ Claim Entailment Ratio (0.10): % claims entailed by NLI (from verifier)
+  ⑥ Grounding Ratio (0.10): % "Chi tiết" bullets that cite a valid context
+    block [n] whose content backs the claim (from verifier Tier-1.5,
+    machine-checked — see src/rag/verifier.py `_verify_grounding`)
 
 Threshold: < 0.70 → refuse to answer ("Tôi không tìm thấy đủ thông tin...")
 
 Usage:
     scorer = ConfidenceScorer(llm_gateway)
-    result = scorer.score(question, answer, context, search_results, rerank_scores, entailment_ratio)
+    result = scorer.score(question, answer, context, search_results, rerank_scores,
+                           entailment_ratio, grounding_ratio)
     if result.refused:
         # return fallback answer
 """
@@ -33,13 +37,31 @@ from src.rag.context_blocks import parse_context_blocks, select_premise
 
 logger = logging.getLogger(__name__)
 
-# Default weights from the plan (§4.3)
+# Default weights from the plan (§4.3).
+#
+# M0.2 (2026-07-10, docs/Danh_Gia_va_Roadmap_Production_2026-07-06.md): added
+# `grounding` (0.10) as a 6th signal — it was previously computed by the
+# verifier (Tier-1.5, `_verify_grounding`) but only surfaced as
+# observability, never fed into the confidence score. It's a machine-checked
+# signal (does each "Chi tiết" bullet cite a valid context block whose text
+# actually backs the claim?), so it deserves weight. The 0.10 was taken from
+# the two least-discriminating signals: `retriever` (0.25→0.20 — saturates
+# on hybrid/RRF-scale scores, see `_retriever_signal`) and `llm_self_eval`
+# (0.30→0.25 — a self-report; M0.1 fixed its ceiling-at-0.85-1.00 bug but it
+# is still the model grading itself, not an independent check). `reranker`,
+# `context_overlap`, `entailment` are unchanged. Sum is still 1.00.
+#
+# REFUSAL_THRESHOLD (0.725, below) was calibrated against the OLD weights and
+# is intentionally left untouched by this change — recalibrating it against
+# these new weights is tracked as the very next task (M0.3). Until that runs,
+# treat 0.725 as provisional under the new weighting.
 DEFAULT_WEIGHTS = {
-    "retriever": 0.25,
+    "retriever": 0.20,
     "reranker": 0.20,
-    "llm_self_eval": 0.30,
+    "llm_self_eval": 0.25,
     "context_overlap": 0.15,
     "entailment": 0.10,
+    "grounding": 0.10,
 }
 
 # Threshold for refusal — RE-VALIDATED 2026-07-07 WITH THE LIVE BGE RERANKER
@@ -115,6 +137,7 @@ class ConfidenceResult:
     llm_self_eval_score: float = 0.0
     context_overlap_score: float = 0.0
     entailment_score: float = 0.0
+    grounding_score: float = 0.0
 
     # Human-readable label
     label: str = "low"  # "high" | "medium" | "low"
@@ -132,7 +155,7 @@ class ConfidenceScorer:
     """
     Multi-signal confidence scorer for Vietnamese legal RAG.
 
-    Aggregates 5 signals into a weighted score. If score < 0.70,
+    Aggregates 6 signals into a weighted score. If score < 0.70,
     the answer should be refused.
     """
 
@@ -154,6 +177,7 @@ class ConfidenceScorer:
         search_results: List[SearchResult],
         rerank_scores: Optional[List[float]] = None,
         entailment_ratio: Optional[float] = None,
+        grounding_ratio: Optional[float] = None,
     ) -> ConfidenceResult:
         """
         Compute multi-signal confidence score.
@@ -169,6 +193,14 @@ class ConfidenceScorer:
             entailment_ratio: Ratio of entailed claims from verifier (F17).
                 None means semantic (NLI) verification was skipped (signal
                 unavailable), not "0% entailed".
+            grounding_ratio: Ratio of groundable ("Chi tiết" bullet) claims
+                that cite a valid context block [n] backing them, from
+                verifier Tier-1.5 (`VerificationResult.grounding_ratio`).
+                None means the signal is unavailable — either the verifier
+                didn't run for this route, or the answer had no groundable
+                claims at all — NOT "0% grounded". Caller is responsible for
+                making that distinction (see orchestrator._post_process,
+                which mirrors the existing entailment_ratio convention).
 
         Returns:
             ConfidenceResult with score, refusal flag, and per-signal breakdown
@@ -177,6 +209,7 @@ class ConfidenceScorer:
         sig_reranker = self._reranker_signal(rerank_scores)
         sig_overlap = self._context_overlap(answer, context)
         sig_entailment = entailment_ratio
+        sig_grounding = grounding_ratio
         sig_llm = self._llm_self_eval(question, answer, context)
 
         # Weighted aggregation over available signals only — when a signal is
@@ -187,6 +220,7 @@ class ConfidenceScorer:
             "reranker": sig_reranker,
             "context_overlap": sig_overlap,
             "entailment": sig_entailment,
+            "grounding": sig_grounding,
             "llm_self_eval": sig_llm,
         }
         available = {k: v for k, v in signals.items() if v is not None}
@@ -207,6 +241,7 @@ class ConfidenceScorer:
             llm_self_eval_score=sig_llm or 0.0,
             context_overlap_score=sig_overlap or 0.0,
             entailment_score=sig_entailment or 0.0,
+            grounding_score=sig_grounding or 0.0,
         )
 
     # ── Signal ①: Retriever Score ──────────────────────────

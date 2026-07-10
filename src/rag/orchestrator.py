@@ -488,6 +488,13 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         # a 0.0 ratio as "answer entails nothing".
         entailment_ratio = ver_result.entailment_ratio if ver_result.entailment_labels else None
 
+        # Same convention for grounding (Tier-1.5, M0.2): `grounded_claims` is
+        # only empty when there were no groundable ("Chi tiết" bullet) claims
+        # to check at all (see `_verify_grounding`'s early return) — pass None
+        # so confidence scoring drops the signal instead of treating "no
+        # claims to ground" as "0% grounded".
+        grounding_ratio = ver_result.grounding_ratio if ver_result.grounded_claims else None
+
         result = self._confidence_scorer.score(
             question=question,
             answer=answer,
@@ -495,6 +502,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             search_results=results,
             rerank_scores=rerank_scores,
             entailment_ratio=entailment_ratio,
+            grounding_ratio=grounding_ratio,
         )
 
         # Refusal gate
@@ -875,6 +883,7 @@ Các câu liên quan (giữ nguyên văn):"""
             "warnings": ver_result.warnings,
             "entailment_ratio": ver_result.entailment_ratio,
             "contradiction_ratio": ver_result.contradiction_ratio,
+            "grounding_ratio": ver_result.grounding_ratio,
         }
         if conf_result.refused:
             verification_payload["refusal_answer"] = final_answer

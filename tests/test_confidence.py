@@ -19,6 +19,8 @@ import os
 import sys
 from unittest.mock import MagicMock
 
+import pytest
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from src.rag.confidence import ConfidenceScorer, DEFAULT_WEIGHTS, REFUSAL_THRESHOLD
@@ -131,13 +133,73 @@ def test_llm_self_eval_passes_block_selected_context_not_blind_truncation():
 # ── score(): weighting/threshold constants untouched (guard) ───────────
 
 def test_default_weights_and_threshold_unchanged():
-    """Guard against accidental drift of the calibrated constants — this
-    task must not touch them."""
+    """Guard against accidental drift of the calibrated constants.
+
+    M0.2 (2026-07-10) intentionally updated DEFAULT_WEIGHTS to add the new
+    `grounding` signal (retriever 0.25->0.20, llm_self_eval 0.30->0.25,
+    grounding +0.10 new) — this guard is updated to match, per that task's
+    explicit instructions. REFUSAL_THRESHOLD stays 0.725 (unrecalibrated
+    against the new weights on purpose — M0.3 will do that)."""
     assert DEFAULT_WEIGHTS == {
-        "retriever": 0.25,
+        "retriever": 0.20,
         "reranker": 0.20,
-        "llm_self_eval": 0.30,
+        "llm_self_eval": 0.25,
         "context_overlap": 0.15,
         "entailment": 0.10,
+        "grounding": 0.10,
     }
     assert REFUSAL_THRESHOLD == 0.725 or os.getenv("CONFIDENCE_REFUSAL_THRESHOLD")
+
+
+def test_default_weights_sum_to_one():
+    """Renormalization only preserves a 0-1 scale if the full weight set is
+    a proper distribution to begin with."""
+    assert sum(DEFAULT_WEIGHTS.values()) == pytest.approx(1.0)
+
+
+# ── score(): grounding signal (M0.2) ────────────────────────────────────
+
+def _scorer_with_pinned_signals(llm_score: float = 1.0) -> ConfidenceScorer:
+    """A ConfidenceScorer whose retriever/reranker/context_overlap/llm_self_eval
+    signals are all pinned to a fixed value, so a test can isolate exactly the
+    contribution of `grounding_ratio` in `score()`'s weighted aggregation
+    without needing to reverse-engineer the real regex/keyword logic of the
+    other signals."""
+    scorer = ConfidenceScorer(MagicMock())
+    scorer._retriever_signal = lambda results: llm_score
+    scorer._reranker_signal = lambda scores: llm_score
+    scorer._context_overlap = lambda answer, context: llm_score
+    scorer._llm_self_eval = lambda question, answer, context: llm_score
+    return scorer
+
+
+def test_score_grounding_present_applies_010_weight():
+    """With every other signal pinned at 1.0 and grounding at 0.5, the
+    weighted score must drop by exactly weight(grounding) * (1.0 - 0.5)
+    = 0.10 * 0.5 = 0.05 off the max — i.e. land at 0.95."""
+    scorer = _scorer_with_pinned_signals(1.0)
+    result = scorer.score(
+        question="Q", answer="A", context="C",
+        search_results=[], rerank_scores=[0.5],
+        entailment_ratio=1.0, grounding_ratio=0.5,
+    )
+    assert result.grounding_score == 0.5
+    assert result.score == pytest.approx(1.0 - DEFAULT_WEIGHTS["grounding"] * 0.5)
+    assert result.score == pytest.approx(0.95)
+
+
+def test_score_grounding_none_renormalizes_max_stays_1_0():
+    """grounding_ratio=None must be DROPPED from aggregation (renormalized),
+    not treated as a 0 — so a perfect answer on every other signal still
+    reaches the full 1.0, not a value capped below it by a phantom penalty."""
+    scorer = _scorer_with_pinned_signals(1.0)
+    result = scorer.score(
+        question="Q", answer="A", context="C",
+        search_results=[], rerank_scores=[0.5],
+        entailment_ratio=1.0, grounding_ratio=None,
+    )
+    assert result.score == pytest.approx(1.0)
+    # Breakdown still reports a sane default (0.0) for the unavailable
+    # signal, but it must not have been counted in the weighted average.
+    assert result.grounding_score == 0.0
+    assert result.refused is False
