@@ -62,7 +62,17 @@ from src.rag.orchestrator import AdaptiveRAGPipeline
 
 CRIMINAL_SET = "data/eval/eval_set_criminal_v1.json"
 GENERAL_SET = "data/eval/eval_set_general_v1.json"
+SECTORS_SET = "data/eval/eval_set_sectors_v1.json"  # M1.5 — 5 lĩnh vực mới
 REPORT_DIR = "data/eval_reports"
+
+SET_PATHS = {
+    "criminal": CRIMINAL_SET,
+    "general": GENERAL_SET,
+    "sectors": SECTORS_SET,
+}
+# Sets whose questions carry a single `expected_behavior` (grounded sets) vs
+# the general set's refuse-now/answer-later pair of fields.
+GROUNDED_SETS = {"criminal", "sectors"}
 
 RETRIEVAL_K = (5, 10)
 FETCH_K = max(RETRIEVAL_K)
@@ -71,7 +81,7 @@ FETCH_K = max(RETRIEVAL_K)
 # ── Loading ───────────────────────────────────────────────────────────────
 
 def load_questions(set_name: str, limit: Optional[int]) -> List[Dict]:
-    path = CRIMINAL_SET if set_name == "criminal" else GENERAL_SET
+    path = SET_PATHS[set_name]
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
     questions = data["questions"]
@@ -128,6 +138,7 @@ def run_tier1(questions: List[Dict], vector_store: LegalVectorStore, embedder: B
                 "id": q["id"],
                 "type": q["type"],
                 "difficulty": q["difficulty"],
+                "legal_sector": q.get("legal_sector"),
                 "expected_articles": expected,
                 "top_hits": [
                     {"document_id": h["document_id"], "article": h["article"], "score": round(h["score"], 4)}
@@ -180,6 +191,26 @@ def _aggregate_tier1(rows: List[Dict]) -> Dict:
         }
         for t, trows in sorted(by_type.items())
     }
+
+    # Per-sector breakdown — Gate M1 requires per-sector recall reported
+    # separately (docs/Plan_Giai_Doan_Cuoi_2026-07-10.md). Only the sectors
+    # set carries legal_sector; criminal/general rows have None and are
+    # skipped, leaving by_sector empty (not printed) for those sets.
+    by_sector: Dict[str, List[Dict]] = defaultdict(list)
+    for r in rows:
+        sec = r.get("legal_sector")
+        if sec:
+            by_sector[sec].append(r)
+    agg["by_sector"] = {
+        s: {
+            "n": len(srows),
+            **{f"recall@{k}_strict": _mean([r[f"recall@{k}_strict"] for r in srows]) for k in RETRIEVAL_K},
+            **{f"recall@{k}_lenient": _mean([r[f"recall@{k}_lenient"] for r in srows]) for k in RETRIEVAL_K},
+            "mrr_strict": _mean([r["rr_strict"] for r in srows]),
+            "mrr_lenient": _mean([r["rr_lenient"] for r in srows]),
+        }
+        for s, srows in sorted(by_sector.items())
+    }
     return agg
 
 
@@ -192,7 +223,7 @@ def run_tier2(
     sleep_s: float,
 ) -> Dict:
     """Answer/refusal eval — calls the LLM through AdaptiveRAGPipeline.query()."""
-    behavior_field = "expected_behavior" if set_name == "criminal" else "expected_behavior_current"
+    behavior_field = "expected_behavior" if set_name in GROUNDED_SETS else "expected_behavior_current"
 
     rows = []
     for i, q in enumerate(questions):
@@ -308,6 +339,16 @@ def print_tier1_summary(tier1: Dict, set_name: str):
                         f"{tagg['recall@10_strict']} | {tagg['mrr_strict']} |")
         click.echo("")
 
+        # Per-sector recall — Gate M1 artifact (only present for the sectors set).
+        by_sector = agg.get("by_sector") or {}
+        if by_sector:
+            click.echo("| lĩnh vực | n | recall@5 (strict) | recall@10 (strict) | MRR (strict) |")
+            click.echo("|---|---|---|---|---|")
+            for s, sagg in by_sector.items():
+                click.echo(f"| {s} | {sagg['n']} | {sagg['recall@5_strict']} | "
+                            f"{sagg['recall@10_strict']} | {sagg['mrr_strict']} |")
+            click.echo("")
+
     d5 = tier1["modes"]["dense"]["recall@5_strict"] or 0
     h5 = tier1["modes"]["hybrid"]["recall@5_strict"] or 0
     r5 = tier1["modes"]["routed"]["recall@5_strict"] or 0
@@ -356,7 +397,7 @@ def print_tier2_summary(tier2: Dict, set_name: str):
 # ── CLI ────────────────────────────────────────────────────────────────────
 
 @click.command()
-@click.option("--set", "set_name", type=click.Choice(["criminal", "general"]), default="criminal",
+@click.option("--set", "set_name", type=click.Choice(["criminal", "general", "sectors"]), default="criminal",
               help="Bộ eval để chạy.")
 @click.option("--limit", type=int, default=None, help="Chỉ chạy N câu hỏi đầu tiên (smoke test).")
 @click.option("--answers", is_flag=True, default=False,
