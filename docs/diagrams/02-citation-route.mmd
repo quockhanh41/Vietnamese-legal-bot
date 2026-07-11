@@ -1,0 +1,28 @@
+flowchart TD
+    Q["question"] --> PC["parse_citation()"]
+
+    subgraph PARSE ["parse_citation() — thuần regex, không LLM"]
+        R1["_ARTICLE_RE: 'Điều 173', 'Điều 12a'<br/>(đòi chữ số ngay sau 'Điều' —<br/>loại 'điều kiện', 'điều tra'...)"]
+        R2["_KHOAN_RE / _DIEM_RE:<br/>Khoản 1, Điểm a"]
+        R3["_DOC_NUMBER_RE: '59/2020/QH14',<br/>'145/2020/NĐ-CP' → _normalize_doc_number()"]
+        R4["_YEAR_RE: năm 19xx/20xx<br/>(tránh nhầm với số Điều/Khoản)"]
+        R5["doc_hint: cụm tên luật quanh 'Điều N'<br/>+ mở viết tắt BLHS/BLTTHS/BLDS/LDN...<br/>(_ABBREVIATIONS)"]
+    end
+
+    PC --> PARSED{"ParsedCitation?"}
+    PARSED -->|None| HYB["embedder.encode(dense+sparse)<br/>→ search_hybrid(top_k)<br/>route = 'hybrid'"]
+    PARSED -->|có| RD["CitationLookup.resolve_doc(hint, year, doc_number)"]
+
+    subgraph RESOLVE ["resolve_doc() — xếp hạng văn bản ứng viên"]
+        RD --> RD1["1. doc_number khớp chính xác<br/>(_get_doc_number_index) → thắng tuyệt đối"]
+        RD1 --> RD2["2. alias/tên luật khớp (_get_alias_index);<br/>hint quá dài → cắt tỉa về đúng<br/>một tiêu đề khớp (M1.3)"]
+        RD2 --> RD3["3. năm khớp → ưu tiên;<br/>không phân giải được → tra mọi document"]
+    end
+
+    RD3 --> LK["CitationLookup.lookup(parsed, cap=8)<br/>quét _get_chunks_by_doc (cache scroll toàn collection)<br/>tìm chunk MỞ ĐẦU bằng 'Điều N.'"]
+    LK --> HIT{"tìm thấy chunk?"}
+
+    HIT -->|có| FILL["dense fill: search_dense(top_k×2)<br/>khử trùng point_id, bổ sung đến đủ 10<br/>→ LLM có ngữ cảnh xung quanh"]
+    FILL --> OUT1["return (hits, 'lookup', parsed)"]
+
+    HIT -->|"không (vd 'Điều 999' không tồn tại)"| EMPTY["return ([], 'lookup', parsed)<br/>CỐ Ý không fallback vector search:<br/>context rỗng → cổng tin cậy tự từ chối,<br/>thay vì cite một Điều 'trông có vẻ đúng'"]

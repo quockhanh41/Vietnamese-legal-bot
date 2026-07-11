@@ -1,0 +1,32 @@
+flowchart TD
+    DL["scripts/download_dataset.py<br/>HuggingFace → data/raw/*.parquet"] --> SEL["scripts/select_corpus.py (M1.1)<br/>tuyển tay 100 văn bản, 6 lĩnh vực<br/>→ corpus_100docs.parquet (có cột sector)"]
+    SEL --> ING["scripts/ingest.py<br/>--collection --quantized --resume --device"]
+
+    subgraph SETUP ["Khởi tạo"]
+        ING --> CUR{"parquet có cột 'sector'?"}
+        CUR -->|có| CM["curated mode:<br/>filter_row(curated=True) bỏ lọc legal_type<br/>(đã tuyển tay), giữ guard độ dài,<br/>CẢNH BÁO nếu rơi document"]
+        CUR -->|không| FM["full-dataset mode:<br/>filter_row() lọc legal_type ∈ LEGAL_TYPES<br/>+ độ dài ≥ MIN_CONTENT_LENGTH"]
+        CM & FM --> CC["store.create_collection(recreate, quantized)<br/>dense 1024 COSINE + sparse<br/>+ int8 quantization (nếu --quantized)<br/>+ _create_payload_indexes()"]
+        CC --> CP["IngestCheckpoint(collection)<br/>SQLite: data/ingest_progress/(collection).sqlite"]
+    end
+
+    CP --> LOOP["pyarrow iter_batches — streaming,<br/>không load hết dataset vào RAM"]
+
+    subgraph PERDOC ["Với từng document"]
+        LOOP --> RES{"--resume và<br/>checkpoint.is_done(doc_id)?"}
+        RES -->|có| SKIP["bỏ qua (đã ingest xong)"]
+        RES -->|không| AMEND{"tiêu đề khớp _AMENDMENT_RE?<br/>(luật sửa đổi, bổ sung...)"}
+        AMEND -->|có| ALC["ArticleLevelChunker.chunk_document()<br/>+ meta is_amendment_chunk=True"]
+        AMEND -->|không| HC["HierarchicalChunker.chunk_document()<br/>chunk mức Khoản + parent_chunk_text<br/>(nguyên Điều — nguồn cho _expand_to_parent)"]
+        ALC & HC --> CTX["build_contextual_text(meta)<br/>prepend header 'Luật | Chương | Điều | Khoản'<br/>vào BẢN ĐEM EMBED — chunk_text hiển thị giữ nguyên"]
+        CTX --> SECT["curated: meta['sector'] = ...<br/>(nguồn cho corpus_summary nhóm lĩnh vực)"]
+    end
+
+    SECT --> BUF["gom vào chunk_buffer"]
+    BUF --> FLUSH{"đủ batch?"}
+    FLUSH -->|có| EMB["embedder.encode(batch)<br/>BGE-M3: dense + sparse 1 lần encode"]
+    EMB --> UP["store.upsert_chunks()<br/>point_id = compute_point_id()<br/>uuid5(document_id:chunk_index) — DETERMINISTIC<br/>(_upsert_with_retry, 3 lần)"]
+    UP --> MARK["checkpoint.mark_done_many()<br/>CHỈ sau khi upsert thành công —<br/>document dở dang không bao giờ bị đánh dấu xong"]
+    MARK --> LOOP
+    FLUSH -->|"chưa (còn dữ liệu)"| LOOP
+    LOOP -->|hết dữ liệu| FINAL["flush phần còn lại + checkpoint.close()"]

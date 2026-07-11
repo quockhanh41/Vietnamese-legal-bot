@@ -1,0 +1,27 @@
+flowchart TD
+    IN["_post_process(question, answer,<br/>results, context, rerank_scores)"] --> V["HallucinationVerifier.verify()"]
+
+    subgraph VERIFY ["verifier.py — 3 tầng"]
+        V --> T1["Tier 1 — _verify_citations():<br/>mọi 'Điều N' trong answer phải có<br/>trong context (_article_in_context)"]
+        T1 --> T15["Tier 1.5 — _verify_grounding():<br/>_groundable_claims() lấy bullet 'Chi tiết'<br/>→ extract_block_refs() lấy [n] được cite<br/>→ khối [n] có thực sự chứa nội dung?<br/>⇒ grounding_ratio"]
+        T15 --> T2["Tier 2 — _verify_semantic():<br/>_split_claims() tách answer thành claim<br/>→ select_premise() (context_blocks.py)<br/>chọn đúng khối [n] làm premise<br/>→ mDeBERTa NLI: ENTAIL/CONTRADICT/NEUTRAL<br/>⇒ entailment_ratio, contradiction_ratio"]
+        T2 --> PASS["passed = contradiction_ratio ≤ 0.30<br/>(grounding chỉ sinh warning,<br/>không đổi passed)"]
+    end
+
+    PASS --> NONE["Không có claim để chấm?<br/>entailment_ratio / grounding_ratio → None<br/>(để scorer LOẠI tín hiệu thay vì tính 0%)"]
+    NONE --> CS["ConfidenceScorer.score()"]
+
+    subgraph SCORE ["confidence.py — 6 tín hiệu có trọng số"]
+        CS --> S1["_retriever_signal() — 0.20<br/>max cosine từ search"]
+        CS --> S2["_reranker_signal() — 0.20<br/>max điểm cross-encoder<br/>(None nếu route không rerank)"]
+        CS --> S3["_llm_self_eval() — 0.25<br/>CONFIDENCE_EVAL_PROMPT rubric 4 tiêu chí<br/>→ _parse_rubric_score() cộng điểm bằng code"]
+        CS --> S4["_context_overlap() — 0.15<br/>trùng từ khóa answer ↔ context"]
+        CS --> S5["entailment_ratio — 0.10 (từ Tier 2)"]
+        CS --> S6["grounding_ratio — 0.10 (từ Tier 1.5)"]
+        S1 & S2 & S3 & S4 & S5 & S6 --> NORM["Tín hiệu None → loại +<br/>CHUẨN HOÁ LẠI trọng số<br/>(điểm tối đa luôn 1.0, không phạt ngầm)"]
+        NORM --> SUM["score = Σ weight × signal"]
+    end
+
+    SUM --> GATE{"score < REFUSAL_THRESHOLD<br/>0.700 (env CONFIDENCE_REFUSAL_THRESHOLD)?"}
+    GATE -->|có| REF["CỔNG TỪ CHỐI 2:<br/>final_answer = REFUSAL_ANSWER"]
+    GATE -->|không| OK["giữ answer;<br/>verify không passed → nối warning<br/>vào disclaimer (_enrich_response)"]

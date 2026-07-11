@@ -1,0 +1,54 @@
+flowchart TD
+    START["POST /api/chat/stream<br/>api/main.py: chat_stream()"] --> QS["AdaptiveRAGPipeline.query_stream()"]
+    QS --> PC{"parse_citation(question)<br/>citation_lookup.py"}
+
+    PC -->|"None — không phải câu trích dẫn"| CLS["_classify_and_scope()<br/>1 LLM call duy nhất<br/>COMPLEXITY_CLASSIFIER_PROMPT + corpus_summary()"]
+    CLS --> SCOPE{"SCOPE?<br/>(parse fail → IN, fail-open)"}
+    SCOPE -->|OUT| OOS["CỔNG TỪ CHỐI 1<br/>OUT_OF_SCOPE_ANSWER_TEMPLATE<br/>.format(corpus_summary_compact())<br/>→ yield answer + __VERIFICATION__, DỪNG"]
+    SCOPE -->|IN| CLASS{"CLASS?<br/>(parse fail → MEDIUM)"}
+
+    PC -->|"có 'Điều N' / số hiệu văn bản"| LOOKUP
+
+    subgraph LOOKUP ["Route LOOKUP"]
+        RR["retrieve_routed(fill_top_k=10)<br/>resolve_doc() → lookup() → dense fill<br/>(xem sơ đồ 02)"]
+    end
+
+    subgraph SIMPLE ["Route SIMPLE"]
+        S1["embedder.encode_queries()"] --> S2["vector_store.search_dense(top_k=20)"]
+        S2 --> S3["_dynamic_top_k(min 3, max 15)"]
+    end
+
+    subgraph MEDIUM ["Route MEDIUM"]
+        M1["embedder.encode(dense + sparse)"] --> M2["vector_store.search_hybrid(top_k=20)"]
+        M2 --> M3["_dynamic_top_k(min 5, max 15)"] --> M4["_rerank_results()<br/>BGE-reranker-v2-m3"]
+    end
+
+    subgraph COMPLEX ["Route COMPLEX"]
+        C1["llm.generate(QUERY_REWRITE_PROMPT)"] --> C2["llm.generate(MULTI_QUERY_PROMPT)<br/>→ 3 biến thể"]
+        C2 --> C3["llm.generate(HYDE_PROMPT)<br/>→ văn bản giả định"]
+        C3 --> C4["search_hybrid(top_k=10) × 4 query<br/>→ khử trùng theo point_id"]
+        C4 --> C5["_dynamic_top_k(min 5, max 20)"] --> C6["_rerank_results()"]
+    end
+
+    CLASS -->|SIMPLE| SIMPLE
+    CLASS -->|MEDIUM| MEDIUM
+    CLASS -->|COMPLEX| COMPLEX
+
+    LOOKUP --> P2
+    SIMPLE --> P2
+    MEDIUM --> P2
+    COMPLEX --> P2
+
+    subgraph SHARED ["Bước chung mọi route (Plan §3.4 / §3.6)"]
+        P2["_annotate_phase2()<br/>get_phase2_status() per chunk"] --> FIE["_filter_in_effect()<br/>loại is_in_effect == False<br/>(thiếu metadata → GIỮ, fail-open)"]
+        FIE --> EXP["_expand_to_parent()<br/>chunk Khoản → nguyên Điều (parent_chunk_text)<br/>gộp hit trùng Điều"]
+        EXP --> BC["_build_context() đánh số khối [n]<br/>+ _build_citations() — CÙNG list, CÙNG thứ tự"]
+    end
+
+    BC --> CMP{"route == COMPLEX?"}
+    CMP -->|có| CC["_compress_context()<br/>LLM lược context"] --> GEN
+    CMP -->|không| GEN["llm.generate_stream(GENERATION_PROMPT<br/>+ SYSTEM_PROMPT)<br/>yield từng token về UI"]
+
+    GEN --> STRIP["re.sub bỏ block think<br/>của Qwen3 khỏi full_answer"]
+    STRIP --> PP["_post_process()<br/>CỔNG TỪ CHỐI 2 (xem sơ đồ 03)"]
+    PP --> VP["yield __VERIFICATION__<br/>(kèm refusal_answer nếu bị từ chối)"]

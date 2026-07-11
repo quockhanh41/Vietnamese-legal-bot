@@ -1,0 +1,30 @@
+sequenceDiagram
+    participant UI as Streamlit UI<br/>pages/chat.py
+    participant API as FastAPI<br/>main.py: chat_stream()
+    participant PIPE as AdaptiveRAGPipeline<br/>query_stream()
+    participant LLM as LLMGateway
+
+    UI->>API: POST /api/chat/stream {question}
+    API->>PIPE: query_stream(question)
+
+    loop Các bước trung gian (classify / routing / context...)
+        PIPE-->>API: "__STEP__" + JSON
+        API-->>UI: SSE event: step
+        Note over UI: render vào expander<br/>"Các bước xử lý"
+    end
+
+    PIPE-->>API: "__CITATIONS__" + JSON
+    API-->>UI: SSE event: citations (render card [n])
+
+    PIPE->>LLM: generate_stream(GENERATION_PROMPT)
+    loop Từng token
+        LLM-->>PIPE: token
+        PIPE-->>API: token (chuỗi thường, không tiền tố)
+        API-->>UI: SSE event: token
+    end
+
+    Note over PIPE: _post_process() chạy SAU token cuối:<br/>verify 3 tầng + confidence 6 tín hiệu
+    PIPE-->>API: "__VERIFICATION__" + JSON<br/>(kèm refusal_answer nếu refused)
+    API-->>UI: SSE event: verification
+    Note over UI: badge tin cậy — nếu refused thì<br/>THAY câu trả lời bằng refusal
+    API-->>UI: SSE event: done
