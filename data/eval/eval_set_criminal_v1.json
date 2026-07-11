@@ -402,25 +402,25 @@
     },
     {
       "id": "crim-401",
-      "question": "Thành lập công ty TNHH một thành viên cần những giấy tờ gì?",
+      "question": "Đăng ký bảo hộ độc quyền sáng chế cho một sản phẩm cần đáp ứng những điều kiện gì?",
       "type": "out-of-scope",
-      "difficulty": "easy",
-      "legal_sector": "doanh nghiệp",
+      "difficulty": "medium",
+      "legal_sector": "sở hữu trí tuệ",
       "expected_behavior": "refuse",
       "ground_truth": "",
       "expected_articles": [],
-      "notes": "Luật Doanh nghiệp chưa có trong corpus — bot phải từ chối, không được bịa từ luật hình sự."
+      "notes": "Bẫy giáp ranh (M1.6, viết lại 2026-07-11): câu cũ 'thành lập công ty TNHH' đã HẾT out-of-scope vì M1.1 đưa Luật Doanh nghiệp vào corpus 100 docs. Câu mới thuộc Luật Sở hữu trí tuệ — KHÔNG có trong corpus; đọc như hoạt động doanh nghiệp (có trong corpus) nhưng điều kiện bảo hộ sáng chế nằm ở luật khác — bot phải từ chối, không bịa."
     },
     {
       "id": "crim-402",
-      "question": "Người lao động muốn đơn phương chấm dứt hợp đồng lao động thì phải báo trước bao nhiêu ngày?",
+      "question": "Người lao động phải đóng bảo hiểm xã hội đủ bao nhiêu năm mới được hưởng lương hưu?",
       "type": "out-of-scope",
-      "difficulty": "easy",
-      "legal_sector": "lao động",
+      "difficulty": "medium",
+      "legal_sector": "bảo hiểm xã hội",
       "expected_behavior": "refuse",
       "ground_truth": "",
       "expected_articles": [],
-      "notes": "Bộ luật Lao động chưa có trong corpus."
+      "notes": "Bẫy giáp ranh (M1.6, viết lại 2026-07-11): câu cũ 'đơn phương chấm dứt HĐLĐ' đã HẾT out-of-scope vì M1.1 đưa Bộ luật Lao động vào corpus. Câu mới thuộc Luật Bảo hiểm xã hội — KHÔNG có trong corpus; đọc như câu lao động (BLLĐ có trong corpus) nhưng điều kiện hưởng lương hưu do luật BHXH quy định — bot phải từ chối."
     },
     {
       "id": "crim-403",
@@ -468,14 +468,14 @@
     },
     {
       "id": "crim-407",
-      "question": "Ly hôn đơn phương cần thủ tục gì?",
+      "question": "Người nước ngoài được sở hữu tối đa bao nhiêu căn hộ trong một tòa nhà chung cư ở Việt Nam?",
       "type": "out-of-scope",
-      "difficulty": "easy",
-      "legal_sector": "hôn nhân gia đình",
+      "difficulty": "medium",
+      "legal_sector": "nhà ở",
       "expected_behavior": "refuse",
       "ground_truth": "",
       "expected_articles": [],
-      "notes": "Luật Hôn nhân và gia đình chưa có trong corpus."
+      "notes": "Bẫy giáp ranh (M1.6, viết lại 2026-07-11): câu cũ 'ly hôn đơn phương' đã HẾT out-of-scope vì M1.1 đưa Luật Hôn nhân và gia đình vào corpus. Câu mới thuộc Luật Nhà ở — KHÔNG có trong corpus (scope prompt cảnh báo rõ: đừng nhầm Luật Đất đai với Luật Nhà ở); hạn mức sở hữu căn hộ của người nước ngoài do Luật Nhà ở quy định — bot phải từ chối."
     }
   ]
 }
