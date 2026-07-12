@@ -52,8 +52,8 @@ logger = logging.getLogger(__name__)
 # `context_overlap`, `entailment` are unchanged. Sum is still 1.00.
 #
 # REFUSAL_THRESHOLD (below) was recalibrated against these weights in M0.3
-# (2026-07-10, same day): 0.725 → 0.700 — see the provenance block above the
-# constant.
+# (2026-07-10: 0.725 → 0.700) and again in M1.7 (2026-07-12, 100-doc corpus:
+# 0.700 → 0.650) — see the provenance block above the constant.
 DEFAULT_WEIGHTS = {
     "retriever": 0.20,
     "reranker": 0.20,
@@ -63,63 +63,50 @@ DEFAULT_WEIGHTS = {
     "grounding": 0.10,
 }
 
-# Threshold for refusal — RECALIBRATED 2026-07-10 (M0.3) TO 0.700 after the
-# M0 overhaul changed every part of the score's input distribution at once:
-# corpus rebuilt as luat_law_ctx_v2 (chunker misalignment fixed, 178 recovered
-# articles, parent-doc context), NLI premise selected per-claim (M0.1),
-# self-eval switched to a code-combined rubric (M0.1), and grounding added as
-# a 6th weighted signal (M0.2). Fresh Tier-2, 70 questions, 0 errors: 34
-# answer + 36 refuse (reports 20260710T085125Z criminal + 20260710T085328Z
-# general, analysis 20260710T085625Z_calibration).
+# Threshold for refusal — RECALIBRATED 2026-07-12 (M1.7) TO 0.650 at the
+# 100-doc multi-sector scale (collection luat_law_ctx_v3, 23.7K points).
+# Fresh Tier-2, 133 questions, 0 errors: criminal 41 + general 41 + sectors
+# 51 (reports 20260712T004159Z / 20260712T002745Z / 20260712T003539Z,
+# analysis 20260712T004208Z_calibration).
 #
-# For the first time the two distributions SEPARATE CLEANLY: top refuse-side
-# score is gen-802 at 0.6899 (down from 0.7045 — the improved signals pushed
-# the one scope-gate-clearing out-of-scope question further down), lowest
-# answer-side score is crim-203 at 0.7038 — a positive gap of 0.0139 where
-# every previous calibration had overlap (last one: −0.1347). t=0.700 is the
-# only sweep grid point inside that gap: refusal_recall 1.0, false_refusal
-# 0.0, youden 1.0 — it strictly dominates the old 0.725, which sat ABOVE the
-# gap and false-refused crim-202/203/302 (0.7038-0.7141) for no leak-safety
-# benefit. Margins at 0.700: +0.0101 below to gen-802 (the dangerous, leak
-# side) and −0.0038 up to crim-203 (thin, but drift there only causes a
-# benign false-refusal). Margins are within run-to-run noise (temperature
-# 0.1 generation, NLI variance) at n=70 — treat as provisional at the 6-doc
-# corpus and RECALIBRATE AT EVERY SCALE STEP (M1/M2 gates in
+# THE THRESHOLD'S JOB CHANGED AT THIS SCALE. At 6 docs the confidence gate
+# did scope work; at 100 docs the SCOPE GATE does it (20/21 expected-refuse
+# rows are refused there and never reach this threshold — calibration now
+# excludes those sentinel-0.0 rows from the sweep, scripts/
+# calibrate_threshold.py M1.7 methodology fix). The confidence gate's only
+# genuine customer is weak-evidence answers: exactly one expected-refuse row
+# cleared the scope gate — crim-406 ("Điều 999 BLHS", non-existent article)
+# at 0.625.
+#
+# t=0.650 is BOTH the grid Youden optimum AND the lowest leak-safe point:
+# refusal_recall 1.0 (crim-406 caught, margin 0.025), false_refusal 0.028
+# (3/107 — dd-201/ld-201/dn-201, ALL comparison-type: the known
+# reranker-on-comparison weakness, M3.4 in the plan; benign refusals),
+# youden 0.972, answer_precision 1.0. The old 0.700 false-refused 12/107
+# (0.1121) for zero extra leak-safety — the answer distribution's floor
+# dropped at 100 docs (min 0.4426 vs 0.7038 at 6 docs; more/harder
+# questions, denser distractors). Answer-side margin: nearest kept answer
+# hg-101 at 0.670 (+0.020). Both margins are within run-to-run noise —
+# provisional as always; RECALIBRATE AT EVERY SCALE STEP (M2 gate,
 # docs/Plan_Giai_Doan_Cuoi_2026-07-10.md).
 #
-# ── Previous calibration (2026-07-07, kept for provenance) ──
-# RE-VALIDATED 2026-07-07 WITH THE LIVE BGE RERANKER
-# (transformers<5 pin, commit 958a777). The 0.725 value was originally picked
-# while the 0.20-weight reranker signal was silently renormalized away (reranker
-# crashed on every medium/complex query); this re-run confirms it holds now that
-# the signal is real. Fresh Tier-2, 70 questions, 0 errors: 34 answer + 36 refuse
-# (reports 20260707T110621Z criminal + 20260707T111111Z general, analysis
-# 20260707T111144Z_calibration via scripts/calibrate_threshold.py).
+# Known residue owned by OTHER workstreams, NOT this threshold: 5 scope-gate
+# over-refusals (gen-301/304/802, dd-102/301 — root-cause B, classifier
+# workstream); comparison-type low scores (M3.4). Eval-label lesson: crim-401
+# /402 "refuse" labels were stale TWICE (SHTT and BHXH laws ARE in the
+# 100-doc corpus — the bot answered them correctly at 0.8453/0.7045); every
+# out-of-scope label must be verified against corpus_100docs.parquet.
 #
-# Grid Youden-optimal is t=0.675 (youden 0.9428, refusal_recall 0.9722,
-# false_refusal 0.0294) — but 0.675 LEAKS the one genuine out-of-scope refuse
-# question that clears the scope gate, gen-802 (land-dispute, score 0.7045):
-# refusal_recall drops from 1.0 to 0.9722. For a legal bot, answering an
-# out-of-scope question is worse than a conservative false-refusal, so we keep
-# the threshold in the leak-safe band (t > 0.7045). 0.725 is the lowest sweep
-# grid point that still refuses gen-802: refusal_recall 1.0, false_refusal
-# 0.0588 (crim-203 + crim-201), youden 0.9412 — within 0.0016 of the grid
-# optimum. New margin: the clean separation gap is now gen-802 (0.7045, top
-# refuse) → crim-104 (0.7291, lowest robustly-answered) = 0.0246 wide; 0.725
-# sits 0.0205 above gen-802 (fat leak-side cushion) and 0.0041 below crim-104
-# (thin, benign false-refuse side). The reranker did NOT collapse the answer
-# distribution (answer mean 0.8301); its only boundary effect is pushing
-# comparison-type crim-203 to ~0.53-0.57 (verified: retrieval succeeds — both
-# ground-truth murder articles present at top cosine 0.8333 — but the
-# cross-encoder scores every single chunk low (max 0.2015) because a comparison
-# answer synthesizes 2+ articles; stacked with a harsh self-eval draw + the
-# NLI-NEUTRAL-on-short-Vietnamese-claims weakness). crim-203 is a flagged
-# per-signal follow-up, not a threshold problem — rescuing it would need t<0.57
-# and leak every refuse question. (2026-07-10 note: the M0.1 per-claim NLI
-# premise + rubric self-eval fixes lifted crim-203 to 0.7038 — the follow-up
-# above is what made the clean separation possible.)
+# ── Previous calibration (M0.3, 2026-07-10, 6-doc corpus — kept for
+# provenance; full history in git and the roadmap doc) ──
+# 0.725 → 0.700 after the M0 overhaul (luat_law_ctx_v2 rebuild, per-claim
+# NLI premise, rubric self-eval, grounding as 6th signal). 70 questions,
+# 0 errors; first-ever clean separation: refuse max gen-802 0.6899 <
+# answer min crim-203 0.7038 (gap +0.0139); t=0.700 the only grid point in
+# the gap — refusal_recall 1.0, false_refusal 0.0, youden 1.0 (reports
+# 20260710T085125Z + 20260710T085328Z, analysis 20260710T085625Z).
 # Override per-deployment with CONFIDENCE_REFUSAL_THRESHOLD.
-REFUSAL_THRESHOLD = float(os.getenv("CONFIDENCE_REFUSAL_THRESHOLD", "0.700"))
+REFUSAL_THRESHOLD = float(os.getenv("CONFIDENCE_REFUSAL_THRESHOLD", "0.650"))
 
 REFUSAL_ANSWER = (
     "⚠️ **Tôi không tìm thấy đủ thông tin chính xác để trả lời câu hỏi này.**\n\n"

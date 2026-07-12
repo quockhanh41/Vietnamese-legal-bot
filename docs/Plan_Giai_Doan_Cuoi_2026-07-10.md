@@ -200,7 +200,7 @@ Baseline 6 docs = 1.670 chunks (~278 chunks/doc — đây là **worst case** vì
 | Milestone | Trạng thái | Ngày xong | Ghi chú |
 |---|---|---|---|
 | M0 — Nền sạch | ✅ Hoàn thành | 2026-07-10 | 6 commits (`5dd8f43`…). Nổi bật: 178 Điều khôi phục vào index; phân bố confidence lần đầu tách sạch (gap +0.0139); threshold 0.725→0.700 (refusal_recall 1.0, false_refusal 0.0). Chi tiết: roadmap doc mục "Trạng thái M0". |
-| M1 — 100 docs | 🔲 | | |
+| M1 — 100 docs | 🟨 M1.1–M1.8 xong; gate còn 1 mục | | **M1.7 XONG 2026-07-12**: threshold **0.700→0.650** trên Tier-2 sạch 133 câu / v3 (calibration `20260712T004208Z`). Vai trò threshold ĐỔI ở bậc 100 docs: scope gate từ chối 20/21 câu out-of-scope (sentinel 0.0, loại khỏi sweep — methodology fix `calibrate_threshold.py`); confidence gate chỉ còn bắt crim-406 (Điều 999 không tồn tại, 0.625). t=0.650: refusal_recall 1.0, false_refusal 0.028 (3/107 — toàn comparison-type, việc của M3.4), youden 0.972; 0.700 cũ false-refuse 12/107. Học phí: label OOS crim-401/402 stale LẦN 2 (SHTT + BHXH CÓ trong corpus) — viết lại lần cuối có verify parquet. **Gate M1 còn vướng: citation accuracy sectors 0.6667 < 0.85** (criminal 0.8922 ✓; recall ✓ −2.5/−2.9 điểm; refusal recall ✓ 21/21; per-sector ✓). Root-cause B (5 over-refusals scope gate: gen-301/304/802, dd-102/301) — workstream riêng đã duyệt. |
 | M2 — 600 docs | 🔲 | | |
 | M3 — SOTA theo số đo | 🔲 | | |
 | M4 — Memory + observability | 🔲 | | |

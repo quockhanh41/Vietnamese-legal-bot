@@ -137,10 +137,11 @@ def test_default_weights_and_threshold_unchanged():
 
     M0.2 (2026-07-10) intentionally updated DEFAULT_WEIGHTS to add the new
     `grounding` signal (retriever 0.25->0.20, llm_self_eval 0.30->0.25,
-    grounding +0.10 new). M0.3 (same day) recalibrated REFUSAL_THRESHOLD
-    0.725 -> 0.700 on fresh Tier-2 data (clean separation, gap 0.0139,
-    calibration report 20260710T085625Z) — this guard pins both on purpose;
-    any further change must come with a new calibration report."""
+    grounding +0.10 new). M1.7 (2026-07-12) recalibrated REFUSAL_THRESHOLD
+    0.700 -> 0.650 at the 100-doc scale (scope-gate-aware sweep, refusal
+    recall 1.0, false_refusal 0.028, calibration report 20260712T004208Z)
+    — this guard pins both on purpose; any further change must come with a
+    new calibration report."""
     assert DEFAULT_WEIGHTS == {
         "retriever": 0.20,
         "reranker": 0.20,
@@ -149,7 +150,7 @@ def test_default_weights_and_threshold_unchanged():
         "entailment": 0.10,
         "grounding": 0.10,
     }
-    assert REFUSAL_THRESHOLD == 0.700 or os.getenv("CONFIDENCE_REFUSAL_THRESHOLD")
+    assert REFUSAL_THRESHOLD == 0.650 or os.getenv("CONFIDENCE_REFUSAL_THRESHOLD")
 
 
 def test_default_weights_sum_to_one():
