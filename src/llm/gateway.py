@@ -19,40 +19,74 @@ litellm.telemetry = False
 class LLMGateway:
     """Unified LLM access through LiteLLM with automatic fallback."""
 
-    # Model fallback chain: Groq primary + fallback, then cross-provider (OpenAI) fallback
+    # Model fallback chain: Groq primary + fallback, then cross-provider $0
+    # fallbacks (M1.7: Groq TPD is per-ORGANIZATION — key rotation inside one
+    # org shares a single 100K/day bucket, so a second provider is the only
+    # real headroom). Order: same-day Groq capacity first, then Gemini free
+    # (biggest external quota), then OpenRouter free (~50 req/day account-wide
+    # across ALL :free models — a mop-up tail, not a workhorse).
     MODEL_CHAIN = [
         "groq/qwen/qwen3-32b",           # Primary: Qwen 3 32B, excellent Vietnamese
-        "groq/llama-3.3-70b-versatile",  # Fallback 1: Llama 70B
-        "openai/gpt-4o-mini",            # Fallback 2: cross-provider (only if OPENAI_API_KEY is set)
+        "groq/llama-3.3-70b-versatile",  # Fallback 1: Llama 70B (own TPD bucket)
+        "gemini/gemini-3.5-flash",       # Fallback 2: Google AI Studio free tier
+                                         # (2.5-flash is closed to new projects
+                                         # — 404 on every key created after the
+                                         # cutoff; 3.5-flash verified on all
+                                         # keys 2026-07-12)
+        "openrouter/qwen/qwen3-next-80b-a3b-instruct:free",   # same family as primary
+        "openrouter/meta-llama/llama-3.3-70b-instruct:free",  # same weights as Fallback 1
+        "openai/gpt-4o-mini",            # last resort (only if OPENAI_API_KEY is set)
     ]
 
     def __init__(self):
-        # GROQ_API_KEYS: comma-separated list rotated on rate-limit errors
-        # (Groq caps tokens-per-day PER KEY — with one key a long eval run
-        # dies mid-flight; see docs/Danh_Gia_va_Roadmap §calibration 2026-07-07).
-        # Falls back to the single GROQ_API_KEY.
-        keys_raw = os.getenv("GROQ_API_KEYS", "") or os.getenv("GROQ_API_KEY", "")
-        self.groq_keys = [k.strip() for k in keys_raw.split(",") if k.strip()]
-        self.groq_key = self.groq_keys[0] if self.groq_keys else ""
+        # Per-provider key rotation: *_API_KEYS is a comma-separated list
+        # rotated on rate-limit errors; falls back to the singular *_API_KEY.
+        # (NOTE 2026-07-11: Groq TPD is per-ORG, not per-key — rotation only
+        # helps if the keys belong to different organizations. Gemini and
+        # OpenRouter free quotas are per-account, so extra accounts' keys DO
+        # add capacity there.)
+        self.groq_keys = self._env_keys("GROQ_API_KEYS", "GROQ_API_KEY")
+        self.gemini_keys = self._env_keys("GEMINI_API_KEYS", "GEMINI_API_KEY")
+        self.openrouter_keys = self._env_keys("OPENROUTER_API_KEYS", "OPENROUTER_API_KEY")
         self.openai_key = os.getenv("OPENAI_API_KEY", "")
 
+    @staticmethod
+    def _env_keys(plural_var: str, singular_var: str) -> list:
+        """Comma-separated key list from plural_var, else [singular_var]."""
+        raw = os.getenv(plural_var, "") or os.getenv(singular_var, "")
+        return [k.strip() for k in raw.split(",") if k.strip()]
+
+    @staticmethod
+    def _provider(model: str) -> str:
+        """LiteLLM provider prefix — 'openrouter/openai/gpt-oss:free' is an
+        openrouter model, so route on the prefix, never on substrings."""
+        return model.split("/", 1)[0]
+
     def _is_thinking_model(self, model: str) -> bool:
-        """Groq Qwen3 models emit <think> blocks; reasoning_effort='none' disables them."""
-        return "qwen3" in model
+        """Models that think by default and need reasoning_effort='none' on
+        small token budgets: Groq Qwen3 emits <think> blocks; Gemini
+        2.5+/3.x burns the whole budget thinking and returns EMPTY content
+        (verified live on gemini-3.5-flash, max_tokens=100 → finish=length,
+        content=''). NOT the OpenRouter Qwen3 in the chain — it's an
+        instruct (non-thinking) variant that would 400 on the param."""
+        provider = self._provider(model)
+        if provider == "groq":
+            return "qwen3" in model
+        return provider == "gemini"
 
     def _usable_models(self, models_to_try: list) -> list:
         """Skip models whose provider has no API key configured."""
-        usable = []
-        for m in models_to_try:
-            if ("openai" in m or "gpt" in m) and not self.openai_key:
-                continue
-            usable.append(m)
-        return usable
+        return [m for m in models_to_try if any(self._keys_for(m))]
 
     def _keys_for(self, model: str) -> list:
-        """API keys to try for a model — all Groq keys (rotation), or the OpenAI key."""
-        if "openai" in model or "gpt" in model:
+        """API keys to try for a model — the provider's full rotation list."""
+        provider = self._provider(model)
+        if provider == "openai":
             return [self.openai_key]
+        if provider == "gemini":
+            return self.gemini_keys
+        if provider == "openrouter":
+            return self.openrouter_keys
         return self.groq_keys or [""]
 
     @staticmethod
