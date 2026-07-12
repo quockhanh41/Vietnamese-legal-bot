@@ -233,6 +233,12 @@ class EnrichmentPipeline:
         # Step 6: Build index
         self.metadata_store.build_index()
 
+        # Step 7 (M2.5): push known is_in_effect onto chunk payloads so
+        # retrieval can filter server-side (exclude_superseded=True) instead
+        # of relying on a client-side post-filter.
+        n_backfilled = self._backfill_is_in_effect()
+        print(f"  ↳ is_in_effect backfilled on {n_backfilled} docs")
+
         # Finalize
         self.result.finished_at = datetime.now().isoformat()
         self.result.elapsed_seconds = (datetime.now() - start_time).total_seconds()
@@ -245,6 +251,20 @@ class EnrichmentPipeline:
         return self.result
 
     # ── Helpers ─────────────────────────────────────────────────
+
+    def _backfill_is_in_effect(self) -> int:
+        """Push each doc's known is_in_effect onto its chunk payloads so
+        retrieval can filter server-side (LegalVectorStore.search_*(
+        exclude_superseded=True)). Only docs with a KNOWN status (True/False)
+        are written; None (unknown) is left unset so the filter keeps it
+        (fail-open).
+        """
+        n = 0
+        for doc_id, meta in self.metadata_store.get_all_documents().items():
+            if meta.is_in_effect is not None:
+                self.vector_store.set_is_in_effect(doc_id, bool(meta.is_in_effect))
+                n += 1
+        return n
 
     def _collect_documents(self) -> Dict[int, Dict[str, Any]]:
         """

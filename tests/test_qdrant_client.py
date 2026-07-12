@@ -413,3 +413,37 @@ def test_scroll_docs_walks_all_pages():
     s.client = fake
     out = s.scroll_docs(doc_ids=[])
     assert {p.id for p in out} == {"p1", "p2", "p3"}
+
+
+# ── M2.5: is_in_effect server-side filter + backfill setter ─────────────────
+
+def test_build_filter_exclude_superseded_adds_must_not():
+    from src.db.qdrant_client import LegalVectorStore
+    s = LegalVectorStore.__new__(LegalVectorStore)
+    flt = s._build_filter({"legal_type": "Luật"}, exclude_superseded=True)
+    assert any(getattr(c, "key", None) == "is_in_effect" for c in (flt.must_not or []))
+    # keeps True + absent: only value False is excluded
+    mn = [c for c in flt.must_not if c.key == "is_in_effect"][0]
+    assert mn.match.value is False
+
+
+def test_build_filter_none_conditions_but_exclude():
+    from src.db.qdrant_client import LegalVectorStore
+    s = LegalVectorStore.__new__(LegalVectorStore)
+    flt = s._build_filter(None, exclude_superseded=True)
+    assert flt.must_not and flt.must_not[0].key == "is_in_effect"
+
+
+def test_set_is_in_effect_calls_set_payload():
+    from src.db.qdrant_client import LegalVectorStore
+    s = LegalVectorStore.__new__(LegalVectorStore)
+    s.collection_name = "test"
+    class _Rec:
+        def __init__(self): self.calls = []
+        def set_payload(self, **kw): self.calls.append(kw)
+    s.client = _Rec()
+    s.set_is_in_effect(10, False)
+    call = s.client.calls[0]
+    assert call["payload"] == {"is_in_effect": False}
+    cond = call["points"].must[0]
+    assert cond.key == "document_id" and cond.match.value == 10

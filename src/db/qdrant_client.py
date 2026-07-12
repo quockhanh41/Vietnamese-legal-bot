@@ -283,9 +283,10 @@ class LegalVectorStore:
         query_vector: List[float],
         top_k: int = 20,
         filter_conditions: Optional[Dict] = None,
+        exclude_superseded: bool = False,
     ) -> List[SearchResult]:
         """Pure dense (semantic) search."""
-        query_filter = self._build_filter(filter_conditions) if filter_conditions else None
+        query_filter = self._build_filter(filter_conditions, exclude_superseded=exclude_superseded)
 
         response = self.client.query_points(
             collection_name=self.collection_name,
@@ -303,9 +304,10 @@ class LegalVectorStore:
         sparse_vector: Dict[int, float],
         top_k: int = 20,
         filter_conditions: Optional[Dict] = None,
+        exclude_superseded: bool = False,
     ) -> List[SearchResult]:
         """Pure sparse (BM25-like) search."""
-        query_filter = self._build_filter(filter_conditions) if filter_conditions else None
+        query_filter = self._build_filter(filter_conditions, exclude_superseded=exclude_superseded)
 
         indices = list(sparse_vector.keys())
         values = list(sparse_vector.values())
@@ -328,6 +330,7 @@ class LegalVectorStore:
         top_k: int = 20,
         fusion_strategy: str = "rrf",
         filter_conditions: Optional[Dict] = None,
+        exclude_superseded: bool = False,
     ) -> List[SearchResult]:
         """
         Hybrid search combining dense + sparse via Reciprocal Rank Fusion (RRF).
@@ -341,11 +344,14 @@ class LegalVectorStore:
             top_k: Number of results to return
             fusion_strategy: 'rrf' (default) — server-side Reciprocal Rank Fusion
             filter_conditions: Optional metadata filter dict
+            exclude_superseded: When True, drops chunks whose document is known
+                superseded (is_in_effect == False). Docs with unknown status
+                (field absent/None) are kept — fail-open (see _build_filter).
 
         Returns:
             Fused, deduplicated search results
         """
-        query_filter = self._build_filter(filter_conditions) if filter_conditions else None
+        query_filter = self._build_filter(filter_conditions, exclude_superseded=exclude_superseded)
 
         indices = list(sparse_vector.keys())
         values = list(sparse_vector.values())
@@ -372,19 +378,41 @@ class LegalVectorStore:
 
         return [self._to_search_result(p) for p in response.points]
 
-    def _build_filter(self, conditions: Dict) -> Filter:
-        """Build Qdrant filter from conditions dict.
+    def _build_filter(
+        self,
+        conditions: Optional[Dict] = None,
+        exclude_superseded: bool = False,
+    ) -> Optional[Filter]:
+        """Build a Qdrant filter from a conditions dict, optionally excluding
+        superseded chunks server-side.
+
         Example: {"legal_type": "Luật", "issuing_authority": "Quốc hội"}
+
+        exclude_superseded adds a must_not on is_in_effect == False. This
+        keeps points where is_in_effect is True OR absent/None (fail-open:
+        docs whose status is still unknown are not silently dropped) — only
+        chunks explicitly known superseded are excluded.
         """
-        must_conditions = []
-        for key, value in conditions.items():
-            must_conditions.append(
-                FieldCondition(
-                    key=key,
-                    match=MatchValue(value=value),
-                )
-            )
-        return Filter(must=must_conditions)
+        must = []
+        for key, value in (conditions or {}).items():
+            must.append(FieldCondition(key=key, match=MatchValue(value=value)))
+        must_not = []
+        if exclude_superseded:
+            must_not.append(FieldCondition(key="is_in_effect", match=MatchValue(value=False)))
+        if not must and not must_not:
+            return None
+        return Filter(must=must or None, must_not=must_not or None)
+
+    def set_is_in_effect(self, doc_id: int, value: bool) -> None:
+        """Backfill the is_in_effect flag onto every chunk payload of `doc_id`
+        so exclude_superseded=True searches can filter it server-side.
+        """
+        self.client.set_payload(
+            collection_name=self.collection_name,
+            payload={"is_in_effect": value},
+            points=Filter(must=[FieldCondition(key="document_id", match=MatchValue(value=doc_id))]),
+            wait=True,
+        )
 
     def _to_search_result(self, point: ScoredPoint) -> SearchResult:
         """Convert ScoredPoint to SearchResult."""
