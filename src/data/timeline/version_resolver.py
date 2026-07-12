@@ -38,6 +38,28 @@ def _normalize_doc_number(raw: str) -> str:
     return s.lstrip("0") or s
 
 
+# Legal-hierarchy rank by title prefix. A lower-rank document can never
+# REPLACE a higher-rank one: NĐ 76/2023 (guidance decree for Luật PCBLGĐ
+# 2022) carried the law's name in its extracted replaced_laws clause and —
+# being newer — passed the date direction guard, marking the CURRENT law
+# replaced by its own implementing decree (measured on the 100-doc corpus,
+# 2026-07-12). Bộ luật and Luật share a tier (codes are laws); unknown
+# prefixes rank highest so the guard never blocks a match it can't judge.
+_TYPE_RANKS = [
+    (re.compile(r"^\s*(bộ\s*luật|luật)\b", re.IGNORECASE), 3),
+    (re.compile(r"^\s*(nghị\s*quyết|pháp\s*lệnh)\b", re.IGNORECASE), 3),
+    (re.compile(r"^\s*nghị\s*định\b", re.IGNORECASE), 2),
+    (re.compile(r"^\s*(thông\s*tư|quyết\s*định)\b", re.IGNORECASE), 1),
+]
+
+
+def _type_rank(law_name: str) -> int:
+    for pattern, rank in _TYPE_RANKS:
+        if pattern.search(law_name or ""):
+            return rank
+    return 3  # unknown → treat as top rank (guard stays out of the way)
+
+
 # Marks the boundary after which numbers in a replacement clause refer to
 # laws that AMENDED the replaced law, not to laws being replaced: "Luật BHXH
 # số 58/2014/QH13 ĐÃ ĐƯỢC SỬA ĐỔI, BỔ SUNG một số điều theo Luật số
@@ -220,12 +242,19 @@ class VersionResolver:
         norm = self._normalize_name(tl.law_name)
         own_num = _normalize_doc_number(tl.doc_number) if tl.doc_number else None
 
+        own_rank = _type_rank(tl.law_name)
+
         for other in self.timelines:
             if other.doc_id == doc_id:
                 continue
             if _AMENDMENT_TITLE_RE.search(other.law_name or ""):
                 # Amendments modify, they don't replace — e.g. "Luật sửa đổi
                 # BLTTHS 2025" must not mark BLTTHS 2015 expired.
+                continue
+            if _type_rank(other.law_name) < own_rank:
+                # Hierarchy guard: a decree/circular can never replace a law,
+                # whatever its extracted clauses claim (applies to the number
+                # path too — extraction garbage is not a legal act).
                 continue
             for replaced in (other.replaced_laws or []):
                 clause_nums = _extract_doc_numbers(replaced)

@@ -14,7 +14,12 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from scripts.eval import aggregate_tier2, failed_question_ids, merge_tier2_rows
+from scripts.eval import (
+    aggregate_tier2,
+    failed_question_ids,
+    merge_tier2_rows,
+    row_citation_accuracy,
+)
 
 
 def _q(qid):
@@ -74,6 +79,33 @@ class TestMergeTier2Rows:
         new = [_row("a-1")]
         merged = merge_tier2_rows(QUESTIONS, prev, new)
         assert [r["id"] for r in merged] == ["a-1", "a-2", "a-3", "a-4"]
+
+
+class TestRowCitationAccuracy:
+    """Citation accuracy is only measurable when the bot actually answered.
+
+    A refusal has no citations to grade and is already priced into
+    false_refusal_rate — scoring it 0 double-counts the failure (M1 gate
+    discovery: 10 of 16 zero-citation sectors rows were refusals, dragging
+    0.83 down to 0.67)."""
+
+    EXPECTED = [{"doc_id": 1, "article": "Điều 117"}]
+
+    def test_refused_row_is_none_not_zero(self):
+        assert row_citation_accuracy(
+            "answer", True, "⚠️ Tôi không tìm thấy đủ thông tin...", self.EXPECTED) is None
+
+    def test_answered_row_is_scored(self):
+        assert row_citation_accuracy(
+            "answer", False, "Theo Điều 117 Bộ luật Dân sự...", self.EXPECTED) == 1.0
+
+    def test_answered_row_missing_citation_scores_zero(self):
+        assert row_citation_accuracy(
+            "answer", False, "Hợp đồng cần điều kiện sau...", self.EXPECTED) == 0.0
+
+    def test_refuse_expected_row_is_none(self):
+        assert row_citation_accuracy(
+            "refuse", False, "Theo Điều 117...", self.EXPECTED) is None
 
 
 class TestAggregateTier2:

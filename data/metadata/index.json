@@ -3,12 +3,12 @@
   "amendment_laws": 12,
   "base_laws": 88,
   "with_effective_date": 97,
-  "currently_in_effect": 81,
+  "currently_in_effect": 82,
   "total_graph_nodes": 4970,
   "total_graph_edges": 4943,
   "total_amendments": 629,
   "total_articles_amended": 312,
-  "last_enriched": "2026-07-10T22:47:46.699256",
+  "last_enriched": "2026-07-12T08:21:14.656013",
   "documents": [
     {
       "doc_id": 2463,
@@ -492,7 +492,7 @@
       "title": "Nghị định 144/2021/NĐ-CP quy định về xử phạt vi phạm hành chính trong lĩnh vực a",
       "is_amendment": false,
       "effective_date": null,
-      "is_in_effect": false,
+      "is_in_effect": null,
       "ref_count": 0,
       "amendment_count": 0
     },
@@ -609,7 +609,7 @@
       "title": "Luật Phòng, chống bạo lực gia đình 2022",
       "is_amendment": false,
       "effective_date": "2023-07-01",
-      "is_in_effect": false,
+      "is_in_effect": true,
       "ref_count": 20,
       "amendment_count": 0
     },
@@ -897,7 +897,7 @@
       "title": "Luật Đầu tư 2025",
       "is_amendment": false,
       "effective_date": null,
-      "is_in_effect": false,
+      "is_in_effect": null,
       "ref_count": 47,
       "amendment_count": 0
     },

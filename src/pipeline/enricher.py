@@ -207,10 +207,14 @@ class EnrichmentPipeline:
                     # expired. VersionResolver.find_replacement already does
                     # this name-matching — it just wasn't wired in before.
                     replacement = resolver.find_replacement(doc_id)
-                    if replacement and replacement.effective_date and meta.is_in_effect:
+                    # `is not False`: flip True AND None (unknown) — a found
+                    # replacement is positive knowledge either way; only skip
+                    # docs already known superseded (their own expiry text).
+                    if replacement and replacement.effective_date and meta.is_in_effect is not False:
+                        if meta.is_in_effect:
+                            self.result.currently_in_effect -= 1
                         meta.is_in_effect = False
                         meta.expiry_date = meta.expiry_date or replacement.effective_date.isoformat()
-                        self.result.currently_in_effect -= 1
 
                     self.metadata_store.save_document(doc_id, meta)
 

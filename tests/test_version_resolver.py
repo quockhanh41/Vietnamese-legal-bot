@@ -152,3 +152,53 @@ def test_amendment_titled_doc_never_replaces():
                 replaced=["Bộ luật Tố tụng hình sự số 101/2015/QH13"])
     r = VersionResolver([base, amend])
     assert r.find_replacement(296884) is None
+
+
+# ── hierarchy guard (M1 follow-up, 2026-07-12) ─────────────────────────────
+#
+# Measured failure on the 100-doc corpus: NĐ 76/2023 (the guidance decree
+# for Luật PCBLGĐ 2022) carried the LAW's name in its extracted
+# replaced_laws clause. The name fallback's newer-date direction guard
+# passed (decree is newer) and the CURRENT law was marked replaced by its
+# own implementing decree — hidden from every answer by the temporal
+# filter (hg-001/hg-101/hg-301 citation zeros). A lower-rank document
+# (Nghị định/Thông tư/Quyết định) can never replace a higher-rank one
+# (Luật/Bộ luật) in the legal hierarchy.
+
+def test_guidance_decree_cannot_replace_its_law_name_fallback():
+    law = _tl(490095, "Luật Phòng, chống bạo lực gia đình 2022",
+              num="13/2022/QH15", eff=date(2023, 7, 1))
+    decree = _tl(557470, "Nghị định 76/2023/NĐ-CP hướng dẫn Luật Phòng, "
+                 "chống bạo lực gia đình", num="76/2023/NĐ-CP",
+                 eff=date(2023, 12, 25),
+                 replaced=["Luật Phòng, chống bạo lực gia đình"])
+    r = VersionResolver([law, decree])
+    assert r.find_replacement(490095) is None
+
+
+def test_decree_cannot_replace_law_even_with_explicit_number():
+    """Extraction garbage can put the law's own number in a decree's
+    clause — the hierarchy guard must hold on the number path too."""
+    law = _tl(490095, "Luật Phòng, chống bạo lực gia đình 2022",
+              num="13/2022/QH15", eff=date(2023, 7, 1))
+    decree = _tl(557470, "Nghị định 76/2023/NĐ-CP hướng dẫn",
+                 num="76/2023/NĐ-CP", eff=date(2023, 12, 25),
+                 replaced=["Luật Phòng, chống bạo lực gia đình số 13/2022/QH15"])
+    r = VersionResolver([law, decree])
+    assert r.find_replacement(490095) is None
+
+
+def test_law_still_replaces_law_and_decree_still_replaces_decree():
+    old_law = _tl(1, "Luật Việc làm 2013", num="38/2013/QH13",
+                  eff=date(2015, 1, 1))
+    new_law = _tl(2, "Luật Việc làm 2025", num="74/2025/QH15",
+                  eff=date(2026, 1, 1),
+                  replaced=["Luật Việc làm số 38/2013/QH13"])
+    old_nd = _tl(3, "Nghị định 28/2015/NĐ-CP hướng dẫn Luật Việc làm",
+                 num="28/2015/NĐ-CP", eff=date(2015, 5, 1))
+    new_nd = _tl(4, "Nghị định 999/2026/NĐ-CP hướng dẫn Luật Việc làm",
+                 num="999/2026/NĐ-CP", eff=date(2026, 3, 1),
+                 replaced=["Nghị định số 28/2015/NĐ-CP"])
+    r = VersionResolver([old_law, new_law, old_nd, new_nd])
+    assert r.find_replacement(1) is new_law
+    assert r.find_replacement(3) is new_nd

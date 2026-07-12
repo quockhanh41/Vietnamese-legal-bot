@@ -40,7 +40,11 @@ class DocumentMeta:
     # Temporal
     effective_date: Optional[str] = None   # ISO format
     expiry_date: Optional[str] = None
-    is_in_effect: bool = False
+    # None = unknown (kept by the temporal filter, which excludes only an
+    # explicit False). The old `False` default silently hid current docs
+    # whose effective_date extraction failed (Luật Đầu tư 2025, NĐ 144/2021
+    # on the 100-doc corpus, 2026-07-12).
+    is_in_effect: Optional[bool] = None
     replaced_laws: List[str] = field(default_factory=list)
     version_chain: List[str] = field(default_factory=list)  # Ordered list of law names
 

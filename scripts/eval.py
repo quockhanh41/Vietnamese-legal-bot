@@ -216,6 +216,25 @@ def _aggregate_tier1(rows: List[Dict]) -> Dict:
 
 # ── Tier 2: Answer/refusal eval ───────────────────────────────────────────
 
+def row_citation_accuracy(
+    expected_behavior: Optional[str],
+    refused: bool,
+    answer_text: str,
+    expected_articles: List[Dict],
+) -> Optional[float]:
+    """Citation accuracy for one Tier-2 row, or None when not measurable.
+
+    None when the question isn't an answer-test OR the bot refused: a
+    refusal carries no citations to grade and is already priced into
+    false_refusal_rate — scoring it 0 here double-counts the failure and
+    conflates two metrics (M1 gate discovery, 2026-07-12: 10 of 16
+    zero-citation sectors rows were runtime refusals, dragging the true
+    ~0.83 down to a reported 0.67).
+    """
+    if expected_behavior != "answer" or refused:
+        return None
+    return citation_accuracy(answer_text, expected_articles)
+
 def run_tier2(
     questions: List[Dict],
     pipeline: AdaptiveRAGPipeline,
@@ -252,9 +271,8 @@ def run_tier2(
                 "confidence_label": resp.confidence,
                 "pipeline_used": resp.pipeline_used,
                 "latency_ms": round(resp.latency_ms or elapsed_ms, 1),
-                "citation_accuracy": (
-                    citation_accuracy(resp.answer, expected_articles)
-                    if expected_behavior == "answer" else None
+                "citation_accuracy": row_citation_accuracy(
+                    expected_behavior, resp.refused, resp.answer, expected_articles
                 ),
             })
         else:
