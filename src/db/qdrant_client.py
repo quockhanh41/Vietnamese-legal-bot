@@ -94,6 +94,11 @@ class LegalVectorStore:
     SPARSE_VECTOR_NAME = "sparse"
     VECTOR_DIM = 1024  # BGE-M3
 
+    # M2.3: fields projected by get_document_index()'s scroll — doc-level
+    # metadata only, deliberately excludes chunk_text (that's the whole
+    # point: O(docs) memory instead of O(chunks)).
+    _DOC_INDEX_FIELDS = ["document_id", "document_title", "document_number", "legal_type", "sector"]
+
     def __init__(
         self,
         url: Optional[str] = None,
@@ -397,6 +402,64 @@ class LegalVectorStore:
             document_id=payload.get("document_id"),
             parent_chunk_text=payload.get("parent_chunk_text"),
         )
+
+    def get_document_index(self) -> Dict[int, Dict]:
+        """One projected doc-level scroll (no chunk_text). {doc_id: {title,number,type,sector}}."""
+        index: Dict[int, Dict] = {}
+        offset = None
+        while True:
+            points, offset = self.client.scroll(
+                collection_name=self.collection_name, limit=256, offset=offset,
+                with_payload=self._DOC_INDEX_FIELDS, with_vectors=False)
+            if not points:
+                break
+            for p in points:
+                payload = p.payload or {}
+                doc_id = payload.get("document_id")
+                if doc_id is None or doc_id in index:
+                    continue
+                index[doc_id] = {k: payload.get(k) for k in
+                                 ("document_title", "document_number", "legal_type", "sector")}
+            if offset is None:
+                break
+        return index
+
+    def scroll_article(self, doc_ids: List[int], article_number: str, cap: int = 8) -> List[SearchResult]:
+        """Server-side filtered scroll: document_id in doc_ids AND article_number == value."""
+        must = [FieldCondition(key="article_number", match=MatchValue(value=article_number))]
+        if doc_ids:
+            must.append(FieldCondition(key="document_id", match=models.MatchAny(any=list(doc_ids))))
+        points, _ = self.client.scroll(
+            collection_name=self.collection_name, scroll_filter=Filter(must=must),
+            limit=cap, with_payload=True, with_vectors=False)
+        return [self._point_to_result(p) for p in points]
+
+    def scroll_docs(self, doc_ids: List[int], limit_per: int = 512):
+        """Raw points for the lenient fallback (keeps chunk_text/article), filtered by document_id."""
+        if not doc_ids:
+            flt = None
+        else:
+            flt = Filter(must=[FieldCondition(key="document_id", match=models.MatchAny(any=list(doc_ids)))])
+        out, offset = [], None
+        while True:
+            points, offset = self.client.scroll(
+                collection_name=self.collection_name, scroll_filter=flt,
+                limit=limit_per, offset=offset, with_payload=True, with_vectors=False)
+            out.extend(points)
+            if offset is None:
+                break
+        return out
+
+    def _point_to_result(self, point) -> SearchResult:
+        payload = point.payload or {}
+        return SearchResult(
+            point_id=str(point.id), score=1.0, chunk_text=payload.get("chunk_text", ""),
+            document_title=payload.get("document_title", ""),
+            document_number=payload.get("document_number", ""),
+            legal_type=payload.get("legal_type", ""), article=payload.get("article"),
+            chapter=payload.get("chapter"), url=payload.get("url"),
+            document_id=payload.get("document_id"),
+            parent_chunk_text=payload.get("parent_chunk_text"))
 
     def list_documents(
         self,

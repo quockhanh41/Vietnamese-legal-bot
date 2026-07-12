@@ -274,3 +274,142 @@ def test_create_collection_quantized_enables_int8_and_on_disk():
     assert qc.scalar.always_ram is True
     dense = store.client.last_vectors_config[LegalVectorStore.DENSE_VECTOR_NAME]
     assert dense.on_disk is True
+
+
+# ── get_document_index / scroll_article / scroll_docs: server-side helpers ──
+# (M2.3 — citation lookup no longer needs a client-side full-collection
+# chunk cache; these scroll server-side using the document_id/article_number
+# payload indexes created in _create_payload_indexes().)
+
+class _FakePoint:
+    def __init__(self, pid, payload): self.id, self.payload = pid, payload
+
+
+def _seed_points():
+    return [
+        _FakePoint("p1", {"document_id": 10, "document_title": "Bộ luật Hình sự",
+                          "document_number": "100/2015/QH13", "legal_type": "Luật",
+                          "sector": "hinh_su", "article": "Điều 173", "article_number": "173",
+                          "chunk_text": "Điều 173. Tội trộm cắp..."}),
+        _FakePoint("p2", {"document_id": 10, "document_title": "Bộ luật Hình sự",
+                          "document_number": "100/2015/QH13", "legal_type": "Luật",
+                          "sector": "hinh_su", "article": "Điều 40", "article_number": "40",
+                          "chunk_text": "Điều 40. Tử hình..."}),
+        _FakePoint("p3", {"document_id": 20, "document_title": "Bộ luật Lao động",
+                          "document_number": "45/2019/QH14", "legal_type": "Luật",
+                          "sector": "lao_dong", "article": "Điều 40", "article_number": "40",
+                          "chunk_text": "Điều 40. Nghĩa vụ..."}),
+    ]
+
+
+def _match_filter(payload, flt):
+    """Minimal Qdrant Filter evaluator for must (MatchValue / MatchAny) + must_not."""
+    if flt is None: return True
+    for c in (flt.must or []):
+        val = payload.get(c.key)
+        m = c.match
+        if hasattr(m, "any"):
+            if val not in m.any: return False
+        elif val != m.value:
+            return False
+    for c in (getattr(flt, "must_not", None) or []):
+        if payload.get(c.key) == c.match.value: return False
+    return True
+
+
+def _install_scroll(fake, points):
+    def scroll(collection_name, scroll_filter=None, limit=256, offset=None,
+               with_payload=True, with_vectors=False):
+        matched = [p for p in points if _match_filter(p.payload, scroll_filter)]
+        # honor projected payload (list of fields) by trimming
+        if isinstance(with_payload, list):
+            matched = [_FakePoint(p.id, {k: p.payload.get(k) for k in with_payload}) for p in matched]
+        return matched, None
+    fake.scroll = scroll
+
+
+def _install_paginated_scroll(fake, points, page_size=2):
+    """Fake scroll that returns `page_size` points per call, advancing an
+    integer offset cursor and returning offset=None only on the last page —
+    so the store's `while True: ... if offset is None: break` loop is exercised
+    across multiple pages (real Qdrant behavior)."""
+    def scroll(collection_name, scroll_filter=None, limit=256, offset=None,
+               with_payload=True, with_vectors=False):
+        matched = [p for p in points if _match_filter(p.payload, scroll_filter)]
+        if isinstance(with_payload, list):
+            matched = [_FakePoint(p.id, {k: p.payload.get(k) for k in with_payload}) for p in matched]
+        start = offset or 0
+        page = matched[start:start + page_size]
+        next_off = start + page_size
+        return page, (next_off if next_off < len(matched) else None)
+    fake.scroll = scroll
+
+
+def _store_with_points(points):
+    from src.db.qdrant_client import LegalVectorStore
+    s = LegalVectorStore.__new__(LegalVectorStore)
+    s.collection_name = "test"
+    fake = _FakeQdrantClient()
+    _install_scroll(fake, points)
+    s.client = fake
+    return s
+
+
+def test_get_document_index_projects_doc_level():
+    s = _store_with_points(_seed_points())
+    idx = s.get_document_index()
+    assert set(idx.keys()) == {10, 20}
+    assert idx[10]["document_title"] == "Bộ luật Hình sự"
+    assert idx[10]["sector"] == "hinh_su"
+    assert "chunk_text" not in idx[10]  # not retained
+
+
+def test_scroll_article_filters_by_doc_and_number():
+    s = _store_with_points(_seed_points())
+    hits = s.scroll_article(doc_ids=[10], article_number="40")
+    assert [h.point_id for h in hits] == ["p2"]  # not p3 (doc 20), not p1 (art 173)
+
+
+def test_scroll_article_all_docs_when_empty():
+    s = _store_with_points(_seed_points())
+    hits = s.scroll_article(doc_ids=[], article_number="40")
+    assert {h.point_id for h in hits} == {"p2", "p3"}
+
+
+def test_get_document_index_paginates_and_dedups_first_wins():
+    pts = [
+        _FakePoint("a1", {"document_id": 10, "document_title": "BLHS (first)",
+                          "document_number": "100/2015/QH13", "legal_type": "Luật", "sector": "hinh_su"}),
+        _FakePoint("a2", {"document_id": 20, "document_title": "BLLĐ",
+                          "document_number": "45/2019/QH14", "legal_type": "Luật", "sector": "lao_dong"}),
+        _FakePoint("a3", {"document_id": 30, "document_title": "Luật Đất đai",
+                          "document_number": "31/2024/QH15", "legal_type": "Luật", "sector": "dat_dai"}),
+        _FakePoint("a4", {"document_id": 40, "document_title": "Luật DN",
+                          "document_number": "59/2020/QH14", "legal_type": "Luật", "sector": "doanh_nghiep"}),
+        # duplicate doc 10 on a later page with a DIFFERENT title — first-seen must win
+        _FakePoint("a5", {"document_id": 10, "document_title": "BLHS (later dup)",
+                          "document_number": "100/2015/QH13", "legal_type": "Luật", "sector": "hinh_su"}),
+    ]
+    from src.db.qdrant_client import LegalVectorStore
+    s = LegalVectorStore.__new__(LegalVectorStore)
+    s.collection_name = "test"
+    fake = _FakeQdrantClient()
+    _install_paginated_scroll(fake, pts, page_size=2)
+    s.client = fake
+    idx = s.get_document_index()
+    assert set(idx.keys()) == {10, 20, 30, 40}          # all pages walked
+    assert idx[10]["document_title"] == "BLHS (first)"  # first-seen wins across pages
+
+
+def test_scroll_docs_walks_all_pages():
+    """scroll_docs must follow the offset cursor and return every point across
+    pages (not just the first page) — same hot-path loop as get_document_index."""
+    pts = _seed_points()  # 3 points -> spans 2 pages at page_size=2
+    from src.db.qdrant_client import LegalVectorStore
+    s = LegalVectorStore.__new__(LegalVectorStore)
+    s.collection_name = "test"
+    fake = _FakeQdrantClient()
+    _install_paginated_scroll(fake, pts, page_size=2)
+    s.client = fake
+    out = s.scroll_docs(doc_ids=[])
+    assert {p.id for p in out} == {"p1", "p2", "p3"}
