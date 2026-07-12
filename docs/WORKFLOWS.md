@@ -80,7 +80,7 @@ Hai quy ước dễ trượt khi đọc code:
   hiệu bị loại + chuẩn hoá lại trọng số); `0.0` nghĩa là "có claim và tất cả đều fail".
   Nhầm hai giá trị này sẽ phạt oan các câu trả lời ngắn.
 - **`passed` chỉ phụ thuộc contradiction**: grounding/citation lỗi chỉ sinh warning.
-  Ngưỡng từ chối 0.700 được calibrate trên hành vi đó — đổi `passed` là phải
+  Ngưỡng từ chối 0.650 (M1.7) được calibrate trên hành vi đó — đổi `passed` là phải
   recalibrate.
 
 ---

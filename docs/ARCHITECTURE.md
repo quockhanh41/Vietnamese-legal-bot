@@ -26,19 +26,19 @@ Hệ thống gồm 3 tiến trình khi chạy (xem `docker-compose.yml` / `Makef
                                                                             │
                                               ┌─────────────┬──────────────┼─────────────┐
                                               ▼             ▼              ▼             ▼
-                                        Qdrant Cloud   BGE-M3        BGE-reranker   LLM (Groq
-                                        (vectors)      (embedder)    + mDeBERTa NLI  Qwen3-32B)
+                                        Qdrant Cloud   BGE-M3        BGE-reranker   LLM chain (Groq
+                                        (vectors)      (embedder)    + mDeBERTa NLI  → Gemini → OpenRouter)
 ```
 
 Corpus hiện có 2 thế hệ song song trong Qdrant (xem mục 4):
 
-- `luat_law_ctx_v2` — 6 văn bản luật hình sự, 2.242 points (M0.5). Đây vẫn là
-  `DEFAULT_COLLECTION_NAME` trong code.
 - `luat_law_ctx_v3` — corpus tuyển chọn **100 văn bản (luật + nghị định), 6 lĩnh vực**
   (hình sự, dân sự – tố tụng dân sự, lao động – bảo hiểm, doanh nghiệp – thương mại –
-  đầu tư, đất đai, hôn nhân gia đình), 23.727 points (M1). Dùng qua flag
-  `--collection` của `scripts/ingest.py` / `scripts/eval.py`; default sẽ chuyển sang
-  v3 khi các gate M1 chốt xong.
+  đầu tư, đất đai, hôn nhân gia đình), 23.727 points (M1). Đây là
+  `DEFAULT_COLLECTION_NAME` từ 2026-07-12 — chuyển cùng lúc với recalibrate ngưỡng
+  từ chối (M1.7): ngưỡng 0.650 là hàm của phân bố điểm trên chính collection này.
+- `luat_law_ctx_v2` — 6 văn bản luật hình sự, 2.242 points (M0.5). Giữ để so sánh
+  trước/sau; dùng qua flag `--collection`.
 
 Mã nguồn chia thành **2 mặt phẳng** độc lập:
 
@@ -60,7 +60,7 @@ riêng biệt (mục 3.2 và 3.5).
 |---|---|
 | `orchestrator.py` | **Trái tim của hệ thống.** `NaiveRAGPipeline` (baseline: dense search → generate) và `AdaptiveRAGPipeline` (routing + verify + confidence). Hai entry point: `query()` (đồng bộ) và `query_stream()` (streaming, dùng cho UI). Mọi route đều đi qua 3 bước hậu-retrieval chung: annotate Phase-2 → lọc hiệu lực → mở rộng lên Điều cha (mục 3.3). |
 | `citation_lookup.py` | Route tra cứu trực tiếp cho câu hỏi dạng trích dẫn: `parse_citation()` bóc Điều/Khoản/Điểm/tên luật/năm **và số hiệu văn bản** ("59/2020/QH14", "145/2020/NĐ-CP") bằng regex, hiểu viết tắt đa lĩnh vực (BLHS, BLTTHS, BLDS, LDN...); `CitationLookup.resolve_doc()` xếp hạng ứng viên văn bản theo alias/số hiệu/năm; `lookup()` tra thẳng metadata trong Qdrant thay vì vector search. Cũng là nơi sinh `corpus_summary()` (nhóm theo lĩnh vực, nạp vào scope gate) và `corpus_summary_compact()` (1 đoạn ngắn cho câu từ chối out-of-scope). |
-| `confidence.py` | `ConfidenceScorer` — điểm tin cậy **6 tín hiệu** có trọng số (bảng ở mục 3.5); `REFUSAL_THRESHOLD = 0.700` (recalibrate M0.3 — lai lịch trong block comment ngay trên hằng số); 2 mẫu câu từ chối (`REFUSAL_ANSWER`, `OUT_OF_SCOPE_ANSWER_TEMPLATE`). |
+| `confidence.py` | `ConfidenceScorer` — điểm tin cậy **6 tín hiệu** có trọng số (bảng ở mục 3.5); `REFUSAL_THRESHOLD = 0.650` (recalibrate M1.7 trên corpus 100 docs — lai lịch đầy đủ trong block comment ngay trên hằng số); 2 mẫu câu từ chối (`REFUSAL_ANSWER`, `OUT_OF_SCOPE_ANSWER_TEMPLATE`). |
 | `verifier.py` | `HallucinationVerifier` — kiểm chứng 3 tầng: structural (Điều được cite có trong context không), grounding (mỗi claim `[n]` trỏ đúng khối nguồn — **tỉ lệ này là tín hiệu confidence thứ 6**), NLI entailment (mDeBERTa, premise chọn theo từng claim thay vì cắt mù context). |
 | `context_blocks.py` | Tiện ích chung cho verifier + confidence: `parse_context_blocks()` tách context thành các khối `[n]`, `select_premise()` chọn đúng khối nguồn làm premise cho NLI/self-eval theo từng claim (fix M0.1 — thay cho `context[:2000]`). |
 
@@ -68,7 +68,7 @@ riêng biệt (mục 3.2 và 3.5).
 
 | File | Vai trò |
 |---|---|
-| `gateway.py` | `LLMGateway` bọc LiteLLM: chuỗi fallback `groq/qwen3-32b` → `groq/llama-3.3-70b` → `openai/gpt-4o-mini`; xoay vòng nhiều Groq API key khi dính rate-limit (`GROQ_API_KEYS` trong `.env`); `reasoning_effort="none"` để tắt block `<think>` của Qwen3. |
+| `gateway.py` | `LLMGateway` bọc LiteLLM: chuỗi fallback cross-provider $0 (M1.7) `groq/qwen3-32b` → `groq/llama-3.3-70b` → `gemini/gemini-3.5-flash` → `openrouter/qwen3-next-80b-instruct:free` → `openrouter/llama-3.3-70b:free` → `openai/gpt-4o-mini`. Routing theo **prefix provider** (không match substring); provider thiếu key bị bỏ qua. **Mọi provider đều xoay nhiều key** khi rate-limit (`GROQ_API_KEYS`/`GEMINI_API_KEYS`/`OPENROUTER_API_KEYS`, plural thắng singular). Lưu ý quota: Groq TPD tính **per-organization** (nhiều key cùng org = 1 bucket), Gemini/OpenRouter per-account. `reasoning_effort="none"` tắt thinking cho Groq-Qwen3 **và Gemini 3.x** (Gemini trả content RỖNG trên budget nhỏ nếu không tắt). Kiểm key sống: `scripts/check_llm_keys.py`. |
 | `prompts.py` | Toàn bộ prompt template: `SYSTEM_PROMPT` (trợ lý pháp lý **mọi lĩnh vực**), `GENERATION_PROMPT` (yêu cầu cite `[n]`), `COMPLEXITY_CLASSIFIER_PROMPT` (phân loại + scope gate, kèm few-shot đa lĩnh vực — M1.4), `QUERY_REWRITE_PROMPT`, `MULTI_QUERY_PROMPT`, `HYDE_PROMPT`, `CONFIDENCE_EVAL_PROMPT` (self-eval theo rubric 4 tiêu chí, code tự cộng điểm — M0.1). |
 
 ### `src/db/` — vector store
@@ -81,13 +81,13 @@ riêng biệt (mục 3.2 và 3.5).
 
 | File / thư mục | Vai trò |
 |---|---|
-| `constants.py` | Nguồn chân lý duy nhất cho hằng số: `DEFAULT_COLLECTION_NAME = "luat_law_ctx_v2"`, bộ lọc `LEGAL_TYPES`, `MIN_CONTENT_LENGTH`... |
+| `constants.py` | Nguồn chân lý duy nhất cho hằng số: `DEFAULT_COLLECTION_NAME = "luat_law_ctx_v3"`, bộ lọc `LEGAL_TYPES`, `MIN_CONTENT_LENGTH`... |
 | `chunker.py` + `chunking/` | 5 chiến lược chunking (`article_level`, `hierarchical`, `fixed_size`, `semantic`, `sentence`) cùng trả về dataclass `LegalChunk` (chunk_text + metadata Chương/Điều/Khoản + `parent_chunk_text`). Factory: `create_chunker()`. Ingest dùng `HierarchicalChunker` cho luật thường và `ArticleLevelChunker` cho luật sửa đổi (mục 4). |
 | `contextualizer.py` | Contextual Retrieval kiểu Anthropic nhưng **rule-based, không tốn LLM call**: ghép header `Luật \| Chương \| Điều \| Khoản` vào chuỗi **đem đi embed** (text hiển thị giữ nguyên). Đây là lý do collection có hậu tố `_ctx`. |
 | `embedder.py` | `BGEEmbedder` bọc BGE-M3: một lần encode ra cả dense (1024-dim) lẫn sparse (lexical weights) — không cần BM25 riêng. Có xử lý MPS OOM cho macOS. |
 | `ingest_checkpoint.py` | Checkpoint SQLite theo document (`data/ingest_progress/{collection}.sqlite`) cho `--resume` — tiết kiệm GPU-hour khi rớt session Kaggle, không phải cơ chế đảm bảo đúng đắn (point ID đã deterministic). |
-| `metadata_store.py` | Kho JSON lưu metadata enrichment mức document (graph, timeline, amendment). |
-| `graph/`, `timeline/`, `amendment/` | Lớp enrichment — xem [`KNOWLEDGE_GRAPH_VERSIONING.md`](KNOWLEDGE_GRAPH_VERSIONING.md). M1.8b sửa `find_replacement` cho đúng ở bậc 100 docs: khớp số hiệu là chuẩn nhất, khớp tên phải đảm bảo văn bản thay thế **mới hơn**, không rõ ngày → không kết luận (12/12 cặp temporal đúng). |
+| `metadata_store.py` | Kho JSON lưu metadata enrichment mức document (graph, timeline, amendment). `is_in_effect` mặc định **None = chưa rõ** (fail-open — bộ lọc temporal chỉ loại khi biết chắc `False`; mặc định `False` cũ từng giấu Luật Đầu tư 2025 + NĐ 144/2021 khỏi mọi câu trả lời khi trích ngày hiệu lực thất bại). |
+| `graph/`, `timeline/`, `amendment/` | Lớp enrichment — xem [`KNOWLEDGE_GRAPH_VERSIONING.md`](KNOWLEDGE_GRAPH_VERSIONING.md). `find_replacement` đúng ở bậc 100 docs qua 2 đợt sửa: (M1.8b) khớp số hiệu là chuẩn nhất, khớp tên phải đảm bảo văn bản thay thế **mới hơn**, không rõ ngày → không kết luận; (M1, 2026-07-12) thêm **hierarchy guard** — Nghị định/Thông tư không bao giờ được "thay thế" Luật/Bộ luật, kể cả khi clause trích xuất nói vậy (NĐ 76/2023 hướng dẫn từng đánh chết chính Luật PCBLGĐ 2022 mà nó hướng dẫn). |
 
 ### `src/pipeline/` — lớp enrichment lúc chạy
 
@@ -126,11 +126,18 @@ nhanh, request đầu tiên chậm.
   đo refusal accuracy, citation accuracy — tốn LLM). Chọn bộ câu hỏi bằng
   `--set criminal|general|sectors`, chọn collection bằng `--collection`; báo cáo Tier 1
   có bảng **recall theo từng lĩnh vực** (artifact Gate M1). Report ghi vào
-  `data/eval_reports/`.
+  `data/eval_reports/`. Hai quy ước Tier 2 (M1.7): `--retry <report>` chạy lại **chỉ**
+  các câu lỗi (quota chết giữa run) và merge vào report cũ (`config.retry_of` giữ chuỗi
+  lai lịch); citation accuracy = `None` khi bot từ chối — từ chối đã được đo ở
+  false_refusal_rate, chấm 0 là đếm trùng một lỗi hai lần.
 - `scripts/calibrate_threshold.py` — quét ngưỡng từ chối trên report Tier 2 (nguồn gốc
-  con số 0.700).
+  con số 0.650). Từ M1.7, sweep **chỉ chạy trên rows qua confidence gate** — refusal
+  của scope gate mang điểm sentinel 0.0 bị tách ra section riêng (over-refusals +
+  escaped-refuse), không được làm bẩn phân bố.
 - `scripts/inspect_confidence.py` — soi breakdown 6 tín hiệu của từng câu hỏi (debug
   false-refusal).
+- `scripts/check_llm_keys.py` — bắn 1 completion nhỏ cho từng cặp (model, key), bỏ qua
+  fallback chain để key hỏng không trốn được; chạy mỗi khi đổi key trong `.env`.
 - `scripts/select_corpus.py` — M1.1: trích 100 văn bản tuyển chọn tay ra
   `corpus_100docs.parquet` (lai lịch chọn lọc:
   [`notes/corpus-100docs-selection-2026-07-10.md`](notes/corpus-100docs-selection-2026-07-10.md)).
@@ -142,9 +149,11 @@ nhanh, request đầu tiên chậm.
 ### `tests/`
 
 Pytest cho các phần thuần logic: scope gate, citation lookup (gồm bộ đa lĩnh vực),
-prompts đa lĩnh vực, calibration, verifier, context blocks, contextualizer, chunker
-(article-level + hierarchical), ingest checkpoint + bộ lọc curated, orchestrator,
-retriever Phase-2, version resolver, eval metrics. Chạy: `make test`.
+prompts đa lĩnh vực, calibration (gồm tách scope-gate rows), verifier, context blocks,
+contextualizer, chunker (article-level + hierarchical), ingest checkpoint + bộ lọc
+curated, orchestrator, retriever Phase-2, version resolver (gồm hierarchy guard),
+eval metrics, eval retry/merge, gateway (routing provider + key rotation), metadata
+store (fail-open temporal default). Chạy: `make test`.
 
 **Thứ tự đọc code gợi ý:** `src/rag/orchestrator.py` (nắm luồng chính) →
 `src/rag/confidence.py` + `verifier.py` (hiểu cổng từ chối) → `src/rag/citation_lookup.py`
@@ -253,11 +262,16 @@ từng token về client.
 
    Tín hiệu thiếu (ví dụ route simple không có reranker) bị **loại và chuẩn hóa lại
    trọng số** — điểm tối đa luôn là 1.0, không bị "phạt ngầm".
-3. Điểm `< 0.700` (`REFUSAL_THRESHOLD`, override bằng env `CONFIDENCE_REFUSAL_THRESHOLD`)
-   → thay câu trả lời bằng `REFUSAL_ANSWER`. Ngưỡng 0.700 recalibrate ở M0.3 sau khi hai
-   phân bố answer/refuse lần đầu tách sạch (gap +0.0139); lai lịch đầy đủ trong block
-   comment ngay trên hằng số ở `confidence.py`. Margin mỏng → **phải recalibrate ở mỗi
-   bậc scale** (gate M1/M2).
+3. Điểm `< 0.650` (`REFUSAL_THRESHOLD`, override bằng env `CONFIDENCE_REFUSAL_THRESHOLD`)
+   → thay câu trả lời bằng `REFUSAL_ANSWER`. Ngưỡng 0.650 recalibrate ở M1.7 trên corpus
+   100 docs — và **vai trò của ngưỡng đã đổi ở bậc này**: scope gate (mục 3.2) làm gần
+   hết việc từ chối out-of-scope (20/21 câu refuse của eval), nên confidence gate chỉ còn
+   là lưới cuối cho câu **thiếu bằng chứng** (ví dụ "Điều 999 BLHS" không tồn tại).
+   Calibration vì vậy chỉ sweep trên rows qua confidence gate (xem
+   `scripts/calibrate_threshold.py`). t=0.650: refusal_recall 1.0, false_refusal 0.028
+   — ngưỡng 0.700 cũ false-refuse gấp 4 lần mà không thêm an toàn. Lai lịch đầy đủ trong
+   block comment ngay trên hằng số ở `confidence.py`. Margin mỏng → **phải recalibrate
+   ở mỗi bậc scale** (gate M2).
 
 ### 3.6. Giao thức streaming UI ↔ backend
 
@@ -302,8 +316,8 @@ tạo collection mới — bắt buộc dùng ngay lần chạy đầu cho colle
 (bỏ qua document đã xong theo checkpoint SQLite — dùng khi rớt session Kaggle/mạng),
 `--device cuda` (chạy GPU).
 
-Collection hiện có: `luat_law_ctx_v3` (100 docs, 23.727 points — corpus M1),
-`luat_law_ctx_v2` (6 docs hình sự, 2.242 points — default hiện tại của code, giữ để
+Collection hiện có: `luat_law_ctx_v3` (100 docs, 23.727 points — corpus M1, **default
+của code từ 2026-07-12**), `luat_law_ctx_v2` (6 docs hình sự, 2.242 points — giữ để
 so sánh trước/sau), và các collection cũ hơn. `scripts/reindex_contextual.py` re-embed
 một collection sẵn có sang dạng contextual mà không phải ingest lại từ đầu.
 
@@ -321,13 +335,22 @@ Enrichment (graph/timeline/amendment) là bước offline **riêng**, chạy qua
   `eval_set_general_v1.json` (41 câu biên/ngoài phạm vi — định nghĩa lại ở M1.6 cho
   corpus 100 docs: 27 câu nay phải **trả lời được**, 14 câu vẫn phải từ chối).
   `scripts/validate_eval_set.py` kiểm tra ground-truth có thực sự tồn tại trong corpus.
+  **Quy tắc học bằng học phí (2 lần trả)**: mọi label out-of-scope và expected_articles
+  phải verify trực tiếp với `corpus_100docs.parquet` + trạng thái `is_in_effect` — luật
+  bị thay thế thì expected phải trỏ Điều tương ứng của luật kế nhiệm (ld-104/ld-105/
+  dn-103 từng chấm 0 oan khi bot cite đúng luật mới).
 - `scripts/eval.py` — Tier 1 đo retrieval trên cả 3 chế độ dense/hybrid/routed
   (strict = khớp payload, lenient = khớp text; khoảng cách giữa 2 số đo chính là độ
   lệch metadata của chunker), kèm bảng recall theo lĩnh vực; Tier 2 (`--answers`) đo
-  hành vi trả lời/từ chối end-to-end. Số Tier 1 bộ sectors trên v3: routed recall@5
-  0.8922, recall@10 0.9216; citation-lookup và amendment đạt 1.0.
-- `scripts/calibrate_threshold.py` đọc report Tier 2 và quét ngưỡng — quy trình đã chốt
-  `REFUSAL_THRESHOLD = 0.700` (M0.3) và phải chạy lại ở mỗi bậc scale.
+  hành vi trả lời/từ chối end-to-end. Số Tier 1 trên v3: routed recall@5 0.8971
+  (criminal) / 0.8922 (sectors), recall@10 0.9216; citation-lookup và amendment 1.0.
+  Số gate M1 (Tier 2, 2026-07-12): refusal recall 21/21, citation accuracy **0.8533**
+  (pooled 2 full run × 51 câu sectors; criminal 0.8922) — nhiễu style trả lời giữa các
+  model trong chain ±0.03-0.04/run, nên số gate đo bằng **mean của 2 run đầy đủ**,
+  không bao giờ re-run chọn lọc câu fail.
+- `scripts/calibrate_threshold.py` đọc report Tier 2 và quét ngưỡng **trên rows qua
+  confidence gate** (sentinel scope-gate tách riêng) — quy trình đã chốt
+  `REFUSAL_THRESHOLD = 0.650` (M1.7) và phải chạy lại ở mỗi bậc scale.
 - Số đo baseline hiện tại và lịch sử quyết định: xem
   [`Danh_Gia_va_Roadmap_Production_2026-07-06.md`](Danh_Gia_va_Roadmap_Production_2026-07-06.md).
 
@@ -347,8 +370,10 @@ make eval             # scripts/eval.py Tier 1
 ```
 
 Biến môi trường quan trọng (`.env.example` có đủ danh sách): `QDRANT_URL` /
-`QDRANT_API_KEY`, `GROQ_API_KEYS` (nhiều key, phẩy ngăn cách — gateway tự xoay khi
-rate-limit), `OPENAI_API_KEY` (tùy chọn, chỉ để fallback), `CONFIDENCE_REFUSAL_THRESHOLD`.
+`QDRANT_API_KEY`; `GROQ_API_KEYS`, `GEMINI_API_KEYS`, `OPENROUTER_API_KEYS` (mỗi
+provider nhận danh sách key phẩy ngăn cách — gateway tự xoay khi rate-limit; dạng
+số ít `*_API_KEY` vẫn dùng được); `OPENAI_API_KEY` (tùy chọn, fallback cuối);
+`CONFIDENCE_REFUSAL_THRESHOLD` (override ngưỡng 0.650).
 
 ---
 
@@ -363,7 +388,8 @@ rate-limit), `OPENAI_API_KEY` (tùy chọn, chỉ để fallback), `CONFIDENCE_R
    chunker, chỉ cần ghép header rule-based; được chất lượng "Contextual Retrieval" mà
    chi phí bằng 0.
 4. **Fail-open ở classifier và bộ lọc temporal, fail-safe ở confidence** — lỗi phân
-   loại chỉ làm chọn sai route, thiếu metadata hiệu lực thì giữ chunk lại; còn thiếu
+   loại chỉ làm chọn sai route, thiếu metadata hiệu lực thì giữ chunk lại (kể cả ở
+   tầng metadata: `is_in_effect` mặc định None = chưa rõ, không phải False); còn thiếu
    bằng chứng cho câu trả lời thì mặc định từ chối.
 5. **Verify sau khi stream** — hậu kiểm (NLI + confidence) tốn thời gian, chạy sau khi
    token cuối đã tới UI; kết quả tới qua event `verification` và có thể "rút lại" câu

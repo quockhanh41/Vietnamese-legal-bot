@@ -22,6 +22,6 @@ flowchart TD
         NORM --> SUM["score = Σ weight × signal"]
     end
 
-    SUM --> GATE{"score < REFUSAL_THRESHOLD<br/>0.700 (env CONFIDENCE_REFUSAL_THRESHOLD)?"}
+    SUM --> GATE{"score < REFUSAL_THRESHOLD<br/>0.650 (env CONFIDENCE_REFUSAL_THRESHOLD)?"}
     GATE -->|có| REF["CỔNG TỪ CHỐI 2:<br/>final_answer = REFUSAL_ANSWER"]
     GATE -->|không| OK["giữ answer;<br/>verify không passed → nối warning<br/>vào disclaimer (_enrich_response)"]
