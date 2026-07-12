@@ -331,3 +331,25 @@ class MetadataStore:
             for t in ("documents", "timelines", "amendments", "graph"):
                 self._conn.execute(f"DELETE FROM {t}")
             self._conn.commit()
+
+
+# ── JSON Migration ────────────────────────────────────────────────
+
+def import_json_dir(data_dir: str) -> int:
+    """One-time: load legacy *.json enrichment files into the SQLite store."""
+    p = Path(data_dir)
+    store = MetadataStore(data_dir=data_dir)
+    n = 0
+    docs_f = p / "documents.json"
+    if docs_f.exists():
+        raw = json.loads(docs_f.read_text(encoding="utf-8"))
+        for k, v in raw.items():
+            store.save_document(int(k), DocumentMeta.from_dict(v))
+            n += 1
+    for name, saver in (("graph.json", store.save_graph),
+                        ("timelines.json", store.save_timelines),
+                        ("amendments.json", store.save_amendments)):
+        f = p / name
+        if f.exists():
+            saver(json.loads(f.read_text(encoding="utf-8")))
+    return n

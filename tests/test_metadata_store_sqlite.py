@@ -4,6 +4,7 @@ Run: .venv/bin/python -m pytest tests/test_metadata_store_sqlite.py -q
 """
 import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import json
 import threading
 from datetime import date
 import pytest
@@ -134,3 +135,21 @@ def test_build_index_shape(store):
     assert idx["base_laws"] == 1
     assert idx["total_amendments"] == 3
     assert idx["total_articles_amended"] == 2
+
+
+def test_import_json_dir(tmp_path):
+    from src.data.metadata_store import import_json_dir
+    (tmp_path / "documents.json").write_text(json.dumps({
+        "1": {"doc_id": 1, "title": "Bộ luật Hình sự", "is_in_effect": True,
+              "amended_articles": ["40"]},
+        "2": {"doc_id": 2, "title": "Luật Đầu tư 2025", "is_in_effect": None},
+    }, ensure_ascii=False), encoding="utf-8")
+    (tmp_path / "timelines.json").write_text(json.dumps(
+        [{"doc_id": 1, "effective_date": "2016-01-01", "is_in_effect": True}],
+        ensure_ascii=False), encoding="utf-8")
+    n = import_json_dir(str(tmp_path))
+    assert n == 2
+    store = MetadataStore(data_dir=str(tmp_path))
+    assert store.get_document(1).amended_articles == ["40"]
+    assert store.get_document(2).is_in_effect is None
+    assert store.get_timeline(1)["effective_date"] == "2016-01-01"
