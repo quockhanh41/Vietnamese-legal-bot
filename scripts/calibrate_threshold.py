@@ -93,6 +93,48 @@ def _usable_rows(rows: List[Dict]) -> List[Dict]:
     ]
 
 
+# ── Scope-gate split (M1.7 methodology fix) ──────────────────────────────
+
+SCOPE_GATE_PIPELINE = "out-of-scope"
+
+
+def split_scope_gate_rows(rows: List[Dict]) -> Tuple[List[Dict], List[Dict]]:
+    """Split rows into (confidence-gate rows, scope-gate rows).
+
+    Scope-gate refusals (pipeline_used == "out-of-scope") carry a SENTINEL
+    confidence_score of 0.0 — the confidence gate never scored them. Only
+    the confidence-gate rows are valid input for the threshold sweep; the
+    scope-gate rows are reported separately (scope_gate_stats). Rows without
+    a pipeline_used field (old reports) count as confidence-gate rows.
+    """
+    gate_rows = [r for r in rows if r.get("pipeline_used") != SCOPE_GATE_PIPELINE]
+    scope_rows = [r for r in rows if r.get("pipeline_used") == SCOPE_GATE_PIPELINE]
+    return gate_rows, scope_rows
+
+
+def scope_gate_stats(scope_rows: List[Dict], gate_rows: List[Dict]) -> Dict:
+    """Scope-gate accuracy report — kept OUT of the threshold sweep.
+
+    over_refused_ids: expected_behavior=="answer" rows the scope gate
+    refused (root-cause-B over-refusals). escaped_refuse: expected
+    "refuse" rows that PASSED the scope gate — the confidence gate is the
+    last line of defense for these; their scores show what the threshold
+    is actually up against (crim-402 pattern).
+    """
+    return {
+        "n_scope_refused": len(scope_rows),
+        "n_expected_refuse": sum(1 for r in scope_rows if r["expected_behavior"] == "refuse"),
+        "over_refused_ids": [r["id"] for r in scope_rows if r["expected_behavior"] == "answer"],
+        "escaped_refuse": [
+            {"id": r["id"], "confidence_score": r["confidence_score"]}
+            for r in sorted(
+                (r for r in gate_rows if r["expected_behavior"] == "refuse"),
+                key=lambda r: -r["confidence_score"],
+            )
+        ],
+    }
+
+
 # ── Sweep math (pure — unit tested in tests/test_calibration.py) ─────────
 
 def sweep_thresholds(
@@ -302,6 +344,21 @@ def print_overlap(overlap: Dict):
         click.echo(f"Clean separation — gap = {overlap['gap']}")
 
 
+def print_scope_gate(stats: Dict):
+    click.echo("\n## Scope gate (excluded from threshold sweep)\n")
+    click.echo(f"Refused by scope gate: {stats['n_scope_refused']} "
+               f"({stats['n_expected_refuse']} expected-refuse ✅, "
+               f"{len(stats['over_refused_ids'])} over-refusals ⚠️)")
+    if stats["over_refused_ids"]:
+        click.echo(f"  Over-refused (expected answer, root-cause B): "
+                   f"{', '.join(stats['over_refused_ids'])}")
+    if stats["escaped_refuse"]:
+        click.echo("  Expected-refuse rows that PASSED the scope gate "
+                   "(confidence gate is their last line of defense):")
+        for r in stats["escaped_refuse"]:
+            click.echo(f"    - {r['id']}: {r['confidence_score']}")
+
+
 def print_outliers(out: Dict):
     click.echo("\n## Outliers\n")
     click.echo("Lowest-scoring answer-questions (should have scored HIGH, didn't):")
@@ -329,14 +386,23 @@ def main(reports: Tuple[str, ...]):
         click.echo(f"  - {p}")
 
     all_rows = load_rows(report_paths)
-    rows = _usable_rows(all_rows)
-    n_errors = len(all_rows) - len(rows)
+    usable = _usable_rows(all_rows)
+    n_errors = len(all_rows) - len(usable)
+
+    # M1.7 methodology fix: scope-gate refusals carry sentinel scores (0.0,
+    # never scored by the confidence gate) — calibrate the threshold ONLY on
+    # rows that reached the confidence gate; report the scope gate separately.
+    rows, scope_rows = split_scope_gate_rows(usable)
     click.echo(f"\nRows: {len(all_rows)} total, {n_errors} skipped (error/missing score), "
-               f"{len(rows)} usable.")
+               f"{len(usable)} usable = {len(rows)} confidence-gate + "
+               f"{len(scope_rows)} scope-gate (excluded from sweep).")
 
     n_answer = sum(1 for r in rows if r["expected_behavior"] == "answer")
     n_refuse = sum(1 for r in rows if r["expected_behavior"] == "refuse")
-    click.echo(f"By expected_behavior: answer={n_answer}, refuse={n_refuse}")
+    click.echo(f"Confidence-gate rows by expected_behavior: answer={n_answer}, refuse={n_refuse}")
+
+    gate_stats = scope_gate_stats(scope_rows, rows)
+    print_scope_gate(gate_stats)
 
     sweep = sweep_thresholds(rows)
     best = pick_best_threshold(sweep)
@@ -367,9 +433,11 @@ def main(reports: Tuple[str, ...]):
         "input_reports": report_paths,
         "n_rows_total": len(all_rows),
         "n_rows_errors_skipped": n_errors,
-        "n_rows_usable": len(rows),
+        "n_rows_usable": len(usable),
+        "n_rows_confidence_gate": len(rows),
         "n_answer": n_answer,
         "n_refuse": n_refuse,
+        "scope_gate": gate_stats,
         "sweep": sweep,
         "best_threshold": best,
         "histograms": {

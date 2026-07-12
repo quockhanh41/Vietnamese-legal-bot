@@ -18,11 +18,16 @@ from calibrate_threshold import (
     histogram,
     overlap_region,
     outliers,
+    split_scope_gate_rows,
+    scope_gate_stats,
 )
 
 
-def _row(id_, behavior, score):
-    return {"id": id_, "expected_behavior": behavior, "confidence_score": score}
+def _row(id_, behavior, score, pipeline=None):
+    r = {"id": id_, "expected_behavior": behavior, "confidence_score": score}
+    if pipeline is not None:
+        r["pipeline_used"] = pipeline
+    return r
 
 
 # ── sweep_thresholds ──────────────────────────────────────────────────────
@@ -202,3 +207,53 @@ def test_outliers_empty_groups():
     out = outliers([], n=3)
     assert out["lowest_scoring_answer_questions"] == []
     assert out["highest_scoring_refuse_questions"] == []
+
+
+# ── scope-gate split (M1.7 methodology fix) ──────────────────────────────
+#
+# Scope-gate refusals (pipeline_used == "out-of-scope") carry a SENTINEL
+# confidence_score of 0.0 — they never reached the confidence gate. Mixing
+# them into the sweep inflates refusal_recall at every threshold and drags
+# the Youden optimum toward meaningless lows (observed: 0.475/0.550 on the
+# contaminated 2026-07-11 runs). The threshold must be calibrated only on
+# rows the confidence gate actually scored.
+
+def test_split_scope_gate_rows_separates_sentinels():
+    rows = [
+        _row("a1", "answer", 0.8, pipeline="simple"),
+        _row("r1", "refuse", 0.0, pipeline="out-of-scope"),
+        _row("r2", "refuse", 0.55, pipeline="medium"),
+    ]
+    gate_rows, scope_rows = split_scope_gate_rows(rows)
+    assert [r["id"] for r in gate_rows] == ["a1", "r2"]
+    assert [r["id"] for r in scope_rows] == ["r1"]
+
+
+def test_split_scope_gate_rows_missing_pipeline_field_is_gate_row():
+    # Old reports / hand-built rows without pipeline_used stay in the sweep.
+    rows = [_row("a1", "answer", 0.8)]
+    gate_rows, scope_rows = split_scope_gate_rows(rows)
+    assert len(gate_rows) == 1 and scope_rows == []
+
+
+def test_scope_gate_stats_over_refusals_and_escapes():
+    scope_rows = [
+        _row("r1", "refuse", 0.0, pipeline="out-of-scope"),   # correct refusal
+        _row("a9", "answer", 0.0, pipeline="out-of-scope"),   # OVER-refusal (root cause B)
+    ]
+    gate_rows = [
+        _row("a1", "answer", 0.8, pipeline="simple"),
+        _row("r2", "refuse", 0.835, pipeline="medium"),       # escaped scope gate (crim-402 pattern)
+    ]
+    stats = scope_gate_stats(scope_rows, gate_rows)
+    assert stats["n_scope_refused"] == 2
+    assert stats["n_expected_refuse"] == 1
+    assert stats["over_refused_ids"] == ["a9"]
+    assert stats["escaped_refuse"] == [{"id": "r2", "confidence_score": 0.835}]
+
+
+def test_scope_gate_stats_empty():
+    stats = scope_gate_stats([], [])
+    assert stats["n_scope_refused"] == 0
+    assert stats["over_refused_ids"] == []
+    assert stats["escaped_refuse"] == []

@@ -273,6 +273,15 @@ def run_tier2(
         if i < len(questions) - 1 and sleep_s > 0:
             time.sleep(sleep_s)
 
+    return {"aggregate": aggregate_tier2(rows), "rows": rows}
+
+
+def aggregate_tier2(rows: List[Dict]) -> Dict:
+    """Compute the Tier-2 aggregate block from per-question rows.
+
+    Pure — extracted from run_tier2 so the --retry merge path recomputes
+    aggregates over merged rows with identical logic.
+    """
     ok_rows = [r for r in rows if r["error"] is None]
     conf_by_behavior = defaultdict(list)
     for r in ok_rows:
@@ -281,7 +290,7 @@ def run_tier2(
 
     cite_scores = [r["citation_accuracy"] for r in ok_rows if r["citation_accuracy"] is not None]
 
-    aggregate = {
+    return {
         "n": len(rows),
         "n_errors": len(rows) - len(ok_rows),
         "refusal_accuracy": refusal_accuracy(ok_rows),
@@ -298,7 +307,35 @@ def run_tier2(
             for behavior, scores in sorted(conf_by_behavior.items())
         },
     }
-    return {"aggregate": aggregate, "rows": rows}
+
+
+# ── Tier 2 retry/merge (Groq free-tier TPD dies mid-run — re-run ONLY the
+# errored questions instead of re-burning every successful question's tokens) ─
+
+def failed_question_ids(questions: List[Dict], prev_rows: List[Dict]) -> List[str]:
+    """IDs needing a re-run: rows with error != None, plus set questions
+    that have no row at all (previous run crashed early). Set order."""
+    ok_ids = {r["id"] for r in prev_rows if r.get("error") is None}
+    return [q["id"] for q in questions if q["id"] not in ok_ids]
+
+
+def merge_tier2_rows(
+    questions: List[Dict], prev_rows: List[Dict], new_rows: List[Dict]
+) -> List[Dict]:
+    """Merge retry rows into a previous run's rows, in set-question order.
+
+    A new row always wins for its question id (even if it errored again —
+    the fresh error is the current truth); otherwise the previous row is
+    carried over. Questions with no row in either run are skipped.
+    """
+    prev_by_id = {r["id"]: r for r in prev_rows}
+    new_by_id = {r["id"]: r for r in new_rows}
+    merged = []
+    for q in questions:
+        row = new_by_id.get(q["id"]) or prev_by_id.get(q["id"])
+        if row is not None:
+            merged.append(row)
+    return merged
 
 
 # ── Report writing + printing ─────────────────────────────────────────────
@@ -394,6 +431,57 @@ def print_tier2_summary(tier2: Dict, set_name: str):
                "(deps optional + cần ngân sách LLM riêng) — xem docstring đầu file.")
 
 
+def run_retry(retry_report: str, sleep_s: float):
+    """--retry path: re-run only the errored/missing questions of a previous
+    tier2_answers report and write a merged report (config.retry_of chains
+    back to the source, so provenance survives multiple mop-up passes)."""
+    with open(retry_report, encoding="utf-8") as f:
+        prev = json.load(f)
+    prev_config = prev.get("config", {})
+    if prev_config.get("tier") != "tier2_answers" or "tier2" not in prev:
+        raise click.ClickException(f"{retry_report} không phải report tier2_answers.")
+
+    set_name = prev_config["set"]
+    collection = prev_config["collection"]
+    prev_rows = prev["tier2"]["rows"]
+
+    all_questions = load_questions(set_name, limit=None)
+    retry_ids = failed_question_ids(all_questions, prev_rows)
+    click.echo(f"🔁 Retry từ {retry_report}: set={set_name}, collection={collection}, "
+               f"{len(retry_ids)}/{len(all_questions)} câu cần chạy lại.")
+    if not retry_ids:
+        click.echo("✅ Không còn câu lỗi — không có gì để chạy.")
+        return
+
+    retry_questions = [q for q in all_questions if q["id"] in set(retry_ids)]
+
+    vector_store = LegalVectorStore(collection_name=collection)
+    click.echo("⏳ Loading BGE-M3 embedder (~2GB RAM)...")
+    embedder = BGEEmbedder()
+    llm = LLMGateway()
+    pipeline = AdaptiveRAGPipeline(vector_store=vector_store, embedder=embedder, llm_gateway=llm)
+
+    tier2_new = run_tier2(retry_questions, pipeline, set_name, sleep_s)
+
+    merged_rows = merge_tier2_rows(all_questions, prev_rows, tier2_new["rows"])
+    tier2 = {"aggregate": aggregate_tier2(merged_rows), "rows": merged_rows}
+
+    config = {
+        "set": set_name,
+        "limit": None,
+        "collection": collection,
+        "tier": "tier2_answers",
+        "sleep_s": sleep_s,
+        "retry_of": retry_report,
+        "n_retried": len(retry_questions),
+        "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+    }
+    report = {"config": config, "tier2": tier2}
+    print_tier2_summary(tier2, set_name)
+    path = write_report(report)
+    click.echo(f"\n💾 Merged report saved: {path}")
+
+
 # ── CLI ────────────────────────────────────────────────────────────────────
 
 @click.command()
@@ -405,7 +493,16 @@ def print_tier2_summary(tier2: Dict, set_name: str):
 @click.option("--sleep", "sleep_s", type=float, default=2.0,
               help="Giây nghỉ giữa các câu hỏi ở Tier 2 (tránh rate limit Groq).")
 @click.option("--collection", default=DEFAULT_COLLECTION_NAME, help="Tên Qdrant collection.")
-def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float, collection: str):
+@click.option("--retry", "retry_report", type=click.Path(exists=True), default=None,
+              help="Đường dẫn report tier2_answers cũ: chạy lại CHỈ các câu lỗi "
+                   "(Groq TPD chết giữa chừng), merge vào rows cũ, ghi report mới. "
+                   "set/collection lấy từ config của report — bỏ qua --set/--collection.")
+def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float,
+         collection: str, retry_report: Optional[str]):
+    if retry_report:
+        run_retry(retry_report, sleep_s)
+        return
+
     questions = load_questions(set_name, limit)
     click.echo(f"📊 Eval set: {set_name} ({len(questions)} câu hỏi"
                f"{' — limit áp dụng' if limit else ''})")
