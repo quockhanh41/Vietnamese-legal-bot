@@ -29,15 +29,22 @@ ALL_LEGAL_TYPES: list[str] = [
 MIN_CONTENT_LENGTH: int = 500  # characters — skip empty/short docs
 
 # --- Collection Defaults ---
-# "luat_law_ctx_v2" (M0.5, 2026-07-10) = contextual retrieval + chunker
-# misalignment fixes (WRONG_LABEL 126→0, 178 Điều khôi phục — see
-# docs/notes/chunker-misalignment-diagnosis-2026-07-10.md) + deterministic
-# point IDs + int8 scalar quantization with fp32 on-disk. 2,242 points.
-# Tier-1 gate vs old collection: recall@5 routed 0.9216 (baseline 0.922),
-# per-type recall unchanged, lenient==strict (labels now align with text).
-# Older collections "luat_law_ctx" (1,670) and "luat_law" are kept in
-# Qdrant for before/after comparison.
-DEFAULT_COLLECTION_NAME: str = "luat_law_ctx_v2"
+# "luat_law_ctx_v3" (M1, 2026-07-10; default since 2026-07-12) = the
+# 100-doc multi-sector corpus (6 sectors, `sector` keyword in payload,
+# Kaggle GPU ingest) on the v2 foundations: contextual retrieval, chunker
+# misalignment fixes, deterministic point IDs, int8 scalar quantization
+# with fp32 on-disk. 23,727 points. Tier-1 on v3: recall@5 routed 0.8971
+# criminal / 0.8922 sectors (within the ≤5-point M1 gate vs v2's 0.9216);
+# REFUSAL_THRESHOLD 0.650 is calibrated against THIS collection's score
+# distribution (M1.7, calibration 20260712T004208Z) — switching the
+# default and the threshold together keeps gate behavior consistent.
+#
+# "luat_law_ctx_v2" (M0.5, 2026-07-10) = 6 criminal docs, 2,242 points
+# (recall@5 routed 0.9216, lenient==strict; chunker diagnosis in
+# docs/notes/chunker-misalignment-diagnosis-2026-07-10.md). Kept in
+# Qdrant, with older "luat_law_ctx" (1,670) and "luat_law", for
+# before/after comparison.
+DEFAULT_COLLECTION_NAME: str = "luat_law_ctx_v3"
 
 # --- Date Filter ---
 # No date restriction — we keep all years for temporal versioning and
