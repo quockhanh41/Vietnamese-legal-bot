@@ -7,8 +7,9 @@ instead of just 6 hình sự documents.
 
 Pure-Python parsing + doc resolution against mocked alias/doc-number indexes
 built from *real* corpus_100docs titles and document_number values, plus one
-scroll-fake for CitationLookup._load_collection_cache itself. No network, no
-Qdrant, no models — same no-I/O guarantee as tests/test_citation_lookup.py.
+fake-store test for CitationLookup._load_doc_index itself (M2.3: sourced from
+get_document_index(), not a raw collection scroll). No network, no Qdrant, no
+models — same no-I/O guarantee as tests/test_citation_lookup.py.
 
 Run: .venv/bin/python -m pytest tests/test_citation_lookup_multisector.py -q
 """
@@ -311,62 +312,52 @@ def test_parse_citation_no_citation_hon_nhan_sentence_is_none():
     assert parse_citation("Điều kiện kết hôn theo pháp luật Việt Nam là gì?") is None
 
 
-# ── _load_collection_cache: doc_number caching from a fake scroll client ───
-
-class _FakePoint:
-    def __init__(self, point_id, payload):
-        self.id = point_id
-        self.payload = payload
-
-
-class _FakeScrollClient:
-    """Minimal stand-in for qdrant_client.QdrantClient — CitationLookup only
-    ever calls .scroll() on it. Returns every point on the first call and
-    signals end-of-scroll (offset=None) immediately, since these fixtures
-    are small enough to fit in one page."""
-
-    def __init__(self, points):
-        self._points = points
-
-    def scroll(self, collection_name, limit, offset, with_payload, with_vectors):
-        if offset is not None:
-            return [], None
-        return self._points, None
-
+# ── _load_doc_index: doc_number normalization from get_document_index() ────
 
 class _FakeVectorStore:
-    def __init__(self, points, collection_name="test_collection"):
-        self.client = _FakeScrollClient(points)
-        self.collection_name = collection_name
+    """Minimal stand-in for LegalVectorStore — CitationLookup's doc-index
+    load only ever calls get_document_index() on it (M2.3: server-side
+    filtering replaced the old full-collection client-side scroll cache)."""
+
+    def __init__(self, index):
+        self._index = index
+
+    def get_document_index(self):
+        return self._index
 
 
-def test_load_collection_cache_populates_doc_number_index_from_payload():
-    points = [
-        _FakePoint("p1", {
-            "document_id": 427301,
+def test_load_doc_index_populates_doc_number_index_from_payload():
+    index = {
+        427301: {
             "document_title": "Luật Doanh nghiệp 2020",
-            "document_number": "59/2020/QH14",
-            "chunk_text": "Điều 1. ...",
-        }),
-        _FakePoint("p2", {
-            "document_id": 459400,
+            "document_number": "59/2020/qh14",  # messy-cased payload spelling
+            "legal_type": "Luật",
+            "sector": None,
+        },
+        459400: {
             "document_title": "Nghị định 145/2020/NĐ-CP hướng dẫn Bộ luật Lao động",
             "document_number": "145/2020/nd-cp",  # raw payload spelling variant
-            "chunk_text": "Điều 1. ...",
-        }),
-    ]
-    lookup = CitationLookup(vector_store=_FakeVectorStore(points))
+            "legal_type": "Nghị định",
+            "sector": None,
+        },
+    }
+    lookup = CitationLookup(vector_store=_FakeVectorStore(index))
+
+    # Triggers _load_doc_index() via _get_doc_number_index().
+    doc_number_index = lookup._get_doc_number_index()
+    assert doc_number_index[427301] == "59/2020/QH14"
+    assert doc_number_index[459400] == "145/2020/NĐ-CP"
 
     resolved = lookup.resolve_doc(None, None, doc_number="59/2020/QH14")
     assert resolved == [427301]
 
     # The raw payload spelling ("nd-cp", no diacritic) must have been
-    # normalized to canonical "NĐ-CP" at cache-build time too.
+    # normalized to canonical "NĐ-CP" at index-build time too.
     resolved2 = lookup.resolve_doc(None, None, doc_number="145/2020/NĐ-CP")
     assert resolved2 == [459400]
 
     # corpus_summary() (built from _alias_index) is untouched by the new
-    # doc_number cache — still the same bullet-list contract.
+    # doc_number index — still the same bullet-list contract.
     summary = lookup.corpus_summary()
     assert "- Luật Doanh nghiệp 2020" in summary
 

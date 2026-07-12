@@ -11,10 +11,12 @@ amendment-law chunks quote many "Điều N" verbatim while amending them,
 polluting the results). Citation-style queries are also the most common
 query shape in legal search, so this is worth a dedicated route.
 
-TODO(scale): client-side scroll-and-filter (see CitationLookup.lookup) is
-fine at ~1670 chunks / 6 documents. At corpus scale this needs an indexed
-`article_number` payload field written at ingest time (a Qdrant payload
-index), instead of scanning every chunk of each candidate document.
+M2.3: resolved via server-side filtering — CitationLookup.lookup() scrolls
+Qdrant with a `document_id`/`article_number` filter (LegalVectorStore.
+scroll_article(), backed by the payload indexes created in
+_create_payload_indexes()) instead of caching every chunk client-side. Only
+a lenient fallback (stale `article_number` payload) still scans chunk text,
+and only for the already-scoped candidate documents, bounded by `cap`.
 """
 
 from __future__ import annotations
@@ -24,7 +26,6 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Tuple
 
 from src.db.qdrant_client import LegalVectorStore, SearchResult
-from src.eval.metrics import artnum
 
 
 # ── Parsing ────────────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@ def _normalize_doc_number(raw: str) -> Optional[str]:
     full diacritics. Returns None if `raw` doesn't contain one.
 
     Used both on the free-text question (parse_citation) and on each doc's
-    payload `document_number` (CitationLookup._load_collection_cache), so
+    payload `document_number` (CitationLookup._load_doc_index), so
     the two sides compare equal regardless of source-text case/diacritic
     spelling.
     """
@@ -251,83 +252,40 @@ class CitationLookup:
         self._alias_index: Optional[Dict[int, str]] = None
         self._doc_number_index: Optional[Dict[int, str]] = None
         self._sector_index: Optional[Dict[int, str]] = None
-        self._chunks_by_doc: Optional[Dict[int, List]] = None
         self._corpus_summary: Optional[str] = None
         self._corpus_summary_compact: Optional[str] = None
 
-    # ── Alias index + chunk cache ───────────────────────────────────
+    # ── Doc-level index ──────────────────────────────────────────────
     #
-    # Both are built from a single full collection scroll (see
-    # _load_collection_cache). We'd prefer a server-side `scroll_filter` on
-    # document_id per lookup (the original design) instead of caching every
-    # chunk client-side, but Qdrant Cloud requires a payload index to filter
-    # scroll by a field and none exists for document_id here — creating one
-    # is an ingest-time change out of scope for this route. At 1670 chunks a
-    # single full scroll + in-memory grouping is cheap, cached once, and
-    # avoids provisioning an index just for this.
-    #
-    # TODO(scale): create a payload index on document_id (and, per the
-    # module docstring, article_number) at ingest time once the corpus
-    # grows past a few thousand chunks — then this can go back to
-    # server-side scroll_filter per doc_id instead of a full-collection
-    # client-side cache.
+    # Built from a single projected doc-level scroll (get_document_index):
+    # no chunk_text retained, so this stays O(docs) memory regardless of
+    # corpus size — the article lookup itself (see lookup() below) is
+    # server-side filtered per query instead of scanning a client-side
+    # chunk cache.
 
     def _get_alias_index(self) -> Dict[int, str]:
         if self._alias_index is None:
-            self._load_collection_cache()
+            self._load_doc_index()
         return self._alias_index
 
     def _get_doc_number_index(self) -> Dict[int, str]:
         if self._doc_number_index is None:
-            self._load_collection_cache()
+            self._load_doc_index()
         return self._doc_number_index
 
-    def _get_chunks_by_doc(self) -> Dict[int, List]:
-        if self._chunks_by_doc is None:
-            self._load_collection_cache()
-        return self._chunks_by_doc
-
-    def _load_collection_cache(self) -> None:
-        """One full scroll over the collection; caches (document_id ->
-        document_title), (document_id -> normalized document_number), and
-        (document_id -> [chunks]) on the instance."""
-        aliases: Dict[int, str] = {}
-        doc_numbers: Dict[int, str] = {}
-        sectors: Dict[int, str] = {}
-        chunks_by_doc: Dict[int, List] = {}
-        client = self.vector_store.client
-        collection = self.vector_store.collection_name
-        offset = None
-        while True:
-            points, offset = client.scroll(
-                collection_name=collection,
-                limit=256,
-                offset=offset,
-                with_payload=True,
-                with_vectors=False,
-            )
-            if not points:
-                break
-            for p in points:
-                payload = p.payload or {}
-                doc_id = payload.get("document_id")
-                if doc_id is None:
-                    continue
-                if doc_id not in aliases:
-                    aliases[doc_id] = payload.get("document_title", "")
-                if doc_id not in doc_numbers:
-                    normalized = _normalize_doc_number(payload.get("document_number", ""))
-                    if normalized is not None:
-                        doc_numbers[doc_id] = normalized
-                if doc_id not in sectors and payload.get("sector"):
-                    sectors[doc_id] = payload["sector"]
-                chunks_by_doc.setdefault(doc_id, []).append(p)
-            if offset is None:
-                break
-        self._alias_index = aliases
-        self._doc_number_index = doc_numbers
-        self._sector_index = sectors
-        self._chunks_by_doc = chunks_by_doc
+    def _load_doc_index(self) -> None:
+        """One projected doc-level scroll → alias / doc_number / sector indexes.
+        No chunk_text retained (O(docs) memory)."""
+        index = self.vector_store.get_document_index()
+        aliases, doc_numbers, sectors = {}, {}, {}
+        for doc_id, meta in index.items():
+            aliases[doc_id] = meta.get("document_title", "") or ""
+            normalized = _normalize_doc_number(meta.get("document_number", "") or "")
+            if normalized is not None:
+                doc_numbers[doc_id] = normalized
+            if meta.get("sector"):
+                sectors[doc_id] = meta["sector"]
+        self._alias_index, self._doc_number_index, self._sector_index = aliases, doc_numbers, sectors
 
     def corpus_summary(self) -> str:
         """
@@ -511,59 +469,56 @@ class CitationLookup:
 
     def lookup(self, parsed: ParsedCitation, cap: int = 8) -> List[SearchResult]:
         """
-        Direct metadata lookup for the primary article in `parsed`.
+        Direct metadata lookup for the primary article in `parsed`, server-side.
 
-        For each candidate document (from resolve_doc), scroll its chunks
-        and keep the ones that are actually about the target article:
-        either the `article` payload field matches, or (chunker metadata is
-        occasionally stale) the chunk text itself opens with "Điều N." /
-        "Điều N:" within the first `_CHUNK_OPEN_WINDOW` characters.
+        Strict path: an indexed filter on (document_id ∈ candidates, article_number
+        == target) — cheap even unscoped, so ambiguous citations still search every
+        document by the article-number index.
 
-        Returns [] if nothing matches — the caller must NOT fall back to
-        vector search on empty lookup (e.g. "Điều 999" doesn't exist; vector
-        search would still return *something* plausible-looking and wrong).
+        Lenient fallback (a chunk whose `article` payload is stale but whose text
+        OPENS with "Điều N." within _CHUNK_OPEN_WINDOW chars) runs ONLY when scoped
+        to a bounded set of candidate documents. For an ambiguous citation (no doc
+        hint) `scoped` is empty, and an unscoped lenient scan would walk the whole
+        collection every call for a rare corrective case the indexed strict match
+        already covers — so it is skipped.
+
+        Returns [] if nothing matches — the caller must NOT fall back to vector
+        search on empty lookup (see retrieve_routed).
         """
         target_num = parsed.primary.number
         doc_ids = self.resolve_doc(parsed.doc_hint, parsed.year, parsed.doc_number)
+        all_ids = list(self._get_alias_index().keys())
+        ambiguous = set(doc_ids) == set(all_ids)
+        scoped = [] if ambiguous else doc_ids
+
+        strict = self.vector_store.scroll_article(scoped, target_num, cap=cap)
+        # Preserve resolve_doc's ranking (prefix-law > amendment > referencing
+        # decree) when scoped to multiple docs — the single MatchAny scroll returns
+        # them in Qdrant order, not candidate order.
+        if not ambiguous and len(doc_ids) > 1:
+            rank = {d: i for i, d in enumerate(doc_ids)}
+            strict.sort(key=lambda r: rank.get(r.document_id, len(rank)))
+        if len(strict) >= cap:
+            return strict[:cap]
+
+        # Lenient fallback: scoped lookups only (see docstring).
+        if not scoped:
+            return strict[:cap]
+
+        seen = {r.point_id for r in strict}
         open_pattern = re.compile(r"Điều\s+" + re.escape(target_num) + r"\s*[\.:]")
-
-        strict_hits: List[Tuple[int, object]] = []
-        lenient_hits: List[Tuple[int, object]] = []
-
-        chunks_by_doc = self._get_chunks_by_doc()
-        for doc_id in doc_ids:
-            if len(strict_hits) >= cap:
+        lenient: List[SearchResult] = []
+        for point in self.vector_store.scroll_docs(scoped):
+            payload = point.payload or {}
+            text = payload.get("chunk_text", "") or ""
+            m = open_pattern.search(text)
+            if m and m.start() < _CHUNK_OPEN_WINDOW:
+                r = self.vector_store._point_to_result(point)
+                if r.point_id not in seen:
+                    seen.add(r.point_id); lenient.append(r)
+            if len(strict) + len(lenient) >= cap:
                 break
-            for point in chunks_by_doc.get(doc_id, []):
-                payload = point.payload or {}
-                art_num = artnum(payload.get("article"))
-                if art_num is not None and art_num == target_num:
-                    strict_hits.append((doc_id, point))
-                    continue
-                chunk_text = payload.get("chunk_text", "") or ""
-                m = open_pattern.search(chunk_text)
-                if m and m.start() < _CHUNK_OPEN_WINDOW:
-                    lenient_hits.append((doc_id, point))
-
-        ordered = strict_hits + lenient_hits
-        return [self._point_to_search_result(doc_id, point) for doc_id, point in ordered[:cap]]
-
-    @staticmethod
-    def _point_to_search_result(doc_id: int, point) -> SearchResult:
-        payload = point.payload or {}
-        return SearchResult(
-            point_id=str(point.id),
-            score=1.0,  # lookup is exact metadata match, not a similarity score
-            chunk_text=payload.get("chunk_text", ""),
-            document_title=payload.get("document_title", ""),
-            document_number=payload.get("document_number", ""),
-            legal_type=payload.get("legal_type", ""),
-            article=payload.get("article"),
-            chapter=payload.get("chapter"),
-            url=payload.get("url"),
-            document_id=payload.get("document_id", doc_id),
-            parent_chunk_text=payload.get("parent_chunk_text"),
-        )
+        return (strict + lenient)[:cap]
 
 
 # ── Shared retrieval helper (used by both the pipeline and scripts/eval.py) ─
