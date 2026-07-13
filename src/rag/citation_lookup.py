@@ -568,5 +568,6 @@ def retrieve_routed(
     output = embedder.encode([question], return_dense=True, return_sparse=True)
     dense_vec = output["dense_vecs"][0]
     sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-    hits = vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=fill_top_k)
+    hits = vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=fill_top_k,
+                                      exclude_superseded=True)
     return hits, "hybrid", parsed

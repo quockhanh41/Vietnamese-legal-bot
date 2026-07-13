@@ -225,3 +225,63 @@ def test_post_process_passes_none_when_no_groundable_claims():
     assert mock_scorer.score.call_args.kwargs["grounding_ratio"] is None
     # Same convention must already hold for entailment (pre-existing behavior).
     assert mock_scorer.score.call_args.kwargs["entailment_ratio"] is None
+
+
+# ── retrieve_routed hybrid branch: server-side is_in_effect filter (M2.5) ──
+
+def test_retrieve_routed_hybrid_excludes_superseded():
+    """Non-citation query → hybrid search must request exclude_superseded=True."""
+    import numpy as np
+    from src.rag.citation_lookup import retrieve_routed
+
+    class _Emb:
+        def encode(self, qs, return_dense=True, return_sparse=True):
+            # dense_vec.tolist() is called downstream → must be a numpy array
+            return {"dense_vecs": [np.array([0.1])], "lexical_weights": [{1: 0.5}]}
+        def encode_queries(self, qs): return [np.array([0.1])]
+
+    class _Store:
+        def __init__(self): self.kw = None
+        def search_hybrid(self, dense, sparse, top_k=20, **kw):
+            self.kw = kw
+            return []
+
+    store = _Store()
+    retrieve_routed("Thế nào là tội cướp tài sản?", store, _Emb(), citation_lookup=None, fill_top_k=10)
+    assert store.kw.get("exclude_superseded") is True
+
+
+# ── NaiveRAGPipeline.query: server-side is_in_effect filter (Task 6 fix) ───
+#
+# Task 6 wired exclude_superseded=True into AdaptiveRAGPipeline's answer
+# paths + retrieve_routed's hybrid branch, but left the base-class
+# NaiveRAGPipeline.query()/query_stream() untouched. NaiveRAGPipeline is a
+# LIVE answer path (src/api/main.py's get_naive_pipeline()), so it should
+# request the same server-side filter for consistency. The client-side
+# _filter_in_effect backstop still runs regardless (fail-open on unknown).
+
+def test_naive_query_excludes_superseded():
+    """NaiveRAGPipeline.query() must request exclude_superseded=True from
+    search_dense."""
+    import numpy as np
+
+    class _Store:
+        def __init__(self):
+            self.kw = None
+
+        def search_dense(self, vector, top_k=5, **kw):
+            self.kw = kw
+            return []
+
+    class _Emb:
+        def encode_queries(self, qs):
+            return [np.array([0.1])]
+
+    class _LLM:
+        def generate(self, **kwargs):
+            return "answer"
+
+    store = _Store()
+    pipeline = NaiveRAGPipeline(vector_store=store, embedder=_Emb(), llm_gateway=_LLM())
+    pipeline.query("Thế nào là tội cướp tài sản?")
+    assert store.kw.get("exclude_superseded") is True

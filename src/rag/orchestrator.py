@@ -91,6 +91,7 @@ class NaiveRAGPipeline:
         results = self.vector_store.search_dense(
             query_vector.tolist(),
             top_k=self.top_k,
+            exclude_superseded=True,
         )
 
         # Phase 2 (Plan §3.6): default temporal filter + amendment annotations.
@@ -134,6 +135,7 @@ class NaiveRAGPipeline:
         results = self.vector_store.search_dense(
             query_vector.tolist(),
             top_k=self.top_k,
+            exclude_superseded=True,
         )
 
         # Phase 2 (Plan §3.6) + small-to-big (Plan §3.4) — see query() above.
@@ -526,7 +528,8 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         """SIMPLE: dense search → generate (2 LLM calls including classify)."""
         query_vector = self.embedder.encode_queries([question])[0]
         # Use a broader initial pool, then dynamically select
-        results = self.vector_store.search_dense(query_vector.tolist(), top_k=20)
+        results = self.vector_store.search_dense(query_vector.tolist(), top_k=20,
+                                                  exclude_superseded=True)
 
         # Phase 2 (Plan §3.6): default temporal filter, computed on the broad
         # pool before dynamic-top-k picks the final candidate count.
@@ -560,7 +563,8 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
 
         # Broader initial pool
-        results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20)
+        results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20,
+                                                  exclude_superseded=True)
 
         # Phase 2 (Plan §3.6): default temporal filter, before dynamic-top-k/rerank.
         annotations = self._annotate_phase2(results)
@@ -612,7 +616,8 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             output = self.embedder.encode([q], return_dense=True, return_sparse=True)
             dense_vec = output["dense_vecs"][0]
             sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-            results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10)
+            results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10,
+                                                      exclude_superseded=True)
             all_results.extend(results)
 
         # 5. Deduplicate and apply dynamic top-k
@@ -777,7 +782,8 @@ Các câu liên quan (giữ nguyên văn):"""
         elif complexity == "simple":
             yield f'__STEP__{json.dumps({"step": "Routing", "result": "Simple Pipeline (Dense Search)"})}'
             query_vector = self.embedder.encode_queries([question])[0]
-            results = self.vector_store.search_dense(query_vector.tolist(), top_k=20)
+            results = self.vector_store.search_dense(query_vector.tolist(), top_k=20,
+                                                      exclude_superseded=True)
             annotations = self._annotate_phase2(results)  # Plan §3.6
             results = self._filter_in_effect(results, annotations)
             # Dynamic top-k
@@ -789,7 +795,8 @@ Các câu liên quan (giữ nguyên văn):"""
             output = self.embedder.encode([question], return_dense=True, return_sparse=True)
             dense_vec = output["dense_vecs"][0]
             sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-            results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20)
+            results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20,
+                                                      exclude_superseded=True)
             annotations = self._annotate_phase2(results)  # Plan §3.6
             results = self._filter_in_effect(results, annotations)
             # Dynamic top-k + rerank
@@ -827,7 +834,8 @@ Các câu liên quan (giữ nguyên văn):"""
                 output = self.embedder.encode([q], return_dense=True, return_sparse=True)
                 dense_vec = output["dense_vecs"][0]
                 sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-                all_results.extend(self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10))
+                all_results.extend(self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10,
+                                                                    exclude_superseded=True))
 
             # Deduplicate + dynamic top-k
             seen = set()
