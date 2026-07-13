@@ -153,3 +153,36 @@ def test_import_json_dir(tmp_path):
     assert store.get_document(1).amended_articles == ["40"]
     assert store.get_document(2).is_in_effect is None
     assert store.get_timeline(1)["effective_date"] == "2016-01-01"
+
+
+def test_init_auto_seeds_from_json(tmp_path):
+    (tmp_path / "documents.json").write_text(json.dumps({
+        "1": {"doc_id": 1, "title": "Bộ luật Hình sự", "is_in_effect": True,
+              "amended_articles": ["40"]},
+        "2": {"doc_id": 2, "title": "Luật Đầu tư 2025", "is_in_effect": None},
+    }, ensure_ascii=False), encoding="utf-8")
+    (tmp_path / "timelines.json").write_text(json.dumps(
+        [{"doc_id": 1, "effective_date": "2016-01-01", "is_in_effect": True}],
+        ensure_ascii=False), encoding="utf-8")
+
+    # No manual import_json_dir call — construction alone must seed, and must
+    # complete without RecursionError.
+    store = MetadataStore(data_dir=str(tmp_path))
+
+    assert store.get_document(1).is_in_effect is True
+    assert store.get_document(1).amended_articles == ["40"]
+    assert store.get_document(2).is_in_effect is None
+    assert store.get_timeline(1)["effective_date"] == "2016-01-01"
+
+
+def test_init_does_not_reseed_when_populated(tmp_path):
+    store = MetadataStore(data_dir=str(tmp_path))
+    store.save_document(1, DocumentMeta(doc_id=1, title="Original Title"))
+
+    # Different content — if re-seeded on reopen, doc 1 title would change.
+    (tmp_path / "documents.json").write_text(json.dumps({
+        "1": {"doc_id": 1, "title": "Overwritten Title"},
+    }, ensure_ascii=False), encoding="utf-8")
+
+    reopened = MetadataStore(data_dir=str(tmp_path))
+    assert reopened.get_document(1).title == "Original Title"

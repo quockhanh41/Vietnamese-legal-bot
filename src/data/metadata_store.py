@@ -108,7 +108,7 @@ class MetadataStore:
         all_meta = store.get_all_documents()
     """
 
-    def __init__(self, data_dir: str = "data/metadata"):
+    def __init__(self, data_dir: str = "data/metadata", _skip_auto_seed: bool = False):
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self._db_path = self.data_dir / "store.db"
@@ -124,6 +124,17 @@ class MetadataStore:
         with self._lock:
             self._conn.executescript(_SCHEMA)
             self._conn.commit()
+            count = self._conn.execute("SELECT COUNT(*) FROM documents").fetchone()[0]
+        # Fresh clone/CI/deploy: `store.db` is gitignored, so a brand-new file
+        # has an empty `documents` table while documents.json (+ graph/timelines/
+        # amendments) remain the tracked source of truth. Seed once from those
+        # so metadata-dependent features (temporal filter, get_effective_laws)
+        # aren't silently empty. `_skip_auto_seed` is set only by import_json_dir
+        # below, which does its own unconditional (re)seed via _seed_from_json —
+        # without it, that helper's internal MetadataStore(...) construction
+        # would recurse into this same auto-seed check forever.
+        if not _skip_auto_seed and count == 0 and (self.data_dir / "documents.json").exists():
+            self._seed_from_json()
 
     # ── Document Metadata ──────────────────────────────────────
 
@@ -332,24 +343,42 @@ class MetadataStore:
                 self._conn.execute(f"DELETE FROM {t}")
             self._conn.commit()
 
+    # ── JSON Migration (shared by __init__ auto-seed + import_json_dir) ────
+
+    def _seed_from_json(self) -> int:
+        """
+        Load legacy *.json enrichment files (documents/graph/timelines/
+        amendments) from self.data_dir into THIS already-open store.
+
+        Operates on `self` only — never constructs a MetadataStore — so it
+        is safe to call both from __init__ (guarded auto-seed on an empty
+        store) and from the module-level import_json_dir (unconditional
+        one-time migration) without recursing.
+        """
+        p = self.data_dir
+        n = 0
+        docs_f = p / "documents.json"
+        if docs_f.exists():
+            raw = json.loads(docs_f.read_text(encoding="utf-8"))
+            for k, v in raw.items():
+                self.save_document(int(k), DocumentMeta.from_dict(v))
+                n += 1
+        for name, saver in (("graph.json", self.save_graph),
+                            ("timelines.json", self.save_timelines),
+                            ("amendments.json", self.save_amendments)):
+            f = p / name
+            if f.exists():
+                saver(json.loads(f.read_text(encoding="utf-8")))
+        return n
+
 
 # ── JSON Migration ────────────────────────────────────────────────
 
 def import_json_dir(data_dir: str) -> int:
     """One-time: load legacy *.json enrichment files into the SQLite store."""
-    p = Path(data_dir)
-    store = MetadataStore(data_dir=data_dir)
-    n = 0
-    docs_f = p / "documents.json"
-    if docs_f.exists():
-        raw = json.loads(docs_f.read_text(encoding="utf-8"))
-        for k, v in raw.items():
-            store.save_document(int(k), DocumentMeta.from_dict(v))
-            n += 1
-    for name, saver in (("graph.json", store.save_graph),
-                        ("timelines.json", store.save_timelines),
-                        ("amendments.json", store.save_amendments)):
-        f = p / name
-        if f.exists():
-            saver(json.loads(f.read_text(encoding="utf-8")))
-    return n
+    # _skip_auto_seed=True: we're about to force-(re)seed unconditionally via
+    # _seed_from_json below, so skip __init__'s own empty-store auto-seed
+    # check — avoids doing the import twice, and (more importantly) avoids
+    # nesting MetadataStore construction inside seeding logic.
+    store = MetadataStore(data_dir=data_dir, _skip_auto_seed=True)
+    return store._seed_from_json()
