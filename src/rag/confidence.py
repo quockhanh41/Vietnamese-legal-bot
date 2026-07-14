@@ -63,7 +63,27 @@ DEFAULT_WEIGHTS = {
     "grounding": 0.10,
 }
 
-# Threshold for refusal — RECALIBRATED 2026-07-12 (M1.7) TO 0.650 at the
+# Threshold for refusal — RECALIBRATED 2026-07-15 (M2 Phase E) TO 0.700 at the
+# 600-doc multi-sector scale (collection luat_law_ctx_v4, 60,958 points). Full
+# Tier-2, 165 questions (criminal 41 + general 41 + sectors 83), 157 usable
+# after an error-retry (140 answer / 17 refuse); reports 20260714T18* +
+# analysis 20260714T182658Z_calibration.
+#
+# THE 1.0-REFUSAL GATE IS UNREACHABLE AT A USABLE THRESHOLD HERE. On this
+# rigorous 17-case OOS set the scope gate catches 0 (all are "in-domain-looking
+# but unanswerable"), so the confidence gate is the only defense. refusal_recall
+# 1.0 needs t=0.900, which false-refuses 79% of valid questions — gen-903 (a
+# confident OOS mis-answer at conf 0.882) is the ceiling. The Youden optimum
+# t=0.775 gives refusal_recall 0.941 / false_refusal 0.271. We ship t=0.700
+# (balanced, chosen 2026-07-15): refusal_recall 0.765, false_refusal 0.136,
+# youden 0.629 — trades ~18pt of OOS recall for ~13pt less false-refusal vs
+# Youden, prioritizing demo helpfulness. gen-903 + the confident-OOS ceiling
+# are a documented known gap (scale-journey writeup). M1's "1.0" was on a
+# single OOS case (n_refuse=1) — the gate was never rigorously tested before.
+# RECALIBRATE AT EVERY SCALE STEP.
+#
+# ── Previous calibration (M1.7, 2026-07-12, 100-doc corpus — history) ──
+# RECALIBRATED 2026-07-12 (M1.7) TO 0.650 at the
 # 100-doc multi-sector scale (collection luat_law_ctx_v3, 23.7K points).
 # Fresh Tier-2, 133 questions, 0 errors: criminal 41 + general 41 + sectors
 # 51 (reports 20260712T004159Z / 20260712T002745Z / 20260712T003539Z,
@@ -106,7 +126,7 @@ DEFAULT_WEIGHTS = {
 # the gap — refusal_recall 1.0, false_refusal 0.0, youden 1.0 (reports
 # 20260710T085125Z + 20260710T085328Z, analysis 20260710T085625Z).
 # Override per-deployment with CONFIDENCE_REFUSAL_THRESHOLD.
-REFUSAL_THRESHOLD = float(os.getenv("CONFIDENCE_REFUSAL_THRESHOLD", "0.650"))
+REFUSAL_THRESHOLD = float(os.getenv("CONFIDENCE_REFUSAL_THRESHOLD", "0.700"))
 
 REFUSAL_ANSWER = (
     "⚠️ **Tôi không tìm thấy đủ thông tin chính xác để trả lời câu hỏi này.**\n\n"
