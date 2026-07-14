@@ -202,3 +202,37 @@ def test_law_still_replaces_law_and_decree_still_replaces_decree():
     r = VersionResolver([old_law, new_law, old_nd, new_nd])
     assert r.find_replacement(1) is new_law
     assert r.find_replacement(3) is new_nd
+
+
+# ── consolidation guard (M2 Phase E, 2026-07-14) ───────────────────────────
+#
+# Measured failure on the 600-doc corpus: "Văn bản hợp nhất 410/VBHN-BTP ...
+# hợp nhất Nghị định hướng dẫn Luật Nuôi con nuôi" carried the LAW's name in
+# its extracted replaced_laws clause and, being newer (2017 > 2011), passed
+# the name-fallback direction guard — marking the still-in-force Luật Nuôi
+# con nuôi 2010 expired. exclude_superseded=True then dropped it from the
+# routed pool (hngd recall@5 0.85 -> 0.60). A Văn bản hợp nhất is a
+# CONSOLIDATION (merges a law + its amendments into one readable document);
+# it never repeals anything, so it can never be a replacement.
+
+def test_consolidation_vbhn_never_replaces_its_law_name_fallback():
+    law = _tl(108082, "Luật nuôi con nuôi 2010", num="52/2010/QH12",
+              eff=date(2011, 1, 1))
+    vbhn = _tl(410, "Văn bản hợp nhất 410/VBHN-BTP năm 2026 hợp nhất Nghị "
+               "định hướng dẫn Luật Nuôi con nuôi do Bộ Tư pháp ban hành",
+               eff=date(2017, 1, 1),
+               replaced=["Luật Nuôi con nuôi"])
+    r = VersionResolver([law, vbhn])
+    assert r.find_replacement(108082) is None
+
+
+def test_consolidation_vbhn_never_replaces_even_with_explicit_number():
+    """Extraction can put the law's own số hiệu in a VBHN's clause — the
+    consolidation guard must hold on the number path too."""
+    law = _tl(108082, "Luật nuôi con nuôi 2010", num="52/2010/QH12",
+              eff=date(2011, 1, 1))
+    vbhn = _tl(410, "Văn bản hợp nhất 410/VBHN-BTP hợp nhất Nghị định "
+               "hướng dẫn Luật Nuôi con nuôi", eff=date(2017, 1, 1),
+               replaced=["Luật Nuôi con nuôi số 52/2010/QH12"])
+    r = VersionResolver([law, vbhn])
+    assert r.find_replacement(108082) is None

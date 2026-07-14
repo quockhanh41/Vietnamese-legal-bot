@@ -76,6 +76,16 @@ _AMENDED_BY_MARKER_RE = re.compile(
 # ingest uses to route amendment docs to the article-level chunker.
 _AMENDMENT_TITLE_RE = re.compile(r"(?:sửa\s+đổi|bổ\s+sung)", re.IGNORECASE)
 
+# Consolidation titles ("Văn bản hợp nhất .../VBHN-..."): a hợp nhất merges a
+# law + its amendments into one readable document — it never repeals anything.
+# Its text names the consolidated law (often a decree's parent law), which the
+# name/number match reads as a replacement, marking the still-in-force parent
+# expired (Luật Nuôi con nuôi 2010 via "VBHN ... hợp nhất Nghị định hướng dẫn
+# Luật Nuôi con nuôi", 600-doc corpus, 2026-07-14). It slips past both the
+# amendment guard ("hợp nhất" ≠ "sửa đổi") and the hierarchy guard (VBHN has
+# no rank prefix → defaults to top rank), so it needs its own guard.
+_CONSOLIDATION_TITLE_RE = re.compile(r"văn\s*bản\s*hợp\s*nhất|\bVBHN\b", re.IGNORECASE)
+
 
 def _extract_doc_numbers(clause: str) -> Set[str]:
     """Normalized số hiệu of the laws a replaced_laws clause actually
@@ -250,6 +260,11 @@ class VersionResolver:
             if _AMENDMENT_TITLE_RE.search(other.law_name or ""):
                 # Amendments modify, they don't replace — e.g. "Luật sửa đổi
                 # BLTTHS 2025" must not mark BLTTHS 2015 expired.
+                continue
+            if _CONSOLIDATION_TITLE_RE.search(other.law_name or ""):
+                # Văn bản hợp nhất consolidates, it doesn't replace — e.g.
+                # "VBHN ... hợp nhất Nghị định hướng dẫn Luật Nuôi con nuôi"
+                # must not mark Luật Nuôi con nuôi 2010 expired.
                 continue
             if _type_rank(other.law_name) < own_rank:
                 # Hierarchy guard: a decree/circular can never replace a law,
