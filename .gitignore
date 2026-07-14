@@ -26,3 +26,5 @@ Thumbs.db
 # Docker
 qdrant_data/
 redis_data/
+CLAUDE.MD 
+.claude/

@@ -101,6 +101,7 @@ def ingest(
     collection: str = DEFAULT_COLLECTION_NAME,
     quantized: bool = False,
     resume: bool = False,
+    model_path: str = None,
 ):
     """
     Run ingestion with STREAMING — pyarrow.dataset batch iteration.
@@ -214,7 +215,7 @@ def ingest(
             if len(embed_text_buffer) >= embed_batch_size * 4:
                 if embedder is None:
                     print("Loading BGE-M3 model (this loads ~2GB once)...")
-                    embedder = BGEEmbedder(device=device)
+                    embedder = BGEEmbedder(model_name=model_path or "BAAI/bge-m3", device=device)
 
                 dense, sparse = embedder.encode_documents(
                     embed_text_buffer, batch_size=embed_batch_size
@@ -245,7 +246,7 @@ def ingest(
     if embed_text_buffer:
         if embedder is None:
             print("Loading BGE-M3 model...")
-            embedder = BGEEmbedder(device=device)
+            embedder = BGEEmbedder(model_name=model_path or "BAAI/bge-m3", device=device)
 
         dense, sparse = embedder.encode_documents(
             embed_text_buffer, batch_size=embed_batch_size
@@ -294,8 +295,12 @@ def ingest(
                    "(data/ingest_progress/{collection}.sqlite) — dùng khi chạy "
                    "lại sau khi rớt mạng/session. Checkpoint luôn được ghi dù "
                    "có --resume hay không.")
-def main(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume):
-    ingest(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume)
+@click.option("--model-path", default=None,
+              help="Đường dẫn thư mục model BGE-M3 local để load offline "
+                   "(vd: Kaggle Models mount /kaggle/input/...). Mặc định tải "
+                   "HF id BAAI/bge-m3. Kèm HF_HUB_OFFLINE=1 để tránh mọi request mạng.")
+def main(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume, model_path):
+    ingest(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume, model_path)
 
 
 if __name__ == "__main__":
