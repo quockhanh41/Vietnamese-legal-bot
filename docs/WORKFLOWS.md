@@ -34,7 +34,8 @@ cổng nào.)
 
 Lưu ý so với code (thứ tự chính xác trong `query_stream()`):
 
-- Với route simple/medium/complex, `_annotate_phase2` + `_filter_in_effect` chạy **ngay
+- Bộ lọc hiệu lực **chính** chạy server-side ngay trong search (`exclude_superseded=True`,
+  M2.5); ở tầng client, `_annotate_phase2` + `_filter_in_effect` (backstop) chạy **ngay
   sau search, trước** `_dynamic_top_k`/rerank (để chunk hết hiệu lực không chiếm slot);
   `_expand_to_parent` chạy sau cùng, ngay trước build context. Sơ đồ gộp chúng vào một
   khối cho gọn.
@@ -57,10 +58,12 @@ File: `src/rag/citation_lookup.py`. Được dùng chung bởi orchestrator **v�
 
 *Nguồn: [`diagrams/02-citation-route.mmd`](diagrams/02-citation-route.mmd)*
 
-Cache (`_load_collection_cache`) scroll toàn collection một lần và giữ 3 index trong
-RAM: alias → title, doc_number chuẩn hoá → doc_id, doc_id → chunks. `corpus_summary()`
+Từ M2.3, index là **cấp document** (`_load_doc_index` qua `get_document_index()` — một
+scroll projected nhẹ), giữ trong RAM: alias → title, doc_number chuẩn hoá → doc_id;
+việc tra Điều thì đi **server-side** (`scroll_article()` lọc `document_id`+`article_number`
+trên payload index) thay vì cache toàn bộ chunk client-side như trước. `corpus_summary()`
 (nhóm theo `sector` cho scope gate) và `corpus_summary_compact()` (câu từ chối) cũng
-dựng từ đúng cache này — mọi thứ cùng nhìn một nguồn sự thật.
+dựng từ đúng doc-index này — mọi thứ cùng nhìn một nguồn sự thật.
 
 ---
 
@@ -80,8 +83,8 @@ Hai quy ước dễ trượt khi đọc code:
   hiệu bị loại + chuẩn hoá lại trọng số); `0.0` nghĩa là "có claim và tất cả đều fail".
   Nhầm hai giá trị này sẽ phạt oan các câu trả lời ngắn.
 - **`passed` chỉ phụ thuộc contradiction**: grounding/citation lỗi chỉ sinh warning.
-  Ngưỡng từ chối 0.650 (M1.7) được calibrate trên hành vi đó — đổi `passed` là phải
-  recalibrate.
+  Ngưỡng từ chối 0.700 (M2 Phase E; 0.650 ở M1.7) được calibrate trên hành vi đó — đổi
+  `passed` là phải recalibrate.
 
 ---
 
@@ -121,6 +124,8 @@ Bất biến quan trọng của luồng này:
   `create_collection` tạo mới.
 
 Enrichment (graph/timeline/amendment) là luồng offline **riêng** — `POST
-/api/pipeline/enrich` → `PipelineEnricher` → ghi `data/metadata/` (không đụng Qdrant);
-kết quả được luồng online đọc qua `get_phase2_status()` ở bước `_annotate_phase2` /
-`_filter_in_effect` (workflow 1).
+/api/pipeline/enrich`, `PipelineEnricher`, hoặc `scripts/run_enrichment.py` (M2 Phase E,
+chạy được ngay trên Kaggle sau ingest) → ghi SQLite `data/metadata/store.db` **và backfill
+`is_in_effect` vào payload Qdrant** (`set_is_in_effect`, M2.5). Kết quả được luồng online
+dùng cả server-side (`exclude_superseded=True` trong search) lẫn client-side qua
+`get_phase2_status()` ở `_annotate_phase2` / `_filter_in_effect` backstop (workflow 1).

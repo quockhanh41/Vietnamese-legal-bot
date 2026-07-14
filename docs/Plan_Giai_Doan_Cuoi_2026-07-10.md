@@ -118,6 +118,14 @@ Baseline 6 docs = 1.670 chunks (~278 chunks/doc — đây là **worst case** vì
 **Gate M2**: Tier-1 giữ gate như M1 trên eval set lớn hơn; P95 end-to-end đo được và ghi lại (chưa cần đạt mục tiêu — HF Spaces CPU đo ở M5); Qdrant dùng <70% trần free tier (chừa đường mở rộng).
 **Artefact**: bảng scale journey 6 → 100 → 600 kèm recall từng bậc — câu chuyện "scale có kỷ luật" cho portfolio.
 
+**✅ M2 HOÀN THÀNH (2026-07-15, Phase E)** — collection `luat_law_ctx_v4` (600 docs, 60,958 points) thành default; REFUSAL_THRESHOLD 0.650 → **0.700**. Gates:
+- **Capacity**: 9.5% RAM / 6.0% disk trần free tier (<70%) ✅ — thực tế còn thấp hơn ước tính ~26% ở §2.2.
+- **Tier-1 recall@5 (routed, v1-subset apples-to-apples 100→600)**: mọi sector tụt ≤5pt ✅; overall −3.0pt (0.875→0.845); doanh_nghiep watch-item giữ nguyên.
+- **Bug thật lộ ra ở scale-up & đã fix**: `VersionResolver.find_replacement` coi Văn bản hợp nhất (VBHN) là văn bản thay thế → Luật Nuôi con nuôi 2010 bị đánh `is_in_effect=False` → routed `exclude_superseded` drop → hngd tụt −25pt. Fix consolidation guard (commit f55dc9e) + re-enrichment → hngd hồi 0.60→0.80.
+- **Refusal**: gate "recall=1.0" KHÔNG đạt được ở ngưỡng dùng được trên OOS set 17 câu (M1 chỉ test 1 câu) — gen-903 confident-OOS ceiling; chọn t=0.700 balanced (recall 0.765, false_refusal 0.136), Youden 0.775 bị loại vì false-refuse 27%. Known gap ghi rõ, đẩy sang M3.
+- Artefact: `docs/notes/scale-journey-6-100-600.md`. Chi tiết: `.superpowers/sdd/progress.md` (Phase E log).
+- P95 end-to-end + reranker latency (2.6): deferred sang M5 (đo trên HF Spaces CPU) theo gate gốc.
+
 ### M3 — SOTA theo số đo: benchmark ngoài + kỹ thuật nâng cao
 
 *Chỉ mở sau M2 (các kỹ thuật này cần corpus thật mới đo có ý nghĩa). Từng mục độc lập — làm theo thứ tự ROI, mục nào không cải thiện số → bỏ có ghi chép.*

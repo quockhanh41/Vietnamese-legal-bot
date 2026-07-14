@@ -1,0 +1,832 @@
+{
+  "config": {
+    "set": "sectors",
+    "limit": 5,
+    "collection": "luat_law_ctx_v4",
+    "tier": "tier1_retrieval",
+    "generated_at_utc": "2026-07-14T15:52:03.756988+00:00"
+  },
+  "tier1": {
+    "n_questions_total": 5,
+    "n_questions_eligible": 5,
+    "n_questions_skipped": 0,
+    "modes": {
+      "dense": {
+        "n": 5,
+        "recall@5_strict": 0.8,
+        "recall@5_lenient": 0.8,
+        "recall@10_strict": 0.8,
+        "recall@10_lenient": 0.8,
+        "mrr_strict": 0.5167,
+        "mrr_lenient": 0.5167,
+        "by_type": {
+          "citation-lookup": {
+            "n": 2,
+            "recall@5_strict": 0.5,
+            "recall@10_strict": 0.5,
+            "recall@5_lenient": 0.5,
+            "recall@10_lenient": 0.5,
+            "mrr_strict": 0.5,
+            "mrr_lenient": 0.5
+          },
+          "single-hop": {
+            "n": 3,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.5278,
+            "mrr_lenient": 0.5278
+          }
+        },
+        "by_sector": {
+          "dan_su": {
+            "n": 5,
+            "recall@5_strict": 0.8,
+            "recall@10_strict": 0.8,
+            "recall@5_lenient": 0.8,
+            "recall@10_lenient": 0.8,
+            "mrr_strict": 0.5167,
+            "mrr_lenient": 0.5167,
+            "leakage@5": null
+          }
+        }
+      },
+      "hybrid": {
+        "n": 5,
+        "recall@5_strict": 0.8,
+        "recall@5_lenient": 0.8,
+        "recall@10_strict": 0.8,
+        "recall@10_lenient": 0.8,
+        "mrr_strict": 0.5667,
+        "mrr_lenient": 0.5667,
+        "by_type": {
+          "citation-lookup": {
+            "n": 2,
+            "recall@5_strict": 0.5,
+            "recall@10_strict": 0.5,
+            "recall@5_lenient": 0.5,
+            "recall@10_lenient": 0.5,
+            "mrr_strict": 0.5,
+            "mrr_lenient": 0.5
+          },
+          "single-hop": {
+            "n": 3,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.6111,
+            "mrr_lenient": 0.6111
+          }
+        },
+        "by_sector": {
+          "dan_su": {
+            "n": 5,
+            "recall@5_strict": 0.8,
+            "recall@10_strict": 0.8,
+            "recall@5_lenient": 0.8,
+            "recall@10_lenient": 0.8,
+            "mrr_strict": 0.5667,
+            "mrr_lenient": 0.5667,
+            "leakage@5": null
+          }
+        }
+      },
+      "routed": {
+        "n": 5,
+        "recall@5_strict": 1.0,
+        "recall@5_lenient": 1.0,
+        "recall@10_strict": 1.0,
+        "recall@10_lenient": 1.0,
+        "mrr_strict": 0.9,
+        "mrr_lenient": 0.9,
+        "by_type": {
+          "citation-lookup": {
+            "n": 2,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 1.0,
+            "mrr_lenient": 1.0
+          },
+          "single-hop": {
+            "n": 3,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.8333,
+            "mrr_lenient": 0.8333
+          }
+        },
+        "by_sector": {
+          "dan_su": {
+            "n": 5,
+            "recall@5_strict": 1.0,
+            "recall@10_strict": 1.0,
+            "recall@5_lenient": 1.0,
+            "recall@10_lenient": 1.0,
+            "mrr_strict": 0.9,
+            "mrr_lenient": 0.9,
+            "leakage@5": 0.16
+          }
+        }
+      }
+    },
+    "rows": {
+      "dense": [
+        {
+          "id": "ds-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 124"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296861,
+              "article": "Điều 114. Các biện pháp khẩn cấp tạm thời",
+              "score": 0.603
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 1. Phạm vi điều chỉnh",
+              "score": 0.5949
+            },
+            {
+              "document_id": 296861,
+              "article": "Điều 1. Phạm vi điều chỉnh và nhiệm vụ của Bộ luật tố tụng dân sự",
+              "score": 0.5875
+            },
+            {
+              "document_id": 679014,
+              "article": "Điều 73. Sửa đổi, bổ sung một số khoản của Điều 123 của Bộ luật Tố tụng hình sự số 101/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 02/2021/QH15, Luật số 34/2024/QH15, Luật số 59/2024/QH15 và Luật số 99/2025/QH15 như sau:",
+              "score": 0.5799
+            },
+            {
+              "document_id": 296861,
+              "article": "Điều 129. Cấm tiếp xúc với nạn nhân bạo lực gia đình",
+              "score": 0.5746
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "ds-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 651"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 651. Người thừa kế theo pháp luật",
+              "score": 0.6546
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 653. Quan hệ thừa kế giữa con nuôi và cha nuôi, mẹ nuôi và cha đẻ, mẹ đẻ",
+              "score": 0.6541
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 649. Thừa kế theo pháp luật",
+              "score": 0.6183
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 654. Quan hệ thừa kế giữa con riêng và bố dượng, mẹ kế",
+              "score": 0.613
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 610. Quyền bình đẳng về thừa kế của cá nhân",
+              "score": 0.609
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-101",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 466"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 466. Nghĩa vụ trả nợ của bên vay",
+              "score": 0.7382
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 469. Thực hiện hợp đồng vay không kỳ hạn",
+              "score": 0.6931
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 474. Nghĩa vụ trả nợ của bên vay",
+              "score": 0.6894
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 466. Nghĩa vụ trả nợ của bên vay",
+              "score": 0.6894
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 477. Thực hiện hợp đồng vay không kỳ hạn",
+              "score": 0.6852
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-102",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 357"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 2463,
+              "article": "Điều 305. Trách nhiệm dân sự do chậm thực hiện nghĩa vụ dân sự",
+              "score": 0.7355
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 306. Trách nhiệm dân sự do chậm tiếp nhận việc thực hiện nghĩa vụ dân sự",
+              "score": 0.7044
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 357. Trách nhiệm do chậm thực hiện nghĩa vụ trả tiền",
+              "score": 0.6983
+            },
+            {
+              "document_id": 625169,
+              "article": "Điều 7. Trách nhiệm của các bên do vi phạm hợp đồng",
+              "score": 0.6943
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 440. Nghĩa vụ trả tiền",
+              "score": 0.6819
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "ds-103",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 7022,
+              "article": "Điều 6"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 458435,
+              "article": "Điều 49. Đăng ký quyền tác giả, đăng ký quyền liên quan",
+              "score": 0.6594
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 49. Đăng ký quyền tác giả, quyền liên quan",
+              "score": 0.6542
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 739. Thời điểm phát sinh và hiệu lực quyền tác giả",
+              "score": 0.6521
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 6. Căn cứ phát sinh, xác lập quyền sở hữu trí tuệ",
+              "score": 0.6445
+            },
+            {
+              "document_id": 458435,
+              "article": "Điều 26. Giới hạn quyền tác giả",
+              "score": 0.6351
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.25,
+          "rr_lenient": 0.25
+        }
+      ],
+      "hybrid": [
+        {
+          "id": "ds-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 124"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 1. Phạm vi điều chỉnh",
+              "score": 0.8333
+            },
+            {
+              "document_id": 296861,
+              "article": "Điều 114. Các biện pháp khẩn cấp tạm thời",
+              "score": 0.5
+            },
+            {
+              "document_id": 296661,
+              "article": "Điều 124. Tội giết hoặc vứt bỏ con mới đẻ",
+              "score": 0.3333
+            },
+            {
+              "document_id": 296861,
+              "article": "Điều 1. Phạm vi điều chỉnh và nhiệm vụ của Bộ luật tố tụng dân sự",
+              "score": 0.3214
+            },
+            {
+              "document_id": 270452,
+              "article": "Điều 65. Hiệu lực của Thông tư",
+              "score": 0.25
+            }
+          ],
+          "recall@5_strict": 0.0,
+          "recall@5_lenient": 0.0,
+          "recall@10_strict": 0.0,
+          "recall@10_lenient": 0.0,
+          "rr_strict": 0.0,
+          "rr_lenient": 0.0
+        },
+        {
+          "id": "ds-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 651"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 651. Người thừa kế theo pháp luật",
+              "score": 1.0
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 649. Thừa kế theo pháp luật",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 653. Quan hệ thừa kế giữa con nuôi và cha nuôi, mẹ nuôi và cha đẻ, mẹ đẻ",
+              "score": 0.5833
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 676. Người thừa kế theo pháp luật",
+              "score": 0.2909
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 654. Quan hệ thừa kế giữa con riêng và bố dượng, mẹ kế",
+              "score": 0.2476
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-101",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 466"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 466. Nghĩa vụ trả nợ của bên vay",
+              "score": 1.0
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 474. Nghĩa vụ trả nợ của bên vay",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 469. Thực hiện hợp đồng vay không kỳ hạn",
+              "score": 0.4583
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 466. Nghĩa vụ trả nợ của bên vay",
+              "score": 0.45
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 470. Thực hiện hợp đồng vay có kỳ hạn",
+              "score": 0.3429
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-102",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 357"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 2463,
+              "article": "Điều 305. Trách nhiệm dân sự do chậm thực hiện nghĩa vụ dân sự",
+              "score": 0.75
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 440. Nghĩa vụ trả tiền",
+              "score": 0.6667
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 357. Trách nhiệm do chậm thực hiện nghĩa vụ trả tiền",
+              "score": 0.45
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 306. Trách nhiệm dân sự do chậm tiếp nhận việc thực hiện nghĩa vụ dân sự",
+              "score": 0.3333
+            },
+            {
+              "document_id": 479312,
+              "article": "Điều 17. Vi phạm quy định về tiền lương",
+              "score": 0.3333
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.3333333333333333,
+          "rr_lenient": 0.3333333333333333
+        },
+        {
+          "id": "ds-103",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 7022,
+              "article": "Điều 6"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 458435,
+              "article": "Điều 49. Đăng ký quyền tác giả, đăng ký quyền liên quan",
+              "score": 0.7
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 6. Căn cứ phát sinh, xác lập quyền sở hữu trí tuệ",
+              "score": 0.7
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 49. Đăng ký quyền tác giả, quyền liên quan",
+              "score": 0.6667
+            },
+            {
+              "document_id": 2463,
+              "article": "Điều 739. Thời điểm phát sinh và hiệu lực quyền tác giả",
+              "score": 0.5
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 50. Đơn đăng ký quyền tác giả, quyền liên quan",
+              "score": 0.2198
+            }
+          ],
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        }
+      ],
+      "routed": [
+        {
+          "id": "ds-001",
+          "type": "citation-lookup",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 124"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 124. Giao dịch dân sự vô hiệu do giả tạo",
+              "score": 1.0
+            },
+            {
+              "document_id": 296861,
+              "article": "Điều 114. Các biện pháp khẩn cấp tạm thời",
+              "score": 0.603
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 1. Phạm vi điều chỉnh",
+              "score": 0.5949
+            },
+            {
+              "document_id": 296861,
+              "article": "Điều 1. Phạm vi điều chỉnh và nhiệm vụ của Bộ luật tố tụng dân sự",
+              "score": 0.5875
+            },
+            {
+              "document_id": 679014,
+              "article": "Điều 73. Sửa đổi, bổ sung một số khoản của Điều 123 của Bộ luật Tố tụng hình sự số 101/2015/QH13 đã được sửa đổi, bổ sung một số điều theo Luật số 02/2021/QH15, Luật số 34/2024/QH15, Luật số 59/2024/QH15 và Luật số 99/2025/QH15 như sau:",
+              "score": 0.5799
+            }
+          ],
+          "route": "lookup",
+          "leakage@5": 0.2,
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-002",
+          "type": "citation-lookup",
+          "difficulty": "medium",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 651"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 651. Người thừa kế theo pháp luật",
+              "score": 1.0
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 653. Quan hệ thừa kế giữa con nuôi và cha nuôi, mẹ nuôi và cha đẻ, mẹ đẻ",
+              "score": 0.6541
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 649. Thừa kế theo pháp luật",
+              "score": 0.6183
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 654. Quan hệ thừa kế giữa con riêng và bố dượng, mẹ kế",
+              "score": 0.613
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 610. Quyền bình đẳng về thừa kế của cá nhân",
+              "score": 0.609
+            }
+          ],
+          "route": "lookup",
+          "leakage@5": 0.0,
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-101",
+          "type": "single-hop",
+          "difficulty": "medium",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 466"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 466. Nghĩa vụ trả nợ của bên vay",
+              "score": 1.0
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 466. Nghĩa vụ trả nợ của bên vay",
+              "score": 0.5833
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 469. Thực hiện hợp đồng vay không kỳ hạn",
+              "score": 0.5333
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 470. Thực hiện hợp đồng vay có kỳ hạn",
+              "score": 0.45
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 440. Nghĩa vụ trả tiền",
+              "score": 0.2778
+            }
+          ],
+          "route": "hybrid",
+          "leakage@5": 0.0,
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-102",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 296215,
+              "article": "Điều 357"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 296215,
+              "article": "Điều 357. Trách nhiệm do chậm thực hiện nghĩa vụ trả tiền",
+              "score": 0.75
+            },
+            {
+              "document_id": 296215,
+              "article": "Điều 440. Nghĩa vụ trả tiền",
+              "score": 0.75
+            },
+            {
+              "document_id": 625169,
+              "article": "Điều 7. Trách nhiệm của các bên do vi phạm hợp đồng",
+              "score": 0.3333
+            },
+            {
+              "document_id": 479312,
+              "article": "Điều 17. Vi phạm quy định về tiền lương",
+              "score": 0.3333
+            },
+            {
+              "document_id": 500102,
+              "article": "Điều 38. Giao kết hợp đồng trong giao dịch từ xa",
+              "score": 0.2526
+            }
+          ],
+          "route": "hybrid",
+          "leakage@5": 0.6,
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 1.0,
+          "rr_lenient": 1.0
+        },
+        {
+          "id": "ds-103",
+          "type": "single-hop",
+          "difficulty": "easy",
+          "legal_sector": "dan_su",
+          "expected_articles": [
+            {
+              "doc_id": 7022,
+              "article": "Điều 6"
+            }
+          ],
+          "top_hits": [
+            {
+              "document_id": 458435,
+              "article": "Điều 49. Đăng ký quyền tác giả, đăng ký quyền liên quan",
+              "score": 0.75
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 6. Căn cứ phát sinh, xác lập quyền sở hữu trí tuệ",
+              "score": 0.75
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 49. Đăng ký quyền tác giả, quyền liên quan",
+              "score": 0.6667
+            },
+            {
+              "document_id": 7022,
+              "article": "Điều 50. Đơn đăng ký quyền tác giả, quyền liên quan",
+              "score": 0.25
+            },
+            {
+              "document_id": 423089,
+              "article": "Điều 6. Căn cứ xác định đối tượng được bảo hộ",
+              "score": 0.2159
+            }
+          ],
+          "route": "hybrid",
+          "leakage@5": 0.0,
+          "recall@5_strict": 1.0,
+          "recall@5_lenient": 1.0,
+          "recall@10_strict": 1.0,
+          "recall@10_lenient": 1.0,
+          "rr_strict": 0.5,
+          "rr_lenient": 0.5
+        }
+      ]
+    }
+  }
+}

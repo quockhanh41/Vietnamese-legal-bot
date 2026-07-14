@@ -1,5 +1,5 @@
 flowchart TD
-    DL["scripts/download_dataset.py<br/>HuggingFace → data/raw/*.parquet"] --> SEL["scripts/select_corpus.py (M1.1)<br/>tuyển tay 100 văn bản, 6 lĩnh vực<br/>→ corpus_100docs.parquet (có cột sector)"]
+    DL["scripts/download_dataset.py<br/>HuggingFace → data/raw/*.parquet"] --> SEL["scripts/select_corpus_600.py (M2.2)<br/>tuyển 600 văn bản, 6 lĩnh vực (ngân sách chunk ≤3×)<br/>→ corpus_600docs.parquet (có cột sector)<br/>[M1: select_corpus.py → corpus_100docs.parquet]"]
     SEL --> ING["scripts/ingest.py<br/>--collection --quantized --resume --device"]
 
     subgraph SETUP ["Khởi tạo"]

@@ -19,7 +19,7 @@ flowchart TD
         RD2 --> RD3["3. năm khớp → ưu tiên;<br/>không phân giải được → tra mọi document"]
     end
 
-    RD3 --> LK["CitationLookup.lookup(parsed, cap=8)<br/>quét _get_chunks_by_doc (cache scroll toàn collection)<br/>tìm chunk MỞ ĐẦU bằng 'Điều N.'"]
+    RD3 --> LK["CitationLookup.lookup(parsed, cap=8)<br/>scroll_article() server-side (payload index<br/>document_id + article_number, M2.3)<br/>tìm chunk MỞ ĐẦU bằng 'Điều N.'"]
     LK --> HIT{"tìm thấy chunk?"}
 
     HIT -->|có| FILL["dense fill: search_dense(top_k×2)<br/>khử trùng point_id, bổ sung đến đủ 10<br/>→ LLM có ngữ cảnh xung quanh"]

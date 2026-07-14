@@ -1,0 +1,26 @@
+{
+  "sizes": {
+    "luat_law_ctx_v2": {
+      "vectors_bytes": 11350048,
+      "payloads_bytes": 3477248,
+      "points": 2242
+    },
+    "luat_law_ctx_v3": {
+      "vectors_bytes": 107341950,
+      "payloads_bytes": 66573440,
+      "points": 23727
+    },
+    "luat_law_ctx_v4": {
+      "vectors_bytes": 276017824,
+      "payloads_bytes": 346511616,
+      "points": 60958
+    }
+  },
+  "projection": {
+    "ram_bytes": 102409440,
+    "disk_bytes": 257608508,
+    "ram_pct": 9.537622332572937,
+    "disk_pct": 5.997915472835302
+  },
+  "target_points": 60958
+}

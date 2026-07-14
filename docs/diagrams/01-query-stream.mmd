@@ -40,7 +40,7 @@ flowchart TD
     COMPLEX --> P2
 
     subgraph SHARED ["Bước chung mọi route (Plan §3.4 / §3.6)"]
-        P2["_annotate_phase2()<br/>get_phase2_status() per chunk"] --> FIE["_filter_in_effect()<br/>loại is_in_effect == False<br/>(thiếu metadata → GIỮ, fail-open)"]
+        P2["_annotate_phase2()<br/>get_phase2_status() per chunk"] --> FIE["_filter_in_effect() — backstop client-side<br/>(lọc chính: exclude_superseded server-side trong search, M2.5)<br/>loại is_in_effect == False; thiếu metadata → GIỮ, fail-open"]
         FIE --> EXP["_expand_to_parent()<br/>chunk Khoản → nguyên Điều (parent_chunk_text)<br/>gộp hit trùng Điều"]
         EXP --> BC["_build_context() đánh số khối [n]<br/>+ _build_citations() — CÙNG list, CÙNG thứ tự"]
     end
