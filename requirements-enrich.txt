@@ -1,0 +1,7 @@
+# Extra deps to run scripts/run_enrichment.py on Kaggle (on top of
+# requirements-ingest.txt). Enrichment needs the knowledge-graph library;
+# it does NOT embed, so no FlagEmbedding here.
+-r requirements-ingest.txt
+
+# Knowledge graph construction/traversal — src/data/graph/graph_builder.py
+networkx>=3.0

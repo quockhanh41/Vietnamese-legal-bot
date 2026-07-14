@@ -324,23 +324,19 @@ class TestOversizeSplitInheritsCorrectArticleLabel:
         _assert_no_wrong_label(chunks)
 
 
-class TestArticlePatternSuffixLimitation:
-    """Documents a KNOWN, unfixed limitation (not part of this task's
-    scope): ARTICLE_PATTERN is `\\d+` with no letter-suffix support, so a
-    header like 'Điều 105a.' is not recognized as an article boundary at
-    all — its content silently merges into the preceding Điều's buffer
-    instead of becoming its own chunk. This does not reintroduce a
-    WRONG_LABEL per the diagnosis's own header-matching regex (which is
-    the FIRST header found in the chunk's text) because 'Điều 105a.' still
-    happens to share the LEADING label if it comes right after 'Điều 105.'
-    — but it does mean Điều 105a's content is folded into Điều 105's
-    chunk and never gets its own `article` label. Left unfixed per task
-    instructions (ARTICLE_PATTERN change was optional and out of scope
-    for the 3 diagnosed bugs); this test locks in the current behavior so
-    a future fix is a deliberate, visible change.
+class TestArticlePatternSuffixSupport:
+    """M2.7 (2026-07-13): ARTICLE_PATTERN now accepts a single letter
+    suffix (`\\d+[a-z]?`), fixing the limitation previously locked in here
+    (see git history for the prior `TestArticlePatternSuffixLimitation`).
+    Driver: the 600-doc corpus gate found WRONG_LABEL>0 on "Văn bản hợp
+    nhất" (consolidated) documents, which splice amendment articles in
+    place using letter-suffixed numbers (Điều 8a, 11a, 12a...) — previously
+    unrecognized as article boundaries, so their content silently merged
+    into the preceding Điều's buffer. See
+    docs/notes/chunker-thongtu-diagnosis-2026-07-13.md.
     """
 
-    def test_suffix_letter_article_is_not_recognized_as_boundary(self):
+    def test_suffix_letter_article_is_recognized_as_its_own_boundary(self):
         content = (
             "Điều 105. Điều gốc\n"
             + ("Nội dung điều 105. " * 15)
@@ -351,9 +347,12 @@ class TestArticlePatternSuffixLimitation:
         row = _make_row(content)
         chunks = chunker.chunk_document(row)
 
-        # Current (unfixed) behavior: no chunk is labeled "Điều 105a" —
-        # its text got absorbed into "Điều 105"'s buffer instead.
+        # Fixed behavior: "Điều 105a" gets its own label and chunk, and
+        # its content no longer bleeds into "Điều 105"'s chunk.
         labels = {_article_num(c.article) for c in chunks}
-        assert "105a" not in labels
+        assert "105a" in labels
         art105 = [c for c in chunks if _article_num(c.article) == "105"]
-        assert any("Điều 105a." in c.chunk_text for c in art105)
+        assert not any("Điều 105a." in c.chunk_text for c in art105)
+        art105a = [c for c in chunks if _article_num(c.article) == "105a"]
+        assert any("Điều 105a." in c.chunk_text for c in art105a)
+        _assert_no_wrong_label(chunks)

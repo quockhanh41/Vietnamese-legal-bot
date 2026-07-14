@@ -7,13 +7,13 @@ Checks:
      chunk data (data/raw/luat_law_chunks.json) — both doc_id and article number.
   3. Grounding (sectors set): every expected_articles entry must exist as an
      "Điều N." header inside the corresponding document's content column in
-     data/raw/corpus_100docs.parquet.
+     data/raw/corpus_600docs.parquet.
   4. Stats: question counts by type/difficulty/behavior.
 
 Usage:
     python scripts/validate_eval_set.py                     # validate all 3 sets
     python scripts/validate_eval_set.py --chunks-file path   # custom chunk dump
-    python scripts/validate_eval_set.py --corpus-parquet data/raw/corpus_100docs.parquet
+    python scripts/validate_eval_set.py --corpus-parquet data/raw/corpus_600docs.parquet
 """
 
 import json
@@ -28,9 +28,9 @@ import click
 
 CRIMINAL_SET = "data/eval/eval_set_criminal_v1.json"
 GENERAL_SET = "data/eval/eval_set_general_v1.json"
-SECTORS_SET = "data/eval/eval_set_sectors_v1.json"
+SECTORS_SET = "data/eval/eval_set_sectors_v2.json"  # M2.7 — v1 + Thông tư questions
 CHUNKS_FILE = "data/raw/luat_law_chunks.json"
-CORPUS_PARQUET = "data/raw/corpus_100docs.parquet"
+CORPUS_PARQUET = "data/raw/corpus_600docs.parquet"  # M2.7 — matches SECTORS_SET v2
 
 VALID_TYPES = {
     "citation-lookup", "single-hop", "multi-hop", "comparison",
@@ -72,7 +72,7 @@ def build_corpus_index(chunks_path: str) -> dict[int, set[str]]:
 
 def build_corpus_index_parquet(parquet_path: str) -> dict[int, set[str]]:
     """Map doc_id -> set of article numbers found as 'Điều N.' headers at the
-    start of a line in that document's content (data/raw/corpus_100docs.parquet).
+    start of a line in that document's content (data/raw/corpus_600docs.parquet).
 
     Tolerates a leading curly/angled quote (amendment laws quote the new
     article text, e.g. '"Điều 25a. ...') and a letter suffix on the article
@@ -143,7 +143,7 @@ def print_stats(name: str, questions: list[dict], behavior_field: str):
 
 @click.command()
 @click.option("--chunks-file", default=CHUNKS_FILE, help="Chunk dump for grounding check (criminal set)")
-@click.option("--corpus-parquet", default=CORPUS_PARQUET, help="corpus_100docs.parquet for grounding check (sectors set)")
+@click.option("--corpus-parquet", default=CORPUS_PARQUET, help="corpus_600docs.parquet for grounding check (sectors set)")
 def main(chunks_file: str, corpus_parquet: str):
     all_errors = []
 
@@ -189,7 +189,7 @@ def main(chunks_file: str, corpus_parquet: str):
     if os.path.exists(SECTORS_SET):
         with open(SECTORS_SET, encoding="utf-8") as f:
             sectors = json.load(f)["questions"]
-        prefixes = {"ds-", "ld-", "dn-", "dd-", "hg-"}
+        prefixes = {"ds-", "ld-", "dn-", "dd-", "hg-", "hs-"}
         errors = []
         seen_ids = set()
         for q in sectors:
@@ -206,7 +206,7 @@ def main(chunks_file: str, corpus_parquet: str):
             if q.get("difficulty") not in VALID_DIFFICULTY:
                 errors.append(f"{qid}: invalid difficulty '{q.get('difficulty')}'")
             if q.get("expected_behavior") != "answer":
-                errors.append(f"{qid}: expected_behavior must be 'answer' in eval_set_sectors_v1")
+                errors.append(f"{qid}: expected_behavior must be 'answer' in eval_set_sectors_v2")
             if not q.get("ground_truth", "").strip():
                 errors.append(f"{qid}: ground_truth is empty")
             if not q.get("expected_articles"):
@@ -214,8 +214,8 @@ def main(chunks_file: str, corpus_parquet: str):
         if parquet_corpus:
             errors += validate_grounding(sectors, parquet_corpus, label="sectors/parquet")
         elif not os.path.exists(corpus_parquet):
-            errors.append("eval_set_sectors_v1: --corpus-parquet not found — cannot verify grounding")
-        print_stats("eval_set_sectors_v1", sectors, "expected_behavior")
+            errors.append("eval_set_sectors_v2: --corpus-parquet not found — cannot verify grounding")
+        print_stats("eval_set_sectors_v2", sectors, "expected_behavior")
         all_errors += errors
     else:
         print(f"⚠️ {SECTORS_SET} not found — skipping")

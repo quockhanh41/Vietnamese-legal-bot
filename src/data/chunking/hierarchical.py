@@ -36,8 +36,14 @@ class HierarchicalChunker(BaseChunker):
         re.IGNORECASE,
     )
 
+    # Suffix letter tolerated (e.g. "Điều 105a.") — M2.7 (2026-07-13):
+    # "Văn bản hợp nhất" (consolidated) documents splice amendment articles
+    # in place using letter-suffixed numbers (Điều 8a, 11a, 12a...); without
+    # this the header wasn't recognized as a new boundary at all and its
+    # content silently merged into the preceding Điều's chunk (WRONG_LABEL
+    # on the 600-doc gate). See docs/notes/chunker-thongtu-diagnosis-2026-07-13.md.
     ARTICLE_PATTERN = re.compile(
-        r'^\s*Điều\s+(\d+)\s*[\.:\)]\s*(.*)',
+        r'^\s*Điều\s+(\d+[a-z]?)\s*[\.:\)]\s*(.*)',
         re.IGNORECASE,
     )
 

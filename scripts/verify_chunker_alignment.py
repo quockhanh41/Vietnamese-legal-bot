@@ -166,6 +166,18 @@ def check_parent_homogeneity(chunks, header_re=HEADER_RE):
     return violations
 
 
+def per_sector_chunk_report(rows, chunk_counts):
+    """rows: list of loaded doc dicts (must carry 'id' and 'sector').
+    chunk_counts: {doc_id: n_chunks}. Returns {sector: total_chunks}."""
+    totals = {}
+    for r in rows:
+        sec = r.get("sector")
+        if sec is None:
+            continue
+        totals[sec] = totals.get(sec, 0) + chunk_counts.get(r["id"], 0)
+    return totals
+
+
 def run(data_path=DATA_PATH, quiet=False):
     rows, load_error = load_documents(data_path)
     if load_error:
@@ -180,6 +192,7 @@ def run(data_path=DATA_PATH, quiet=False):
     overall_counts = {"HEADER_OK": 0, "MID_ARTICLE": 0, "WRONG_LABEL": 0, "NO_ARTICLE_LABEL": 0}
     overall_total_chunks = 0
     overall_wrong_label_examples = []
+    chunk_counts = {}
 
     # This task's scope (and gate) is HierarchicalChunker's Bug 1/3/4 fixes.
     # ArticleLevelChunker is explicitly out of scope (per task instructions,
@@ -203,6 +216,7 @@ def run(data_path=DATA_PATH, quiet=False):
 
         chunks = chunker.chunk_document(row)
         overall_total_chunks += len(chunks)
+        chunk_counts[row.get("id")] = len(chunks)
 
         # Amendment docs are audited quote-aware, mirroring the chunker
         # contract they were split with (see HEADER_RE_QUOTED above).
@@ -296,6 +310,15 @@ def run(data_path=DATA_PATH, quiet=False):
     print("  (production baseline before fix, full luat_law_ctx collection, "
           "1670 points: HEADER_OK=193 MID_ARTICLE=1346 WRONG_LABEL=126 "
           "NO_ARTICLE_LABEL=5)")
+
+    sectors_present = any(r.get("sector") is not None for r in rows)
+    if sectors_present:
+        sector_totals = per_sector_chunk_report(rows, chunk_counts)
+        print("\n--- per-sector chunk balance ---")
+        for s, n in sorted(sector_totals.items()):
+            print(f"  {s:<14}{n:>8,}")
+        ratio = max(sector_totals.values()) / min(sector_totals.values())
+        print(f"  max/min = {ratio:.2f}  {'OK (<=3x)' if ratio <= 3.0 else 'OVER 3x — rebalance corpus'}")
 
     # Gate is scoped to this task: WRONG_LABEL==0 is checked across ALL
     # chunks (both chunkers — it happens to hold for ArticleLevelChunker

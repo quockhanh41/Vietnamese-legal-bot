@@ -62,7 +62,8 @@ from src.rag.orchestrator import AdaptiveRAGPipeline
 
 CRIMINAL_SET = "data/eval/eval_set_criminal_v1.json"
 GENERAL_SET = "data/eval/eval_set_general_v1.json"
-SECTORS_SET = "data/eval/eval_set_sectors_v1.json"  # M1.5 — 5 lĩnh vực mới
+SECTORS_SET = "data/eval/eval_set_sectors_v2.json"  # M2.7 — v1 + Thông tư questions
+CORPUS_PARQUET = "data/raw/corpus_600docs.parquet"  # M2.7 — doc_id -> sector, for leakage@k
 REPORT_DIR = "data/eval_reports"
 
 SET_PATHS = {
@@ -100,6 +101,27 @@ def _result_to_dict(r: SearchResult) -> Dict:
     }
 
 
+def load_doc_sector(parquet_path: str = CORPUS_PARQUET) -> Dict[int, str]:
+    """doc_id -> sector, loaded from corpus_600docs.parquet. Caller guards
+    on file existence — returns {} if the parquet is missing."""
+    if not os.path.exists(parquet_path):
+        return {}
+    import pandas as pd
+
+    df = pd.read_parquet(parquet_path, columns=["id", "sector"])
+    return {int(row.id): row.sector for row in df.itertuples()}
+
+
+def cross_sector_leakage(hit_doc_ids: List[int], query_sector: str, doc_sector: Dict[int, str], k: int) -> float:
+    """Fraction of the top-k hits whose doc's sector != query_sector.
+    Hits whose doc_id is not in doc_sector (out-of-corpus) are ignored."""
+    known = [doc_sector[d] for d in hit_doc_ids[:k] if d in doc_sector]
+    if not known:
+        return 0.0
+    foreign = sum(1 for s in known if s != query_sector)
+    return foreign / len(known)
+
+
 # ── Tier 1: Retrieval eval ────────────────────────────────────────────────
 
 def run_tier1(questions: List[Dict], vector_store: LegalVectorStore, embedder: BGEEmbedder) -> Dict:
@@ -116,6 +138,8 @@ def run_tier1(questions: List[Dict], vector_store: LegalVectorStore, embedder: B
         if q.get("expected_behavior") == "answer" and q.get("expected_articles")
     ]
     skipped = len(questions) - len(eligible)
+
+    doc_sector = load_doc_sector()  # {} if corpus_600docs.parquet is missing
 
     rows_by_mode = {"dense": [], "hybrid": [], "routed": []}
     citation_lookup = CitationLookup(vector_store)
@@ -147,6 +171,10 @@ def run_tier1(questions: List[Dict], vector_store: LegalVectorStore, embedder: B
             }
             if mode == "routed":
                 row["route"] = route
+                if doc_sector and q.get("legal_sector"):
+                    row["leakage@5"] = cross_sector_leakage(
+                        [h["document_id"] for h in hit_dicts], q["legal_sector"], doc_sector, 5,
+                    )
             for k in RETRIEVAL_K:
                 row[f"recall@{k}_strict"] = recall_at_k(hit_dicts, expected, k, lenient=False)
                 row[f"recall@{k}_lenient"] = recall_at_k(hit_dicts, expected, k, lenient=True)
@@ -208,6 +236,7 @@ def _aggregate_tier1(rows: List[Dict]) -> Dict:
             **{f"recall@{k}_lenient": _mean([r[f"recall@{k}_lenient"] for r in srows]) for k in RETRIEVAL_K},
             "mrr_strict": _mean([r["rr_strict"] for r in srows]),
             "mrr_lenient": _mean([r["rr_lenient"] for r in srows]),
+            "leakage@5": _mean([r["leakage@5"] for r in srows if "leakage@5" in r]),
         }
         for s, srows in sorted(by_sector.items())
     }
@@ -395,13 +424,15 @@ def print_tier1_summary(tier1: Dict, set_name: str):
         click.echo("")
 
         # Per-sector recall — Gate M1 artifact (only present for the sectors set).
+        # leakage@5 (cross-sector leakage, frequency-bias diagnostic — M2.7)
+        # is only populated for the routed mode; None elsewhere.
         by_sector = agg.get("by_sector") or {}
         if by_sector:
-            click.echo("| lĩnh vực | n | recall@5 (strict) | recall@10 (strict) | MRR (strict) |")
-            click.echo("|---|---|---|---|---|")
+            click.echo("| lĩnh vực | n | recall@5 (strict) | recall@10 (strict) | MRR (strict) | leakage@5 |")
+            click.echo("|---|---|---|---|---|---|")
             for s, sagg in by_sector.items():
                 click.echo(f"| {s} | {sagg['n']} | {sagg['recall@5_strict']} | "
-                            f"{sagg['recall@10_strict']} | {sagg['mrr_strict']} |")
+                            f"{sagg['recall@10_strict']} | {sagg['mrr_strict']} | {sagg['leakage@5']} |")
             click.echo("")
 
     d5 = tier1["modes"]["dense"]["recall@5_strict"] or 0

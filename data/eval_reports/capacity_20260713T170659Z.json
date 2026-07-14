@@ -1,0 +1,36 @@
+{
+  "sizes": {
+    "luat_law": {
+      "vectors_bytes": 8559563,
+      "payloads_bytes": 3034112,
+      "points": 1670
+    },
+    "luat_law_ctx": {
+      "vectors_bytes": 8722368,
+      "payloads_bytes": 2456320,
+      "points": 1670
+    },
+    "luat_law_ctx_v2": {
+      "vectors_bytes": 11350048,
+      "payloads_bytes": 3477248,
+      "points": 2242
+    },
+    "luat_law_ctx_v3": {
+      "vectors_bytes": 107341950,
+      "payloads_bytes": 66573440,
+      "points": 23727
+    },
+    "vietnamese_laws": {
+      "vectors_bytes": 17428650,
+      "payloads_bytes": 18816640,
+      "points": 3441
+    }
+  },
+  "projection": {
+    "ram_bytes": 238560000,
+    "disk_bytes": 600092000,
+    "ram_pct": 22.217631340026855,
+    "disk_pct": 13.971980661153793
+  },
+  "target_points": 142000
+}

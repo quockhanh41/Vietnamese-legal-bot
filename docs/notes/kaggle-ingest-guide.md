@@ -1,6 +1,6 @@
-# Chạy `scripts/ingest.py` trên Kaggle GPU (M1.2)
+# Chạy `scripts/ingest.py` trên Kaggle GPU (M2.2 — corpus 600 docs)
 
-Mục tiêu: embed + upsert `corpus_100docs.parquet` lên Qdrant Cloud dùng GPU
+Mục tiêu: embed + upsert `corpus_600docs.parquet` lên Qdrant Cloud dùng GPU
 miễn phí của Kaggle (T4 x2, ~30h/tuần) thay vì CPU máy local (chậm với
 BGE-M3). Colab tương tự — ghi chú khác biệt ở cuối file.
 
@@ -66,16 +66,31 @@ os.environ["QDRANT_API_KEY"] = secrets.get_secret("QDRANT_API_KEY")
 
 ## Cell 4 — Attach corpus như Kaggle Dataset
 
-Upload `data/raw/corpus_100docs.parquet` một lần thành một Kaggle Dataset
+Upload `data/raw/corpus_600docs.parquet` một lần thành một Kaggle Dataset
 riêng (Kaggle notebook đính kèm dataset ở `/kaggle/input/...` — không cần
 re-upload mỗi session, và không phụ thuộc `git clone` mang theo file dữ
 liệu lớn / gitignored). Sau khi attach dataset vào notebook (nút
 `+ Add Input` bên phải), đường dẫn sẽ có dạng:
 
 ```python
-DATA_PATH = "/kaggle/input/<your-dataset-slug>/corpus_100docs.parquet"
+DATA_PATH = "/kaggle/input/<your-dataset-slug>/corpus_600docs.parquet"
 import os
 assert os.path.exists(DATA_PATH), "Dataset chưa được attach vào notebook"
+```
+
+## Cell 4b — Xoá các collection cũ đã lỗi thời (giải phóng free-tier)
+
+Trước khi ingest 600 docs, xoá 3 collection cũ không còn dùng để lấy lại
+dung lượng RAM/disk trên free-tier (xem `scripts/measure_capacity.py` — 3
+tên này nằm trong danh sách stale). **KHÔNG** xoá `luat_law_ctx_v3` (baseline
+M1, 100 docs) và `luat_law_ctx_v2` (baseline M0.5, 6 docs hình sự) — hai
+collection này giữ lại làm mốc so sánh M0→M1→M2. Chỉ xoá đúng 3 tên dưới đây:
+
+```python
+from qdrant_client import QdrantClient
+c = QdrantClient(url=os.environ["QDRANT_URL"], api_key=os.environ["QDRANT_API_KEY"])
+for name in ["luat_law", "luat_law_ctx", "vietnamese_laws"]:
+    c.delete_collection(name); print("dropped", name)
 ```
 
 ## Cell 5 — Chạy ingest
@@ -83,7 +98,7 @@ assert os.path.exists(DATA_PATH), "Dataset chưa được attach vào notebook"
 ```python
 !python scripts/ingest.py \
     --data-path "{DATA_PATH}" \
-    --collection luat_law_ctx_v3 \
+    --collection luat_law_ctx_v4 \
     --quantized \
     --device cuda \
     --embed-batch-size 128 \
@@ -91,8 +106,9 @@ assert os.path.exists(DATA_PATH), "Dataset chưa được attach vào notebook"
 ```
 
 Ghi chú:
-- `--collection luat_law_ctx_v3`: tên collection M1 (corpus 100 docs); v2
-  (corpus 6 docs hình sự) giữ nguyên làm baseline so sánh M0→M1.
+- `--collection luat_law_ctx_v4`: tên collection M2.2 (corpus 600 docs); v3
+  (100 docs) và v2 (6 docs hình sự) giữ nguyên làm baseline so sánh
+  M0→M1→M2.
 - `--quantized`: **BẮT BUỘC có mặt ngay lần chạy đầu tiên** — int8 scalar
   quantization (`always_ram`) + dense fp32 on-disk chỉ áp được lúc TẠO
   collection (quyết định M0.5, xem `create_collection` trong
@@ -110,10 +126,11 @@ Ghi chú:
   script skip các document đã đánh dấu xong trong checkpoint SQLite, in
   ra số document bị skip. Bỏ qua khi chạy hoàn toàn lần đầu (không hại gì
   nếu vẫn để `--resume` từ đầu — checkpoint rỗng thì không skip gì cả).
-- Corpus curated (`corpus_100docs.parquet` có cột `sector`) được
+- Corpus curated (`corpus_600docs.parquet` có cột `sector`) được
   `scripts/ingest.py` tự động nhận diện và chuyển sang "curated mode":
-  bỏ filter theo `legal_type`/ngày (giữ nguyên 29 văn bản Nghị định trong
-  corpus), chỉ còn guard nội dung tối thiểu — và **in cảnh báo** nếu có
+  bỏ filter theo `legal_type`/ngày (giữ nguyên mọi Nghị định/Thông tư đã
+  chọn trong corpus), chỉ còn guard nội dung tối thiểu — và **in cảnh báo**
+  nếu có
   document nào bị loại (không rơi rớt âm thầm). Nhãn `sector` cũng được
   gắn vào payload từng chunk trong Qdrant.
 
@@ -121,7 +138,7 @@ Ghi chú:
 
 Chạy lại **đúng lệnh Cell 5 ở trên, y nguyên** (giữ `--resume`, KHÔNG thêm
 `--recreate`). Script sẽ:
-1. Mở lại checkpoint SQLite tại `data/ingest_progress/luat_law_ctx_v3.sqlite`
+1. Mở lại checkpoint SQLite tại `data/ingest_progress/luat_law_ctx_v4.sqlite`
    (nằm trong container Kaggle — mất khi session kết thúc, xem lưu ý bên
    dưới).
 2. In ra số document đã có sẵn trong checkpoint, sẽ bị skip.
@@ -134,14 +151,15 @@ thời của Kaggle container — nếu session bị kill hoàn toàn (không ph
 point ID deterministic (chỉ tốn thời gian embed lại, không tạo trùng dữ
 liệu trong Qdrant). Nếu muốn checkpoint sống sót qua nhiều session, lưu
 `data/ingest_progress/` như một Kaggle Dataset output và tải lại ở đầu mỗi
-session (tùy chọn nâng cao, không bắt buộc cho corpus 100 docs).
+session (tùy chọn nâng cao — đáng cân nhắc hơn với corpus 600 docs vì lần
+ingest dài hơn, dễ chạm quota session hơn corpus 100 docs).
 
 ## Cell 6 — Verify
 
 ```python
 from src.db.qdrant_client import LegalVectorStore
 
-store = LegalVectorStore(collection_name="luat_law_ctx_v3")
+store = LegalVectorStore(collection_name="luat_law_ctx_v4")
 info = store.get_collection_info()
 print(f"Collection: {info['name']}")
 print(f"Points:     {info['points_count']:,}")
@@ -150,6 +168,24 @@ print(f"Points:     {info['points_count']:,}")
 Đối chiếu với số dòng "Documents" / "Chunks" mà `scripts/ingest.py` in ra ở
 cuối lần chạy cuối cùng (tổng qua các lần resume) — số points nên khớp với
 tổng số chunks đã ingest.
+
+## Cell 7 — Enrichment (Phase E, chạy ngay cùng session)
+
+Chạy Phase-2 enrichment ngay trên Kaggle sau khi ingest xong: đọc chunks TỪ
+Qdrant, dựng graph/timeline/amendment vào SQLite MetadataStore và backfill
+`is_in_effect` vào payload — làm trên Kaggle để khỏi phải kéo ~140K chunks
+qua đường mạng nhà. Enrichment cần `networkx` (không có trong
+`requirements-ingest.txt`) → cài thêm qua `requirements-enrich.txt`:
+
+```python
+!pip install -q -r requirements-enrich.txt
+!python scripts/run_enrichment.py --collection luat_law_ctx_v4
+```
+
+Sau khi chạy xong, nén `data/metadata/` (`store.db` + các file `*.json`)
+thành một Kaggle Dataset **output**, tải về và commit vào repo — để
+MetadataStore local + eval dùng chung dữ liệu đã enrich (thay vì phải chạy
+lại enrichment ở máy local).
 
 ## Khác biệt trên Google Colab
 
@@ -161,7 +197,7 @@ tổng số chunks đã ingest.
   os.environ["QDRANT_URL"] = userdata.get("QDRANT_URL")
   os.environ["QDRANT_API_KEY"] = userdata.get("QDRANT_API_KEY")
   ```
-- Không có cơ chế "attach Dataset" — upload `corpus_100docs.parquet` qua
+- Không có cơ chế "attach Dataset" — upload `corpus_600docs.parquet` qua
   Google Drive (`from google.colab import drive; drive.mount(...)`) rồi
   trỏ `--data-path` vào đường dẫn trong Drive, hoặc upload trực tiếp qua
   panel Files (mất khi runtime restart, cần re-upload).

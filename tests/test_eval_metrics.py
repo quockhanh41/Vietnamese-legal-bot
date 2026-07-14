@@ -22,6 +22,7 @@ from src.eval.metrics import (
     false_refusal_rate,
     citation_accuracy,
 )
+from scripts.eval import cross_sector_leakage
 
 
 # ── artnum ────────────────────────────────────────────────────────────────
@@ -232,3 +233,13 @@ def test_citation_accuracy_partial_match():
 
 def test_citation_accuracy_no_expected_articles_is_none():
     assert citation_accuracy("Theo Điều 173...", []) is None
+
+
+# ── cross-sector leakage@k ────────────────────────────────────────────────
+
+def test_cross_sector_leakage_counts_foreign_docs():
+    doc_sector = {10: "lao_dong", 11: "lao_dong", 20: "dat_dai", 21: "hinh_su"}
+    # top-4 for a lao_dong query: two in-sector, two foreign → 0.5
+    assert cross_sector_leakage([10, 11, 20, 21], "lao_dong", doc_sector, k=4) == 0.5
+    # unknown doc ids are ignored in the denominator
+    assert cross_sector_leakage([10, 999], "lao_dong", doc_sector, k=4) == 0.0
