@@ -47,6 +47,10 @@ Xác nhận đúng branch + có file mixed embedder:
 !test -f src/data/mixed_embedder.py && echo "mixed_embedder OK"
 ```
 
+> **Nếu bạn đã clone repo từ trước**: `!git pull` để lấy bản vá bộ nhớ mới của
+> `MixedHybridEmbedder` (chia 2 GPU + fp16 + cap seq 2048 — chống CUDA OOM).
+> Kiểm tra có bản vá: `!grep -q "cuda:1" src/data/mixed_embedder.py && echo PATCHED`.
+
 ## Cell 2 — Cài dependencies
 
 Kaggle GPU đã có sẵn torch (CUDA-matched) — **KHÔNG** cài lại torch.
@@ -116,12 +120,16 @@ Ghi chú từng cờ:
 - `--collection luat_law_ctx_v4_aiteamvn`: **collection MỚI** (song song, không đụng v4).
   Lần chạy đầu script tự tạo — không cần `--recreate`.
 - `--embedder mixed` + `--embed-model AITeamVN/Vietnamese_Embedding`: dense từ AITeamVN
-  (SentenceTransformer, 1024-dim, normalize), sparse từ `bge-m3`. Lần đầu tải **cả 2 model**
-  từ HF (~4.6GB tổng) — vẫn vừa T4 16GB.
+  (SentenceTransformer, 1024-dim, normalize, **fp16**, cap seq 2048), sparse từ `bge-m3`.
+  `MixedHybridEmbedder` **tự chia 2 GPU** khi có T4 x2: dense → `cuda:0`, bge-m3 → `cuda:1`
+  (2 model ~560M không vừa 1 T4 16GB nếu chung GPU).
 - `--quantized`: **BẮT BUỘC ngay lần đầu** — int8 + fp32 on-disk chỉ áp lúc TẠO collection
   (khớp config v4 → apples-to-apples). Quên rồi thêm sau là phải `--recreate`.
-- `--device cuda`: cả AITeamVN lẫn bge-m3 chạy GPU.
-- `--embed-batch-size 128`: **hạ xuống 64 rồi 32 nếu CUDA OOM** (2 model nặng VRAM hơn 1).
+- `--device cuda`: bắt buộc (code tự phân bổ cuda:0/cuda:1). **Cần Accelerator = T4 x2** để
+  chia GPU; nếu chỉ 1 GPU, cả 2 model dồn 1 card → phải hạ batch mạnh.
+- `--embed-batch-size 32`: đã đủ thoáng với bản vá (T4 x2). Score attention/lớp ≈
+  `batch × 16 × 2048² × 2B`; batch 32 ≈ 4.3GB/lớp, vừa GPU0 sau khi tách bge-m3 sang GPU1.
+  **CUDA OOM → hạ 16 rồi 8**; nếu chỉ 1 GPU, bắt đầu từ 8.
 - `--resume`: luôn để — chạy lại sau khi rớt session sẽ skip document đã xong (checkpoint
   `data/ingest_progress/luat_law_ctx_v4_aiteamvn.sqlite`).
 - Corpus curated (`corpus_600docs.parquet` có cột `sector`) → ingest tự nhận "curated mode":

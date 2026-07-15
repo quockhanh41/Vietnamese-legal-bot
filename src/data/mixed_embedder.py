@@ -8,10 +8,13 @@ orchestrator use it unchanged.
 """
 
 import numpy as np
+import torch
 from typing import List, Dict, Tuple
 
 from sentence_transformers import SentenceTransformer
 from src.data.embedder import BGEEmbedder
+
+_AITEAMVN_MAX_SEQ = 2048  # AITeamVN/Vietnamese_Embedding's trained ceiling
 
 
 class MixedHybridEmbedder:
@@ -21,8 +24,21 @@ class MixedHybridEmbedder:
         sparse_model: str = "BAAI/bge-m3",
         device: str = "cpu",
     ):
-        self._dense = SentenceTransformer(dense_model, device=device)
-        self._sparse = BGEEmbedder(model_name=sparse_model, device=device)
+        dense_device, sparse_device = device, device
+        # Two ~560M XLM-RoBERTa models don't fit one 16GB T4 together. When
+        # Kaggle gives 2 GPUs, put dense on cuda:0 and BGE-M3 sparse on cuda:1.
+        if device == "cuda" and torch.cuda.device_count() >= 2:
+            dense_device, sparse_device = "cuda:0", "cuda:1"
+        self._dense = SentenceTransformer(dense_model, device=dense_device)
+        # Cap sequence length: AITeamVN maxes at 2048; an inherited larger config
+        # would build 8k-token attention and OOM.
+        if self._dense.max_seq_length and self._dense.max_seq_length > _AITEAMVN_MAX_SEQ:
+            self._dense.max_seq_length = _AITEAMVN_MAX_SEQ
+        # fp16 on GPU: halves dense memory (SentenceTransformer defaults to fp32)
+        # and matches BGE-M3's fp16. Skipped on CPU (fp16 is slow there).
+        if str(dense_device).startswith("cuda"):
+            self._dense = self._dense.half()
+        self._sparse = BGEEmbedder(model_name=sparse_model, device=sparse_device)
         self.dim = self._dense.get_sentence_embedding_dimension()
 
     def encode(

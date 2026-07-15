@@ -7,10 +7,13 @@ import src.data.mixed_embedder as mod
 class _FakeST:
     """Stand-in for SentenceTransformer — no weights loaded."""
     def __init__(self, *a, **k):
-        pass
+        self.max_seq_length = 8192  # inherited-large config, to test the cap
 
     def get_sentence_embedding_dimension(self):
         return 1024
+
+    def half(self):
+        return self  # fp16 no-op for the fake
 
     def encode(self, texts, batch_size=32, normalize_embeddings=False):
         assert normalize_embeddings is True  # dot-product model must be normalized
@@ -53,6 +56,10 @@ def test_encode_queries_dense_only(emb):
 
 def test_vector_size(emb):
     assert emb.vector_size == 1024
+
+
+def test_dense_seq_len_capped(emb):
+    assert emb._dense.max_seq_length == 2048
 
 
 def test_build_embedder_mixed(monkeypatch):
