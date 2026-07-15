@@ -26,6 +26,7 @@ from src.data.chunker import LegalDocumentChunker
 from src.data.chunking.article_level import ArticleLevelChunker
 from src.data.contextualizer import build_context_header, build_contextual_text
 from src.data.embedder import BGEEmbedder
+from src.data.mixed_embedder import build_embedder
 from src.data.ingest_checkpoint import IngestCheckpoint
 from src.db.qdrant_client import LegalVectorStore
 from src.data.constants import (
@@ -92,6 +93,13 @@ def filter_row(row: dict, curated: bool = False) -> bool:
     return True
 
 
+def _make_embedder(embedder_type, embed_model, model_path, device):
+    """Build the ingest embedder. For 'bge-m3', --model-path (local offline dir)
+    still wins as the model source; for 'mixed', --embed-model is the dense model."""
+    source = embed_model or model_path
+    return build_embedder(embedder_type, embed_model=source, device=device)
+
+
 def ingest(
     data_path: str = "data/raw/legal_docs_merged.parquet",
     recreate: bool = False,
@@ -102,6 +110,8 @@ def ingest(
     quantized: bool = False,
     resume: bool = False,
     model_path: str = None,
+    embedder_type: str = "bge-m3",
+    embed_model: str = None,
 ):
     """
     Run ingestion with STREAMING — pyarrow.dataset batch iteration.
@@ -215,7 +225,7 @@ def ingest(
             if len(embed_text_buffer) >= embed_batch_size * 4:
                 if embedder is None:
                     print("Loading BGE-M3 model (this loads ~2GB once)...")
-                    embedder = BGEEmbedder(model_name=model_path or "BAAI/bge-m3", device=device)
+                    embedder = _make_embedder(embedder_type, embed_model, model_path, device)
 
                 dense, sparse = embedder.encode_documents(
                     embed_text_buffer, batch_size=embed_batch_size
@@ -246,7 +256,7 @@ def ingest(
     if embed_text_buffer:
         if embedder is None:
             print("Loading BGE-M3 model...")
-            embedder = BGEEmbedder(model_name=model_path or "BAAI/bge-m3", device=device)
+            embedder = _make_embedder(embedder_type, embed_model, model_path, device)
 
         dense, sparse = embedder.encode_documents(
             embed_text_buffer, batch_size=embed_batch_size
@@ -299,8 +309,16 @@ def ingest(
               help="Đường dẫn thư mục model BGE-M3 local để load offline "
                    "(vd: Kaggle Models mount /kaggle/input/...). Mặc định tải "
                    "HF id BAAI/bge-m3. Kèm HF_HUB_OFFLINE=1 để tránh mọi request mạng.")
-def main(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume, model_path):
-    ingest(data_path, recreate, limit, embed_batch_size, device, collection, quantized, resume, model_path)
+@click.option("--embedder", "embedder_type", type=click.Choice(["bge-m3", "mixed"]),
+              default="bge-m3",
+              help="bge-m3 (default, dense+sparse) hoặc mixed (AITeamVN dense + BGE-M3 sparse).")
+@click.option("--embed-model", default=None,
+              help="Model dense cho --embedder mixed (mặc định AITeamVN/Vietnamese_Embedding). "
+                   "HF id hoặc đường dẫn local.")
+def main(data_path, recreate, limit, embed_batch_size, device, collection, quantized,
+         resume, model_path, embedder_type, embed_model):
+    ingest(data_path, recreate, limit, embed_batch_size, device, collection, quantized,
+           resume, model_path, embedder_type, embed_model)
 
 
 if __name__ == "__main__":
