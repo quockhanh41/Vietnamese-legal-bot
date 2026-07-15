@@ -547,13 +547,16 @@ def run_retry(retry_report: str, sleep_s: float):
               default="bge-m3", help="bge-m3 (default) hoặc mixed (AITeamVN dense + BGE-M3 sparse).")
 @click.option("--embed-model", default=None,
               help="Model dense cho --embedder mixed (mặc định AITeamVN/Vietnamese_Embedding).")
+@click.option("--reranker", "reranker_model", default=None,
+              help="Reranker model cho Tier-2 (mặc định BAAI/bge-reranker-v2-m3). "
+                   "Ví dụ: AITeamVN/Vietnamese_Reranker.")
 @click.option("--retry", "retry_report", type=click.Path(exists=True), default=None,
               help="Đường dẫn report tier2_answers cũ: chạy lại CHỈ các câu lỗi "
                    "(Groq TPD chết giữa chừng), merge vào rows cũ, ghi report mới. "
                    "set/collection lấy từ config của report — bỏ qua --set/--collection.")
 def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float,
          collection: str, embedder_type: str, embed_model: Optional[str],
-         retry_report: Optional[str]):
+         reranker_model: Optional[str], retry_report: Optional[str]):
     if retry_report:
         run_retry(retry_report, sleep_s)
         return
@@ -578,7 +581,9 @@ def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float,
     if answers:
         config["sleep_s"] = sleep_s
         llm = LLMGateway()
-        pipeline = AdaptiveRAGPipeline(vector_store=vector_store, embedder=embedder, llm_gateway=llm)
+        rr_kwargs = {"reranker_model": reranker_model} if reranker_model else {}
+        pipeline = AdaptiveRAGPipeline(vector_store=vector_store, embedder=embedder,
+                                       llm_gateway=llm, **rr_kwargs)
         tier2 = run_tier2(questions, pipeline, set_name, sleep_s)
         report["tier2"] = tier2
         print_tier2_summary(tier2, set_name)
