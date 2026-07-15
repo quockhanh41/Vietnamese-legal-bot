@@ -14,15 +14,28 @@ bge-m3 already wins?). Win or lose, this note gets the tables.
 
 ## Runbook
 
-### 1. Re-embed the 600-doc corpus (GPU: Kaggle per docs/notes/kaggle-ingest-guide.md; or local)
+### 1. Re-embed the 600-doc corpus → Qdrant Cloud (Kaggle GPU, per docs/notes/kaggle-ingest-guide.md)
+Same 7-cell flow as the v4 ingest; Cell 5 becomes (creates the collection in the
+same Qdrant Cloud the local eval reads — QDRANT_URL/QDRANT_API_KEY via Kaggle Secrets):
 ```bash
-.venv/bin/python scripts/ingest.py \
-  --data-path data/raw/corpus_600docs.parquet \
+python scripts/ingest.py \
+  --data-path "{DATA_PATH}" \
   --collection luat_law_ctx_v4_aiteamvn \
   --embedder mixed --embed-model AITeamVN/Vietnamese_Embedding \
-  --quantized --recreate --device cuda
+  --quantized --device cuda --embed-batch-size 128 --resume
 ```
-Expect ~60,958 points. Enrichment/metadata_store/graph are collection-agnostic — NOT re-run.
+Expect ~60,958 points. `MixedHybridEmbedder` loads BOTH AITeamVN (dense) and BGE-M3
+(sparse) on the T4 (~4.6GB together — fits 16GB; drop `--embed-batch-size` to 64/32 on
+CUDA OOM). Do NOT run Cell 7 enrichment on Kaggle — it only has the v3 100-doc metadata
+seed. Graph/timeline/amendment (SQLite) are collection-agnostic and already computed for
+v4 — not re-derived.
+
+### 1b. Backfill is_in_effect onto the new collection (LOCAL — needs the 605-doc store.db)
+Required for routed + Tier-2 parity with v4 (they filter `exclude_superseded=True`).
+Tier-1 dense/hybrid do not filter, so they are already comparable without this.
+```bash
+.venv/bin/python scripts/backfill_is_in_effect.py --collection luat_law_ctx_v4_aiteamvn
+```
 
 ### 2. Tier-1 on the new collection (no LLM)
 ```bash
