@@ -1,0 +1,30 @@
+{
+  "benchmark": "zalo-legal-text-retrieval-2021",
+  "collection": "zalo_legal_2021",
+  "split": "full",
+  "limit": null,
+  "pool": null,
+  "levels": {
+    "a": {
+      "recall@1": 0.5713391739674594,
+      "recall@5": 0.8304130162703379,
+      "recall@10": 0.8848560700876095,
+      "mrr@10": 0.6803397600174822,
+      "ndcg@10": 0.7302422588279771,
+      "queries": 3196,
+      "latency_ms_p50": 3.6,
+      "latency_ms_p95": 4.6
+    },
+    "b": {
+      "recall@1": 0.5963704630788486,
+      "recall@5": 0.8566958698372966,
+      "recall@10": 0.9105131414267835,
+      "mrr@10": 0.7071311858076564,
+      "ndcg@10": 0.7568765888534,
+      "queries": 3196,
+      "latency_ms_p50": 4.4,
+      "latency_ms_p95": 5.8
+    }
+  },
+  "timestamp": "20260715T054132Z"
+}
