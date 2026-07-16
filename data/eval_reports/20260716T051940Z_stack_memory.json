@@ -1,0 +1,13 @@
+{
+  "device": "cpu",
+  "collection": "luat_law_ctx_v4_aiteamvn",
+  "repeats": 20,
+  "budget_mb": 16384,
+  "rss_baseline_mb": 541.9,
+  "rss_peak_mb": 2988.9,
+  "rss_stack_mb": 2447.1,
+  "headroom_ratio": 0.182,
+  "verdict": "fits-headroom",
+  "latency_ms_p50": 1339.3,
+  "latency_ms_p95": 3544.3
+}

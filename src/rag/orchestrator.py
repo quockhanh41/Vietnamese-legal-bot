@@ -294,8 +294,9 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
     - Context Compression: LLM extracts relevant sentences (COMPLEX only)
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, reranker_model: str = "BAAI/bge-reranker-v2-m3", **kwargs):
         super().__init__(*args, **kwargs)
+        self._reranker_model = reranker_model
         self._reranker = None  # Lazy-loaded FlagReranker
         self._confidence_scorer = None  # Lazy-loaded
         self._verifier = None  # Lazy-loaded
@@ -313,11 +314,11 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             try:
                 from FlagEmbedding import FlagReranker
                 self._reranker = FlagReranker(
-                    'BAAI/bge-reranker-v2-m3',
+                    self._reranker_model,
                     use_fp16=True,
                     device='cpu',
                 )
-                print("✅ BGE-Reranker v2 loaded")
+                print(f"✅ Reranker loaded: {self._reranker_model}")
             except Exception as e:
                 print(f"⚠️ Reranker not available (skip): {e}")
                 self._reranker = False  # Sentinel — don't retry

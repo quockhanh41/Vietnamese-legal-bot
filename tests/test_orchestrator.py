@@ -285,3 +285,33 @@ def test_naive_query_excludes_superseded():
     pipeline = NaiveRAGPipeline(vector_store=store, embedder=_Emb(), llm_gateway=_LLM())
     pipeline.query("Thế nào là tội cướp tài sản?")
     assert store.kw.get("exclude_superseded") is True
+
+
+# ── Configurable reranker model (M3 AITeamVN swap) ──────────────────────────
+
+def test_reranker_model_is_configurable(monkeypatch):
+    from src.rag.orchestrator import AdaptiveRAGPipeline
+
+    captured = {}
+
+    class _FakeReranker:
+        def __init__(self, model, use_fp16=True, device="cpu"):
+            captured["model"] = model
+
+    import FlagEmbedding
+    monkeypatch.setattr(FlagEmbedding, "FlagReranker", _FakeReranker)
+
+    p = AdaptiveRAGPipeline(
+        vector_store=None, embedder=None, llm_gateway=None,
+        reranker_model="AITeamVN/Vietnamese_Reranker",
+    )
+    assert p._reranker_model == "AITeamVN/Vietnamese_Reranker"
+    p._get_reranker()
+    assert captured["model"] == "AITeamVN/Vietnamese_Reranker"
+
+
+def test_reranker_model_defaults_to_bge(monkeypatch):
+    from src.rag.orchestrator import AdaptiveRAGPipeline
+
+    p = AdaptiveRAGPipeline(vector_store=None, embedder=None, llm_gateway=None)
+    assert p._reranker_model == "BAAI/bge-reranker-v2-m3"
