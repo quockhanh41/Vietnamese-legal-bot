@@ -118,6 +118,24 @@ def test_filter_in_effect_fails_open_on_unknown():
     assert [r.point_id for r in filtered] == ["a", "b", "c"]
 
 
+def test_filter_in_effect_keep_superseded_bypasses_drop():
+    """Comparison queries need superseded (old-law) chunks — keep_superseded=True
+    must retain an is_in_effect=False chunk that the default path drops."""
+    pipeline = _make_pipeline()
+    results = [_sr("a"), _sr("b")]
+    annotations = {"a": {"is_in_effect": False}, "b": {"is_in_effect": True}}
+    kept = pipeline._filter_in_effect(results, annotations, keep_superseded=True)
+    assert [r.point_id for r in kept] == ["a", "b"]
+
+
+def test_filter_in_effect_default_keeps_dropping():
+    pipeline = _make_pipeline()
+    results = [_sr("a"), _sr("b")]
+    annotations = {"a": {"is_in_effect": False}, "b": {"is_in_effect": True}}
+    kept = pipeline._filter_in_effect(results, annotations)  # default keep_superseded=False
+    assert [r.point_id for r in kept] == ["b"]
+
+
 # ── _build_context / _build_citations amendment annotations (Plan §3.6) ────
 
 def test_build_context_appends_amendment_note():

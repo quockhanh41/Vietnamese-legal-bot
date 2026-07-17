@@ -201,14 +201,21 @@ class NaiveRAGPipeline:
 
     @staticmethod
     def _filter_in_effect(
-        results: List[SearchResult], annotations: Dict[str, Dict]
+        results: List[SearchResult], annotations: Dict[str, Dict],
+        keep_superseded: bool = False,
     ) -> List[SearchResult]:
         """
         Default temporal filter (Plan §3.6): drop chunks whose source law is
         known to no longer be in effect. Fail-open — a chunk with no Phase 2
         metadata, or is_in_effect=None (unknown), is KEPT. Only an explicit
         is_in_effect=False (a law we positively know was superseded) excludes.
+
+        keep_superseded=True bypasses the drop entirely: comparison queries
+        ("Luật X cũ vs Luật X mới") need the superseded old-law version in the
+        pool, so the caller opts out of temporal filtering for that query only.
         """
+        if keep_superseded:
+            return results
         return [
             r for r in results
             if annotations.get(r.point_id, {}).get("is_in_effect") is not False
