@@ -437,15 +437,17 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         parsed = self._enrich_response(parsed, conf_result, ver_result)
         return parsed
 
-    def _classify_and_scope(self, question: str) -> Tuple[str, bool]:
+    def _classify_and_scope(self, question: str) -> Tuple[str, bool, bool]:
         """
         Combined SCOPE + complexity classification — ONE LLM call (zero added
         latency/cost vs. the old complexity-only classifier).
 
-        Returns (complexity, in_scope):
+        Returns (complexity, in_scope, is_comparison):
             complexity: "simple" | "medium" | "complex"
             in_scope: whether the question can be answered from this corpus
                 (see COMPLEXITY_CLASSIFIER_PROMPT for the SCOPE rules).
+            is_comparison: True only when the query compares two laws / two
+                versions.
 
         Parsing is deliberately lenient: regex-search for SCOPE:/CLASS:
         rather than exact-match, since the (thinking) model may wrap labels
@@ -464,11 +466,15 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
         scope_m = re.search(r'SCOPE\s*:\s*(IN|OUT)\b', result, re.IGNORECASE)
         class_m = re.search(r'\b(SIMPLE|MEDIUM|COMPLEX)\b', result, re.IGNORECASE)
+        compare_m = re.search(r'COMPARE\s*:\s*(YES|NO)\b', result, re.IGNORECASE)
 
         in_scope = scope_m.group(1).upper() == "IN" if scope_m else True  # fail open
         complexity = class_m.group(1).lower() if class_m else "medium"  # safe default
+        # fail-safe: unparseable / missing COMPARE ⇒ NO, so a classifier hiccup
+        # never broadens the retrieval pool (keeps current supersession behavior).
+        is_comparison = compare_m.group(1).upper() == "YES" if compare_m else False
 
-        return complexity, in_scope
+        return complexity, in_scope, is_comparison
 
     def _post_process(self, question: str, answer: str, results: List[SearchResult],
                       context: str, rerank_scores: Optional[List[float]] = None) -> tuple:

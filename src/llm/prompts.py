@@ -88,10 +88,12 @@ Câu hỏi: {question}
 # *look* relevant to an out-of-domain question — no confidence signal catches
 # that. A dedicated SCOPE gate, run before retrieval, is the fix; a threshold
 # tweak is not.
-COMPLEXITY_CLASSIFIER_PROMPT = """Bạn nhận một câu hỏi pháp lý tiếng Việt. Nhiệm vụ có 2 phần:
+COMPLEXITY_CLASSIFIER_PROMPT = """Bạn nhận một câu hỏi pháp lý tiếng Việt. Nhiệm vụ có 3 phần:
 (1) SCOPE — câu hỏi này có thể trả lời được từ NỘI DUNG các văn bản pháp luật
 liệt kê dưới đây không?
 (2) CLASS — phân loại độ phức tạp của câu hỏi.
+(3) COMPARE — câu hỏi có yêu cầu SO SÁNH hai văn bản luật khác nhau, hoặc hai
+phiên bản/thời kỳ của cùng một luật không (cần đọc cả bản CŨ lẫn bản MỚI)?
 
 CÁC VĂN BẢN PHÁP LUẬT HIỆN CÓ TRONG CƠ SỞ DỮ LIỆU:
 {corpus_summary}
@@ -111,36 +113,54 @@ QUY TẮC XÁC ĐỊNH SCOPE (đọc kỹ, có điểm dễ nhầm):
   doanh bất động sản — đừng nhầm với Luật Đất đai), pháp luật nước ngoài /
   điều ước quốc tế, và mọi câu hỏi không liên quan pháp luật.
 
+QUY TẮC XÁC ĐỊNH COMPARE:
+- YES khi câu hỏi so sánh 2 văn bản khác nhau, hoặc 2 phiên bản của cùng một
+  luật theo thời gian — dấu hiệu: "so với", "khác nhau", "thay đổi so với",
+  hai năm ban hành khác nhau ("2013 và 2024"), "X và Y ... khác nhau", "vs".
+- NO khi câu hỏi chỉ hỏi về MỘT văn bản / phiên bản hiện hành.
+
 VÍ DỤ (không liên quan câu hỏi thực tế bên dưới, chỉ minh hoạ quy tắc):
 
 Câu hỏi: "Người lao động làm thêm giờ vào ngày lễ được trả lương thế nào?"
 SCOPE: IN
 CLASS: SIMPLE
-(Bộ luật Lao động và nghị định hướng dẫn có trong danh sách.)
+COMPARE: NO
+(Bộ luật Lao động và nghị định hướng dẫn có trong danh sách; chỉ hỏi 1 văn bản.)
+
+Câu hỏi: "Bộ luật Lao động 2012 và Bộ luật Lao động 2019 khác nhau thế nào về thời giờ làm việc?"
+SCOPE: IN
+CLASS: MEDIUM
+COMPARE: YES
+(So sánh 2 phiên bản của cùng một luật theo thời gian — cần đọc cả bản cũ lẫn bản mới.)
 
 Câu hỏi: "Hồ sơ đăng ký thành lập công ty TNHH một thành viên gồm những gì?"
 SCOPE: IN
 CLASS: SIMPLE
+COMPARE: NO
 (Thủ tục NHƯNG nghị định về đăng ký doanh nghiệp có trong danh sách — thủ tục có văn bản phủ là IN.)
 
 Câu hỏi: "Vượt đèn đỏ bị phạt bao nhiêu tiền?"
 SCOPE: OUT
 CLASS: SIMPLE
+COMPARE: NO
 (Xử phạt hành chính giao thông — không văn bản nào trong danh sách quy định mức phạt này.)
 
 Câu hỏi: "Gây tai nạn giao thông làm chết người thì có bị đi tù không?"
 SCOPE: IN
 CLASS: SIMPLE
+COMPARE: NO
 (Cùng chủ đề giao thông nhưng hỏi trách nhiệm HÌNH SỰ — Bộ luật Hình sự có tội danh tương ứng.)
 
 Câu hỏi: "Mua căn hộ chung cư chưa có sổ hồng có rủi ro pháp lý gì?"
 SCOPE: OUT
 CLASS: MEDIUM
+COMPARE: NO
 (Nhà ở / kinh doanh bất động sản — danh sách không có Luật Nhà ở, Luật Kinh doanh BĐS; Luật Đất đai không quy định giao dịch căn hộ.)
 
 Câu hỏi: "Cuối tuần này có nên đi biển không?"
 SCOPE: OUT
 CLASS: SIMPLE
+COMPARE: NO
 (Không liên quan pháp luật.)
 
 ĐỊNH NGHĨA CLASS:
@@ -148,10 +168,11 @@ SIMPLE: hỏi định nghĩa, khái niệm đơn lẻ, yes/no, tra cứu 1 thôn
 MEDIUM: so sánh, câu hỏi có điều kiện, tra cứu nhiều khía cạnh nhưng trong cùng 1 văn bản.
 COMPLEX: suy luận nhiều bước, tình huống giả định, cần thông tin từ nhiều văn bản khác nhau.
 
-Bây giờ hãy trả lời cho câu hỏi thực tế bên dưới. CHỈ trả về đúng 2 dòng theo định dạng
-(luôn điền cả 2 dòng, kể cả khi SCOPE là OUT):
+Bây giờ hãy trả lời cho câu hỏi thực tế bên dưới. CHỈ trả về đúng 3 dòng theo định dạng
+(luôn điền cả 3 dòng, kể cả khi SCOPE là OUT):
 SCOPE: IN hoặc OUT
 CLASS: SIMPLE, MEDIUM, hoặc COMPLEX
+COMPARE: YES hoặc NO
 
 Câu hỏi: {question}
 SCOPE:"""
