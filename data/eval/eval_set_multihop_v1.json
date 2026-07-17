@@ -1,0 +1,132 @@
+[
+  {
+    "id": "mh-001",
+    "question": "Theo Bộ luật Tố tụng dân sự 2015, khi phát hiện bản án đã có hiệu lực pháp luật cần xem xét lại theo thủ tục giám đốc thẩm, những người nào có thẩm quyền kháng nghị bản án đó?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "dan_su",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 327 Bộ luật Tố tụng dân sự 2015 quy định khi phát hiện bản án, quyết định đã có hiệu lực pháp luật có vi phạm thì đương sự có quyền đề nghị người có thẩm quyền kháng nghị theo thủ tục giám đốc thẩm. Người có thẩm quyền kháng nghị được quy định tại Điều 331, gồm Chánh án Tòa án nhân dân tối cao, Viện trưởng Viện kiểm sát nhân dân tối cao (và Chánh án Tòa án nhân dân cấp cao, Viện trưởng Viện kiểm sát nhân dân cấp cao trong phạm vi thẩm quyền).",
+    "expected_articles": [
+      {"doc_id": 296861, "article": "Điều 327"},
+      {"doc_id": 296861, "article": "Điều 331"}
+    ]
+  },
+  {
+    "id": "mh-002",
+    "question": "Theo Nghị định 101/2024/NĐ-CP, trong trình tự, thủ tục cấp Giấy chứng nhận quyền sử dụng đất lần đầu, cơ quan có chức năng quản lý đất đai cấp huyện phải thực hiện những công việc gì thuộc khâu đăng ký đất đai lần đầu?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "dat_dai",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 36 Nghị định 101/2024/NĐ-CP về trình tự, thủ tục cấp Giấy chứng nhận lần đầu dẫn chiếu cơ quan quản lý đất đai cấp huyện thực hiện công việc quy định tại khoản 4 Điều 31. Điều 31 quy định trình tự, thủ tục đăng ký đất đai, tài sản gắn liền với đất lần đầu: người sử dụng đất nộp hồ sơ, cơ quan tiếp nhận, kiểm tra, xác nhận, cập nhật vào hồ sơ địa chính và cơ sở dữ liệu đất đai.",
+    "expected_articles": [
+      {"doc_id": 613131, "article": "Điều 36"},
+      {"doc_id": 613131, "article": "Điều 31"}
+    ]
+  },
+  {
+    "id": "mh-003",
+    "question": "Nhà nước hỗ trợ tiền đóng bảo hiểm xã hội tự nguyện theo tỷ lệ phần trăm trên mức đóng bảo hiểm xã hội hằng tháng; vậy mức đóng bảo hiểm xã hội tự nguyện hằng tháng được xác định như thế nào?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "lao_dong",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 14 quy định người tham gia bảo hiểm xã hội tự nguyện được Nhà nước hỗ trợ tiền đóng theo tỷ lệ phần trăm trên mức đóng bảo hiểm xã hội hằng tháng. Mức đóng đó được xác định tại Điều 10: mức đóng hằng tháng bằng 22% mức thu nhập tháng do người tham gia lựa chọn để đóng vào quỹ hưu trí và tử tuất.",
+    "expected_articles": [
+      {"doc_id": 404051, "article": "Điều 14"},
+      {"doc_id": 404051, "article": "Điều 10"}
+    ]
+  },
+  {
+    "id": "mh-004",
+    "question": "Theo Luật Doanh nghiệp 2020, tiêu chuẩn của Kiểm soát viên yêu cầu không thuộc đối tượng bị cấm thành lập và quản lý doanh nghiệp. Vậy những tổ chức, cá nhân nào không có quyền thành lập và quản lý doanh nghiệp tại Việt Nam?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "doanh_nghiep",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 169 Luật Doanh nghiệp 2020 yêu cầu Kiểm soát viên không thuộc đối tượng theo quy định tại khoản 2 Điều 17. Khoản 2 Điều 17 liệt kê các tổ chức, cá nhân không có quyền thành lập và quản lý doanh nghiệp, gồm: cơ quan nhà nước, đơn vị lực lượng vũ trang dùng tài sản nhà nước để thành lập doanh nghiệp kinh doanh thu lợi riêng; cán bộ, công chức, viên chức; sĩ quan, hạ sĩ quan; người chưa thành niên; người bị hạn chế/mất năng lực hành vi dân sự; người đang bị truy cứu trách nhiệm hình sự, chấp hành hình phạt tù...",
+    "expected_articles": [
+      {"doc_id": 427301, "article": "Điều 169"},
+      {"doc_id": 427301, "article": "Điều 17"}
+    ]
+  },
+  {
+    "id": "mh-005",
+    "question": "Theo Bộ luật Lao động 2019, khi thỏa ước lao động tập thể hết hạn và các bên muốn kéo dài thời hạn của thỏa ước, việc lấy ý kiến người lao động được thực hiện theo trình tự nào?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "lao_dong",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 83 Bộ luật Lao động 2019 quy định khi các bên thỏa thuận kéo dài thời hạn của thỏa ước lao động tập thể thì phải lấy ý kiến theo quy định tại Điều 76. Điều 76 quy định việc lấy ý kiến và ký kết thỏa ước lao động tập thể: đối với thỏa ước doanh nghiệp, dự thảo phải được lấy ý kiến của toàn bộ người lao động; thỏa ước chỉ được ký khi có trên 50% người lao động biểu quyết tán thành.",
+    "expected_articles": [
+      {"doc_id": 333670, "article": "Điều 83"},
+      {"doc_id": 333670, "article": "Điều 76"}
+    ]
+  },
+  {
+    "id": "mh-006",
+    "question": "Theo Bộ luật Tố tụng hình sự 2015, biên bản xem xét dấu vết trên thân thể phải được lập theo quy định nào về biên bản điều tra, và biên bản đó phải bảo đảm những yêu cầu gì?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "hinh_su",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 203 Bộ luật Tố tụng hình sự 2015 quy định biên bản xem xét dấu vết trên thân thể được lập theo quy định tại Điều 178. Điều 178 (biên bản điều tra) yêu cầu khi tiến hành hoạt động điều tra phải lập biên bản theo Điều 133; điều tra viên/cán bộ điều tra phải đọc biên bản cho người tham gia nghe, giải thích quyền bổ sung, nhận xét, và cùng ký xác nhận.",
+    "expected_articles": [
+      {"doc_id": 296884, "article": "Điều 203"},
+      {"doc_id": 296884, "article": "Điều 178"}
+    ]
+  },
+  {
+    "id": "mh-007",
+    "question": "Theo Luật Thi hành án dân sự 2025, khi giao tài sản đã kê biên để thi hành án, số tiền trích lại được thanh toán theo quy định nào?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "dan_su",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 86 Luật Thi hành án dân sự 2025 về giao tài sản để thi hành án dẫn chiếu việc thanh toán số tiền trích lại theo quy định tại khoản 2 Điều 89. Điều 89 quy định về cưỡng chế giao, trả nhà, tài sản gắn liền với đất, trong đó có nội dung xử lý, thanh toán các khoản tiền liên quan khi cưỡng chế giao tài sản.",
+    "expected_articles": [
+      {"doc_id": 628717, "article": "Điều 86"},
+      {"doc_id": 628717, "article": "Điều 89"}
+    ]
+  },
+  {
+    "id": "mh-008",
+    "question": "Theo Luật Người lao động Việt Nam đi làm việc ở nước ngoài theo hợp đồng 2020, doanh nghiệp dịch vụ bị thu hồi Giấy phép khi không duy trì các điều kiện cấp phép. Vậy các điều kiện để được cấp Giấy phép hoạt động dịch vụ đưa người lao động đi làm việc ở nước ngoài là gì?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "lao_dong",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 16 quy định doanh nghiệp dịch vụ bị thu hồi Giấy phép khi không duy trì các điều kiện quy định tại Điều 10. Điều 10 quy định điều kiện cấp Giấy phép hoạt động dịch vụ: có vốn điều lệ từ 5 tỷ đồng trở lên, có chủ sở hữu/thành viên/cổ đông là nhà đầu tư trong nước, ký quỹ, có người đại diện theo pháp luật đủ điều kiện, có đủ số lượng nhân viên nghiệp vụ, cơ sở vật chất, trang thông tin điện tử...",
+    "expected_articles": [
+      {"doc_id": 439844, "article": "Điều 16"},
+      {"doc_id": 439844, "article": "Điều 10"}
+    ]
+  },
+  {
+    "id": "mh-009",
+    "question": "Theo Nghị định hướng dẫn Luật Nhà ở về phát triển và quản lý nhà ở xã hội, khi xác định giá thuê nhà ở xã hội do Nhà nước đầu tư, lợi nhuận định mức của chủ đầu tư được xác định như thế nào?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "nha_o",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 31 (xác định giá thuê, giá thuê mua nhà ở xã hội do Nhà nước đầu tư) sử dụng tổng chi phí đầu tư xây dựng theo quy định tại khoản 2 Điều 22. Điều 22 quy định lợi nhuận định mức của chủ đầu tư dự án nhà ở xã hội được xác định tối đa bằng 10% tổng chi phí đầu tư xây dựng phần diện tích nhà ở xã hội.",
+    "expected_articles": [
+      {"doc_id": 685655, "article": "Điều 31"},
+      {"doc_id": 685655, "article": "Điều 22"}
+    ]
+  },
+  {
+    "id": "mh-010",
+    "question": "Theo Bộ luật Dân sự 2015, khi áp dụng tương tự pháp luật để giải quyết một vụ việc dân sự chưa có quy định điều chỉnh, việc áp dụng không được trái với những nguyên tắc cơ bản nào của pháp luật dân sự?",
+    "type": "multi-hop",
+    "difficulty": "medium",
+    "legal_sector": "dan_su",
+    "expected_behavior": "answer",
+    "ground_truth": "Điều 6 Bộ luật Dân sự 2015 quy định khi không thể áp dụng tương tự pháp luật thì áp dụng các nguyên tắc cơ bản của pháp luật dân sự quy định tại Điều 3. Điều 3 nêu các nguyên tắc cơ bản: mọi cá nhân, pháp nhân bình đẳng; tự do, tự nguyện cam kết, thỏa thuận; thiện chí, trung thực; không xâm phạm lợi ích quốc gia, dân tộc, lợi ích công cộng, quyền và lợi ích hợp pháp của người khác; tự chịu trách nhiệm về việc không thực hiện hoặc thực hiện không đúng nghĩa vụ dân sự.",
+    "expected_articles": [
+      {"doc_id": 296215, "article": "Điều 6"},
+      {"doc_id": 296215, "article": "Điều 3"}
+    ]
+  }
+]
