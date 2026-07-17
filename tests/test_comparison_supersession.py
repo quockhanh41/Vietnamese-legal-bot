@@ -74,3 +74,40 @@ def test_non_comparison_keeps_supersession_on(route):
     cap, capf = _drive(route, is_comparison=False)
     assert cap["exclude_superseded"] is True
     assert capf["keep_superseded"] is False
+
+
+def _stream_pipeline(classify_line: str):
+    """Drive query_stream end-to-end with mocks; return the exclude_superseded
+    captured from the medium-route hybrid search."""
+    p = _adaptive_with_mocks()
+    p.llm.generate.return_value = classify_line          # _classify_and_scope call
+    p.llm.generate_stream.return_value = iter(["ans"])   # token stream
+    p._get_citation_lookup = lambda: SimpleNamespace(
+        corpus_summary=lambda: "", corpus_summary_compact=lambda: "")
+    cap = {}
+
+    def fake_hybrid(*a, **k):
+        cap["exclude_superseded"] = k.get("exclude_superseded")
+        return []
+
+    p.vector_store.search_hybrid = fake_hybrid
+    p._annotate_phase2 = lambda r: {}
+    p._filter_in_effect = lambda results, annotations, keep_superseded=False: results
+    p._post_process = lambda *a, **k: (
+        SimpleNamespace(score=0.9, label="high", refused=False),
+        SimpleNamespace(warnings=[], entailment_ratio=1.0,
+                        contradiction_ratio=0.0, grounding_ratio=1.0),
+        "ans",
+    )
+    list(p.query_stream("Luật X 2013 và Luật X 2024 khác nhau về hạn mức?"))
+    return cap
+
+
+def test_stream_comparison_relaxes_supersession():
+    cap = _stream_pipeline("SCOPE: IN\nCLASS: MEDIUM\nCOMPARE: YES")
+    assert cap["exclude_superseded"] is False
+
+
+def test_stream_non_comparison_keeps_supersession():
+    cap = _stream_pipeline("SCOPE: IN\nCLASS: MEDIUM\nCOMPARE: NO")
+    assert cap["exclude_superseded"] is True

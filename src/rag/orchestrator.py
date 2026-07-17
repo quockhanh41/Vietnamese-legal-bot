@@ -739,6 +739,7 @@ Các câu liên quan (giữ nguyên văn):"""
         start_time = time.time()
 
         rerank_scores = None
+        is_comparison = False
 
         # Step 0: Citation-lookup route — parsed BEFORE the (LLM) complexity
         # classifier; citation-style queries ("Điều 173 BLHS 2015 quy định
@@ -763,7 +764,7 @@ Các câu liên quan (giữ nguyên văn):"""
         else:
             # Step 1: Classify query complexity + scope gate (merged into a
             # single LLM call — see AdaptiveRAGPipeline._classify_and_scope).
-            complexity, in_scope = self._classify_and_scope(question)
+            complexity, in_scope, is_comparison = self._classify_and_scope(question)
             scope_label = "IN" if in_scope else "OUT"
             yield f'__STEP__{json.dumps({"step": "Classification", "result": f"{complexity.upper()} (scope={scope_label})"})}'
 
@@ -797,9 +798,9 @@ Các câu liên quan (giữ nguyên văn):"""
             yield f'__STEP__{json.dumps({"step": "Routing", "result": "Simple Pipeline (Dense Search)"})}'
             query_vector = self.embedder.encode_queries([question])[0]
             results = self.vector_store.search_dense(query_vector.tolist(), top_k=20,
-                                                      exclude_superseded=True)
+                                                      exclude_superseded=not is_comparison)
             annotations = self._annotate_phase2(results)  # Plan §3.6
-            results = self._filter_in_effect(results, annotations)
+            results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
             # Dynamic top-k
             top_k = self._dynamic_top_k(results, min_k=3, max_k=15)
             results = results[:top_k]
@@ -810,9 +811,9 @@ Các câu liên quan (giữ nguyên văn):"""
             dense_vec = output["dense_vecs"][0]
             sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
             results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20,
-                                                      exclude_superseded=True)
+                                                      exclude_superseded=not is_comparison)
             annotations = self._annotate_phase2(results)  # Plan §3.6
-            results = self._filter_in_effect(results, annotations)
+            results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
             # Dynamic top-k + rerank
             top_k = self._dynamic_top_k(results, min_k=5, max_k=15)
             results = results[:top_k]
@@ -849,7 +850,7 @@ Các câu liên quan (giữ nguyên văn):"""
                 dense_vec = output["dense_vecs"][0]
                 sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
                 all_results.extend(self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10,
-                                                                    exclude_superseded=True))
+                                                                    exclude_superseded=not is_comparison))
 
             # Deduplicate + dynamic top-k
             seen = set()
@@ -859,7 +860,7 @@ Các câu liên quan (giữ nguyên văn):"""
                     seen.add(r.point_id)
                     unique_results.append(r)
             annotations = self._annotate_phase2(unique_results)  # Plan §3.6
-            unique_results = self._filter_in_effect(unique_results, annotations)
+            unique_results = self._filter_in_effect(unique_results, annotations, keep_superseded=is_comparison)
             top_k = self._dynamic_top_k(unique_results, min_k=5, max_k=20)
             results = unique_results[:top_k]
 
