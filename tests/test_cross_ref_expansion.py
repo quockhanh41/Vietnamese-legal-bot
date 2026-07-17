@@ -159,3 +159,27 @@ def test_toggle_off_returns_empty():
     p = _pipeline(graph, {})
     p.cross_ref_expansion = False
     assert p._expand_cross_references([_sr("p10", 1, "Điều 10")]) == []
+
+
+def test_complex_pipeline_appends_expansion_to_citations():
+    """The complex route appends expanded blocks so they reach citations."""
+    p = AdaptiveRAGPipeline(vector_store=MagicMock(), embedder=MagicMock(), llm_gateway=MagicMock())
+    # Stub metadata store so _annotate_phase2 stays offline (no real SQLite).
+    md = MagicMock()
+    md.get_document.return_value = None
+    md.get_timeline.return_value = None
+    md.get_all_documents.return_value = {}
+    p._metadata_store = md
+    seeds = [_sr("p10", 1, "Điều 10", "Điều 10 nội dung")]
+    extra = [_sr("p50", 1, "Điều 50", "Điều 50 nội dung")]
+    p.complex_retrieve = MagicMock(return_value=(seeds, None))
+    p._expand_cross_references = MagicMock(return_value=extra)
+    p.llm.generate = MagicMock(return_value="Trả lời [1][2]")
+    conf = MagicMock(); conf.label = "high"; conf.score = 0.8; conf.refused = False
+    ver = MagicMock(); ver.passed = True; ver.warnings = []
+    p._post_process = MagicMock(return_value=(conf, ver, "Trả lời [1][2]"))
+
+    resp = p._complex_pipeline("câu hỏi", start_time=0.0, is_comparison=False)
+    cited_articles = [c["article"] for c in resp.citations]
+    assert "Điều 50" in cited_articles  # expanded block present
+    p._expand_cross_references.assert_called_once()

@@ -620,20 +620,21 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         parsed = self._enrich_response(parsed, conf_result, ver_result)
         return parsed
 
-    def _complex_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
-        """COMPLEX: full pipeline (rewrite → multi-query → HyDE → hybrid → rerank → compress → generate)."""
-        # 1. Query rewrite
+    def complex_retrieve(
+        self, question: str, is_comparison: bool = False,
+    ) -> Tuple[List[SearchResult], Optional[List[float]]]:
+        """Complex-route retrieval (rewrite → multi-query → HyDE → hybrid →
+        dedup → temporal filter → dynamic-top-k → rerank). Returns
+        (results, rerank_scores) POST-rerank, PRE-cross-ref-expansion. Shared
+        by _complex_pipeline and the M3.5 eval harness so both measure the
+        same seed set. NOTE: query_stream keeps its own inline copy because it
+        interleaves __STEP__ progress events between these stages."""
         rewritten = self.llm.generate(QUERY_REWRITE_PROMPT.format(question=question), temperature=0.1).strip()
-
-        # 2. Multi-query expansion
         expanded_raw = self.llm.generate(MULTI_QUERY_PROMPT.format(question=rewritten), temperature=0.3)
         queries = [q.strip() for q in expanded_raw.split("\n") if q.strip() and q[0].isdigit()]
         queries = [q.split(". ", 1)[-1] if ". " in q else q for q in queries]
-
-        # 3. HyDE — generate hypothetical document
         hyde_text = self.llm.generate(HYDE_PROMPT.format(question=question), temperature=0.2).strip()
 
-        # 4. Hybrid search with multiple queries + HyDE (broader pool each)
         all_queries = [rewritten] + queries[:2] + [hyde_text]
         all_results = []
         for q in all_queries:
@@ -644,22 +645,29 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
                                                       exclude_superseded=not is_comparison)
             all_results.extend(results)
 
-        # 5. Deduplicate and apply dynamic top-k
         seen = set()
         unique_results = []
         for r in sorted(all_results, key=lambda x: x.score, reverse=True):
             if r.point_id not in seen:
                 seen.add(r.point_id)
                 unique_results.append(r)
-        # Phase 2 (Plan §3.6): default temporal filter, before dynamic-top-k/rerank.
         annotations = self._annotate_phase2(unique_results)
         unique_results = self._filter_in_effect(unique_results, annotations, keep_superseded=is_comparison)
-
         top_k = self._dynamic_top_k(unique_results, min_k=5, max_k=20)
         results = unique_results[:top_k]
+        return self._rerank_results(question, results)
 
-        # 6. Re-rank (if available)
-        results, rerank_scores = self._rerank_results(question, results)
+    def _complex_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
+        """COMPLEX: full pipeline (rewrite → multi-query → HyDE → hybrid → rerank → expand → compress → generate)."""
+        results, rerank_scores = self.complex_retrieve(question, is_comparison)
+
+        # M3.5: append cross-referenced article text (after rerank, capped).
+        expanded = self._expand_cross_references(results, is_comparison=is_comparison)
+        if expanded:
+            results = results + expanded
+
+        # Phase 2 annotations for the final (post-expansion) result set.
+        annotations = self._annotate_phase2(results)
 
         # 7. Context Compression — extract only relevant sentences
         results = self._expand_to_parent(results)  # Plan §3.4
@@ -673,7 +681,6 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         citations = self._build_citations(results, annotations)
         context = self._build_context(results, annotations)
 
-        # Post-process: verify + confidence
         conf_result, ver_result, final_answer = self._post_process(
             question, raw, results, context, rerank_scores=rerank_scores,
         )
@@ -995,6 +1002,12 @@ Các câu liên quan (giữ nguyên văn):"""
 
             # Re-rank (if available)
             results, rerank_scores = self._rerank_results(question, results)
+
+            # M3.5: append cross-referenced article text (after rerank, capped).
+            expanded = self._expand_cross_references(results, is_comparison=is_comparison)
+            if expanded:
+                results = results + expanded
+                annotations = self._annotate_phase2(results)
 
         # Build context & citations
         results = self._expand_to_parent(results)  # Plan §3.4
