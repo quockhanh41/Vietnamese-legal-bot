@@ -63,7 +63,23 @@ DEFAULT_WEIGHTS = {
     "grounding": 0.10,
 }
 
-# Threshold for refusal — RECALIBRATED 2026-07-15 (M2 Phase E) TO 0.700 at the
+# Threshold for refusal — RE-CONFIRMED 2026-07-16 (M3 Phase 0) AT 0.700 on the
+# AITeamVN mixed stack (collection luat_law_ctx_v4_aiteamvn: AITeamVN dense +
+# BGE-M3 sparse + AITeamVN reranker). Full Tier-2 pooled criminal 41 + general
+# 41 + sectors 83 → answer 144 / refuse 21 (calibration 20260716T174730Z).
+# At 0.700: refusal_recall 0.7619, false_refusal 0.0972 — the SAME threshold
+# BEATS v4 at 0.700 (false_refusal was 0.136 there): the stronger AITeamVN
+# retrieval + reranker tightened the answer distribution (min 0.532) without
+# lifting the refuse-side floor. Youden optimum is t=0.750 (recall 0.9524 /
+# false 0.1944) but we keep 0.700 — same balanced demo-helpfulness rationale as
+# M2 (all 21 OOS clear the scope gate; the confidence gate is the only defense).
+# The 5 confident-OOS leaks at 0.700 (gen-907 0.767, gen-908 0.738, crim-402
+# 0.734, gen-912 0.724, crim-403 0.722) are the M3.7 target: raise refusal_recall
+# WITHOUT raising the threshold (raising it here would cost false_refusal).
+# RECALIBRATE AT EVERY SCALE STEP.
+#
+# ── Previous calibration (M2 Phase E, 2026-07-15, v4/bge-m3 — history) ──
+# RECALIBRATED 2026-07-15 (M2 Phase E) TO 0.700 at the
 # 600-doc multi-sector scale (collection luat_law_ctx_v4, 60,958 points). Full
 # Tier-2, 165 questions (criminal 41 + general 41 + sectors 83), 157 usable
 # after an error-retry (140 answer / 17 refuse); reports 20260714T18* +

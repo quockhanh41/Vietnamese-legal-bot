@@ -1,0 +1,371 @@
+{
+  "generated_at_utc": "2026-07-16T17:47:30.373629+00:00",
+  "input_reports": [
+    "data/eval_reports/20260716T041157Z_eval.json",
+    "data/eval_reports/20260716T030111Z_eval.json",
+    "data/eval_reports/20260716T174630Z_eval.json"
+  ],
+  "n_rows_total": 165,
+  "n_rows_errors_skipped": 0,
+  "n_rows_usable": 165,
+  "n_rows_confidence_gate": 165,
+  "n_answer": 144,
+  "n_refuse": 21,
+  "scope_gate": {
+    "n_scope_refused": 0,
+    "n_expected_refuse": 0,
+    "over_refused_ids": [],
+    "escaped_refuse": [
+      {
+        "id": "gen-907",
+        "confidence_score": 0.7671
+      },
+      {
+        "id": "gen-908",
+        "confidence_score": 0.7383
+      },
+      {
+        "id": "crim-402",
+        "confidence_score": 0.7341
+      },
+      {
+        "id": "gen-912",
+        "confidence_score": 0.7241
+      },
+      {
+        "id": "crim-403",
+        "confidence_score": 0.7223
+      },
+      {
+        "id": "crim-404",
+        "confidence_score": 0.6957
+      },
+      {
+        "id": "crim-405",
+        "confidence_score": 0.6902
+      },
+      {
+        "id": "gen-909",
+        "confidence_score": 0.6813
+      },
+      {
+        "id": "gen-903",
+        "confidence_score": 0.6621
+      },
+      {
+        "id": "gen-902",
+        "confidence_score": 0.6547
+      },
+      {
+        "id": "gen-910",
+        "confidence_score": 0.6522
+      },
+      {
+        "id": "crim-406",
+        "confidence_score": 0.625
+      },
+      {
+        "id": "gen-906",
+        "confidence_score": 0.6163
+      },
+      {
+        "id": "gen-502",
+        "confidence_score": 0.5243
+      },
+      {
+        "id": "gen-905",
+        "confidence_score": 0.4984
+      },
+      {
+        "id": "crim-401",
+        "confidence_score": 0.4826
+      },
+      {
+        "id": "gen-501",
+        "confidence_score": 0.4393
+      },
+      {
+        "id": "gen-901",
+        "confidence_score": 0.4175
+      },
+      {
+        "id": "gen-904",
+        "confidence_score": 0.4137
+      },
+      {
+        "id": "gen-911",
+        "confidence_score": 0.388
+      },
+      {
+        "id": "crim-407",
+        "confidence_score": 0.2393
+      }
+    ]
+  },
+  "sweep": [
+    {
+      "threshold": 0.3,
+      "refusal_recall": 0.047619047619047616,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.8780487804878049,
+      "youden": 0.047619047619047616
+    },
+    {
+      "threshold": 0.325,
+      "refusal_recall": 0.047619047619047616,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.8780487804878049,
+      "youden": 0.047619047619047616
+    },
+    {
+      "threshold": 0.35,
+      "refusal_recall": 0.047619047619047616,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.8780487804878049,
+      "youden": 0.047619047619047616
+    },
+    {
+      "threshold": 0.375,
+      "refusal_recall": 0.047619047619047616,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.8780487804878049,
+      "youden": 0.047619047619047616
+    },
+    {
+      "threshold": 0.4,
+      "refusal_recall": 0.09523809523809523,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.8834355828220859,
+      "youden": 0.09523809523809523
+    },
+    {
+      "threshold": 0.425,
+      "refusal_recall": 0.19047619047619047,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.8944099378881988,
+      "youden": 0.19047619047619047
+    },
+    {
+      "threshold": 0.45,
+      "refusal_recall": 0.23809523809523808,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.9,
+      "youden": 0.23809523809523808
+    },
+    {
+      "threshold": 0.475,
+      "refusal_recall": 0.23809523809523808,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.9,
+      "youden": 0.23809523809523808
+    },
+    {
+      "threshold": 0.5,
+      "refusal_recall": 0.3333333333333333,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.9113924050632911,
+      "youden": 0.3333333333333333
+    },
+    {
+      "threshold": 0.525,
+      "refusal_recall": 0.38095238095238093,
+      "false_refusal_rate": 0.0,
+      "answer_precision": 0.9171974522292994,
+      "youden": 0.38095238095238093
+    },
+    {
+      "threshold": 0.55,
+      "refusal_recall": 0.38095238095238093,
+      "false_refusal_rate": 0.013888888888888888,
+      "answer_precision": 0.9161290322580645,
+      "youden": 0.36706349206349204
+    },
+    {
+      "threshold": 0.575,
+      "refusal_recall": 0.38095238095238093,
+      "false_refusal_rate": 0.020833333333333332,
+      "answer_precision": 0.9155844155844156,
+      "youden": 0.3601190476190476
+    },
+    {
+      "threshold": 0.6,
+      "refusal_recall": 0.38095238095238093,
+      "false_refusal_rate": 0.020833333333333332,
+      "answer_precision": 0.9155844155844156,
+      "youden": 0.3601190476190476
+    },
+    {
+      "threshold": 0.625,
+      "refusal_recall": 0.42857142857142855,
+      "false_refusal_rate": 0.034722222222222224,
+      "answer_precision": 0.9205298013245033,
+      "youden": 0.39384920634920634
+    },
+    {
+      "threshold": 0.65,
+      "refusal_recall": 0.47619047619047616,
+      "false_refusal_rate": 0.05555555555555555,
+      "answer_precision": 0.9251700680272109,
+      "youden": 0.4206349206349206
+    },
+    {
+      "threshold": 0.675,
+      "refusal_recall": 0.6190476190476191,
+      "false_refusal_rate": 0.0763888888888889,
+      "answer_precision": 0.9432624113475178,
+      "youden": 0.5426587301587302
+    },
+    {
+      "threshold": 0.7,
+      "refusal_recall": 0.7619047619047619,
+      "false_refusal_rate": 0.09722222222222222,
+      "answer_precision": 0.9629629629629629,
+      "youden": 0.6646825396825397
+    },
+    {
+      "threshold": 0.725,
+      "refusal_recall": 0.8571428571428571,
+      "false_refusal_rate": 0.14583333333333334,
+      "answer_precision": 0.9761904761904762,
+      "youden": 0.7113095238095237
+    },
+    {
+      "threshold": 0.75,
+      "refusal_recall": 0.9523809523809523,
+      "false_refusal_rate": 0.19444444444444445,
+      "answer_precision": 0.9914529914529915,
+      "youden": 0.7579365079365079
+    },
+    {
+      "threshold": 0.775,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.2708333333333333,
+      "answer_precision": 1.0,
+      "youden": 0.7291666666666667
+    },
+    {
+      "threshold": 0.8,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.4236111111111111,
+      "answer_precision": 1.0,
+      "youden": 0.5763888888888888
+    },
+    {
+      "threshold": 0.825,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.5902777777777778,
+      "answer_precision": 1.0,
+      "youden": 0.4097222222222222
+    },
+    {
+      "threshold": 0.85,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.6875,
+      "answer_precision": 1.0,
+      "youden": 0.3125
+    },
+    {
+      "threshold": 0.875,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.7569444444444444,
+      "answer_precision": 1.0,
+      "youden": 0.24305555555555558
+    },
+    {
+      "threshold": 0.9,
+      "refusal_recall": 1.0,
+      "false_refusal_rate": 0.8819444444444444,
+      "answer_precision": 1.0,
+      "youden": 0.11805555555555558
+    }
+  ],
+  "best_threshold": {
+    "threshold": 0.75,
+    "refusal_recall": 0.9523809523809523,
+    "false_refusal_rate": 0.19444444444444445,
+    "answer_precision": 0.9914529914529915,
+    "youden": 0.7579365079365079
+  },
+  "histograms": {
+    "answer": {
+      "0.00-0.05": 0,
+      "0.05-0.10": 0,
+      "0.10-0.15": 0,
+      "0.15-0.20": 0,
+      "0.20-0.25": 0,
+      "0.25-0.30": 0,
+      "0.30-0.35": 0,
+      "0.35-0.40": 0,
+      "0.40-0.45": 0,
+      "0.45-0.50": 0,
+      "0.50-0.55": 2,
+      "0.55-0.60": 1,
+      "0.60-0.65": 5,
+      "0.65-0.70": 6,
+      "0.70-0.75": 14,
+      "0.75-0.80": 33,
+      "0.80-0.85": 38,
+      "0.85-0.90": 28,
+      "0.90-0.95": 9,
+      "0.95-1.00": 8
+    },
+    "refuse": {
+      "0.00-0.05": 0,
+      "0.05-0.10": 0,
+      "0.10-0.15": 0,
+      "0.15-0.20": 0,
+      "0.20-0.25": 1,
+      "0.25-0.30": 0,
+      "0.30-0.35": 0,
+      "0.35-0.40": 1,
+      "0.40-0.45": 3,
+      "0.45-0.50": 2,
+      "0.50-0.55": 1,
+      "0.55-0.60": 0,
+      "0.60-0.65": 2,
+      "0.65-0.70": 6,
+      "0.70-0.75": 4,
+      "0.75-0.80": 1,
+      "0.80-0.85": 0,
+      "0.85-0.90": 0,
+      "0.90-0.95": 0,
+      "0.95-1.00": 0
+    }
+  },
+  "overlap": {
+    "max_refuse_score": 0.7671,
+    "min_answer_score": 0.532,
+    "gap": -0.2351,
+    "overlaps": true
+  },
+  "outliers": {
+    "lowest_scoring_answer_questions": [
+      {
+        "id": "ld-201",
+        "confidence_score": 0.532
+      },
+      {
+        "id": "hs-403",
+        "confidence_score": 0.5469
+      },
+      {
+        "id": "hg-406",
+        "confidence_score": 0.5697
+      }
+    ],
+    "highest_scoring_refuse_questions": [
+      {
+        "id": "gen-907",
+        "confidence_score": 0.7671
+      },
+      {
+        "id": "gen-908",
+        "confidence_score": 0.7383
+      },
+      {
+        "id": "crim-402",
+        "confidence_score": 0.7341
+      }
+    ]
+  }
+}

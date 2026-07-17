@@ -48,3 +48,57 @@ Root cause classification for both: **embedding recall improvement is double-edg
 2. Decide whether 0.750 or an intermediate value (e.g. 0.725: refusal_recall 0.8125, false_refusal 0.146) is the better false-refusal/refusal-recall tradeoff for production.
 
 No production files were touched in this workstream — `DEFAULT_COLLECTION_NAME`, `REFUSAL_THRESHOLD`, the embedder wiring, and deploy config are all unchanged.
+
+---
+
+## ✅ ADOPTED — M3 Phase 0 (2026-07-16, branch `m3-phase0-adopt`)
+
+Both GO/NO-GO conditions cleared, then production wired to the mixed stack.
+
+**Condition 1 — full criminal Tier-2 (n=41, errors=0):** report `20260716T174630Z`
+(fresh 41-run `20260716T174351Z` had 2 errors → `--retry` mop-up, on the correct
+mixed stack). Criminal @ t=0.700: refusal_accuracy 0.714 (7 refuse), false_refusal
+0.0588, citation 0.854.
+
+**Condition 2 — threshold decision:** **keep 0.700** (NOT 0.725/0.750). The full-pool
+recalibration flipped the GO/NO-GO's partial-data story: with complete criminal
+data (pool answer 144 / refuse 21, calibration `20260716T174730Z`), the AITeamVN
+stack at t=0.700 **beats v4 at t=0.700** — refusal_recall 0.7619 (== v4 gate 0.765),
+false_refusal **0.0972 vs v4's 0.136**. The "higher false-refusal" the partial data
+suggested only appears if the threshold is *raised* to chase refusal_recall (0.725 →
+0.146; 0.750 Youden → 0.194). Adoption is a strict win at the current threshold; no
+threshold change. User-confirmed 2026-07-16.
+
+**Sweep (pool answer 144 / refuse 21):**
+
+| t | refusal_recall | false_refusal |
+|---|---|---|
+| 0.700 (kept) | 0.7619 | 0.0972 |
+| 0.725 | 0.8571 | 0.1458 |
+| 0.750 (Youden) | 0.9524 | 0.1944 |
+
+**B0 — new production baseline** (gate reference for M3.7–3.6):
+`{t=0.700, refusal_recall 0.7619, false_refusal 0.0972, citation criminal 0.854 /
+sectors 0.952}`; criminal Tier-1 routed recall@5 0.8824 (vs v4 0.8382). All 21 OOS
+clear the scope gate (scope gate catches 0) — the confidence gate is the only defense.
+
+**5 confident-OOS leaks at 0.700 → the M3.7 target** (raise refusal_recall WITHOUT
+raising the threshold): gen-907 0.767, gen-908 0.738, crim-402 0.734, gen-912 0.724,
+crim-403 0.722.
+
+**Production changes (branch `m3-phase0-adopt`):**
+- `main.py get_embedder` → `build_embedder("mixed", "AITeamVN/Vietnamese_Embedding")`;
+  `get_adaptive_pipeline` → `reranker_model="AITeamVN/Vietnamese_Reranker"`.
+- `constants.py DEFAULT_COLLECTION_NAME` → `luat_law_ctx_v4_aiteamvn`.
+- `confidence.py REFUSAL_THRESHOLD` value unchanged (0.700), provenance re-confirmed.
+- Bug fixed en route: `scripts/eval.py --retry` hardcoded `BGEEmbedder()` + default
+  reranker → would have silently corrupted the criminal baseline; now the stack is
+  recorded in the report config and reconstructed on retry.
+
+**Verification:** full suite 392 passed; Tier-1 routed recall@5 1.0 on the new
+collection (smoke); live drive of the exact `get_adaptive_pipeline` wiring on 3
+queries — answer (Điều 123 BLHS, conf 0.789), OOS refuse (conf 0.590 → refused),
+citation-lookup (route=lookup, Điều 123, conf 0.871) — all correct.
+
+**Commits:** `77a7b7b` spec · `ac9efd4` rewire · `1183565` retry fix · `6759b40`
+threshold re-confirm. Pending: user approval → merge to `main`; Plan §7 status update.

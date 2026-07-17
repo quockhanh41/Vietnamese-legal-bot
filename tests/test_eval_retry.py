@@ -14,6 +14,9 @@ import os
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
+import json
+
+import scripts.eval as ev
 from scripts.eval import (
     aggregate_tier2,
     failed_question_ids,
@@ -106,6 +109,56 @@ class TestRowCitationAccuracy:
     def test_refuse_expected_row_is_none(self):
         assert row_citation_accuracy(
             "refuse", False, "Theo Điều 117...", self.EXPECTED) is None
+
+
+class TestRunRetryRebuildsStack:
+    """--retry MUST reconstruct the same retrieval stack the report was built
+    with. Querying an AITeamVN-embedded collection with the default bge-m3
+    embedder (or the default reranker) silently produces wrong-stack rows —
+    the exact landmine for the Phase 0 baseline. run_retry reads embedder /
+    embed_model / reranker out of the report config."""
+
+    def _write_prev(self, tmp_path):
+        prev = {
+            "config": {
+                "set": "criminal",
+                "collection": "luat_law_ctx_v4_aiteamvn",
+                "tier": "tier2_answers",
+                "sleep_s": 3.0,
+                "embedder": "mixed",
+                "embed_model": "AITeamVN/Vietnamese_Embedding",
+                "reranker": "AITeamVN/Vietnamese_Reranker",
+            },
+            "tier2": {"aggregate": {}, "rows": [_row("crim-401", error="RateLimitError",
+                                                      behavior="refuse")]},
+        }
+        p = tmp_path / "prev.json"
+        p.write_text(json.dumps(prev), encoding="utf-8")
+        return p
+
+    def test_retry_rebuilds_reports_embedder_and_reranker(self, tmp_path, monkeypatch):
+        seen = {}
+        monkeypatch.setattr(ev, "load_questions", lambda s, limit=None: [
+            {"id": "crim-401", "type": "single-hop", "question": "q?",
+             "expected_behavior": "refuse"}])
+        monkeypatch.setattr(ev, "LegalVectorStore", lambda collection_name=None: "VS")
+        monkeypatch.setattr(ev, "build_embedder",
+                            lambda et, em=None, device="cpu": seen.update(etype=et, emodel=em) or "EMB")
+        monkeypatch.setattr(ev, "LLMGateway", lambda: "LLM")
+        monkeypatch.setattr(ev, "AdaptiveRAGPipeline", lambda **k: seen.update(k) or "PIPE")
+        monkeypatch.setattr(ev, "run_tier2", lambda qs, pipe, s, sl: {
+            "rows": [_row("crim-401", behavior="refuse", refused=True, conf=0.4)]})
+        monkeypatch.setattr(ev, "print_tier2_summary", lambda *a, **k: None)
+        monkeypatch.setattr(ev, "write_report", lambda r: seen.update(report=r) or "out.json")
+
+        ev.run_retry(str(self._write_prev(tmp_path)), sleep_s=0.0)
+
+        assert seen["etype"] == "mixed"
+        assert seen["emodel"] == "AITeamVN/Vietnamese_Embedding"
+        assert seen["reranker_model"] == "AITeamVN/Vietnamese_Reranker"
+        # merged report carries the stack forward so the next mop-up stays faithful
+        assert seen["report"]["config"]["embedder"] == "mixed"
+        assert seen["report"]["config"]["reranker"] == "AITeamVN/Vietnamese_Reranker"
 
 
 class TestAggregateTier2:

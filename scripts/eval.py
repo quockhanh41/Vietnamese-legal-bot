@@ -493,6 +493,12 @@ def run_retry(retry_report: str, sleep_s: float):
 
     set_name = prev_config["set"]
     collection = prev_config["collection"]
+    # Rebuild the SAME retrieval stack the report was made with — an
+    # AITeamVN-embedded collection must not be re-queried with the default
+    # bge-m3 embedder/reranker (old reports lack these keys → bge-m3 default).
+    embedder_type = prev_config.get("embedder", "bge-m3")
+    embed_model = prev_config.get("embed_model")
+    reranker_model = prev_config.get("reranker")
     prev_rows = prev["tier2"]["rows"]
 
     all_questions = load_questions(set_name, limit=None)
@@ -506,10 +512,12 @@ def run_retry(retry_report: str, sleep_s: float):
     retry_questions = [q for q in all_questions if q["id"] in set(retry_ids)]
 
     vector_store = LegalVectorStore(collection_name=collection)
-    click.echo("⏳ Loading BGE-M3 embedder (~2GB RAM)...")
-    embedder = BGEEmbedder()
+    click.echo(f"⏳ Loading embedder ({embedder_type})...")
+    embedder = build_embedder(embedder_type, embed_model, device="cpu")
     llm = LLMGateway()
-    pipeline = AdaptiveRAGPipeline(vector_store=vector_store, embedder=embedder, llm_gateway=llm)
+    rr_kwargs = {"reranker_model": reranker_model} if reranker_model else {}
+    pipeline = AdaptiveRAGPipeline(vector_store=vector_store, embedder=embedder,
+                                   llm_gateway=llm, **rr_kwargs)
 
     tier2_new = run_tier2(retry_questions, pipeline, set_name, sleep_s)
 
@@ -522,6 +530,9 @@ def run_retry(retry_report: str, sleep_s: float):
         "collection": collection,
         "tier": "tier2_answers",
         "sleep_s": sleep_s,
+        "embedder": embedder_type,
+        "embed_model": embed_model,
+        "reranker": reranker_model,
         "retry_of": retry_report,
         "n_retried": len(retry_questions),
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
@@ -580,6 +591,9 @@ def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float,
 
     if answers:
         config["sleep_s"] = sleep_s
+        config["embedder"] = embedder_type
+        config["embed_model"] = embed_model
+        config["reranker"] = reranker_model
         llm = LLMGateway()
         rr_kwargs = {"reranker_model": reranker_model} if reranker_model else {}
         pipeline = AdaptiveRAGPipeline(vector_store=vector_store, embedder=embedder,

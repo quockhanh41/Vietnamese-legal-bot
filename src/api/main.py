@@ -20,7 +20,7 @@ from sse_starlette.sse import EventSourceResponse
 from starlette.concurrency import iterate_in_threadpool
 
 from src.db.qdrant_client import LegalVectorStore
-from src.data.embedder import BGEEmbedder
+from src.data.mixed_embedder import build_embedder
 from src.data.constants import DEFAULT_COLLECTION_NAME
 from src.data.metadata_store import MetadataStore
 from src.llm.gateway import LLMGateway
@@ -72,7 +72,7 @@ async def lifespan(app: FastAPI):
     app.state.vector_store = LegalVectorStore(
         collection_name=DEFAULT_COLLECTION_NAME
     )
-    app.state.embedder = None  # Lazy load (BGE-M3 is heavy)
+    app.state.embedder = None  # Lazy load (mixed embedder is heavy)
     app.state.llm = LLMGateway()
     app.state.metadata_store = MetadataStore()
     app.state.enhanced_retriever = None  # Lazy load
@@ -97,9 +97,11 @@ app.add_middleware(
 
 
 def get_embedder():
-    """Lazy-load BGE-M3 embedder."""
+    """Lazy-load the production embedder — AITeamVN mixed hybrid (AITeamVN dense
+    + BGE-M3 sparse). Heavy; instantiated on first use. Must match the embedder
+    that built DEFAULT_COLLECTION_NAME (M3 Phase 0)."""
     if app.state.embedder is None:
-        app.state.embedder = BGEEmbedder()
+        app.state.embedder = build_embedder("mixed", "AITeamVN/Vietnamese_Embedding")
     return app.state.embedder
 
 
@@ -129,6 +131,7 @@ def get_adaptive_pipeline() -> AdaptiveRAGPipeline:
         embedder=get_embedder(),
         llm_gateway=app.state.llm,
         metadata_store=app.state.metadata_store,
+        reranker_model="AITeamVN/Vietnamese_Reranker",
     )
 
 
