@@ -34,6 +34,13 @@ from src.rag.confidence import ConfidenceScorer, REFUSAL_ANSWER, OUT_OF_SCOPE_AN
 from src.rag.verifier import HallucinationVerifier
 from src.rag.citation_lookup import parse_citation, CitationLookup, retrieve_routed
 
+# M3.5 cross-reference expansion budget (see
+# docs/superpowers/specs/2026-07-17-m3.5-cross-reference-expansion-design.md).
+CROSS_REF_SEED_COUNT = 3
+CROSS_REF_HOPS = 1
+CROSS_REF_MAX_EXPANDED = 4
+CROSS_REF_SCROLL_CAP = 1
+
 @dataclass
 class RAGResponse:
     """Structured response from the RAG pipeline."""
@@ -308,6 +315,9 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         self._confidence_scorer = None  # Lazy-loaded
         self._verifier = None  # Lazy-loaded
         self._citation_lookup = None  # Lazy-loaded CitationLookup
+        # M3.5: cross-reference graph expansion on the complex route.
+        # Instance flag so eval / debugging can disable it without a code change.
+        self.cross_ref_expansion = True
 
     def _get_citation_lookup(self) -> CitationLookup:
         """Lazy-init CitationLookup (builds a document alias index from Qdrant on first use)."""
@@ -706,6 +716,125 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         except Exception as e:
             print(f"⚠️ Reranking failed (skip): {e}")
             return results, None
+
+    # ── Cross-reference graph expansion (M3.5) ───────────────────
+
+    def _expand_cross_references(
+        self, results: List[SearchResult], is_comparison: bool = False,
+    ) -> List[SearchResult]:
+        """
+        Complex-route only (Plan §3.5): follow knowledge-graph edges from the
+        top reranked results and fetch the TEXT of cross-referenced articles,
+        so multi-hop questions ("theo quy định tại Điều Y") get Điều Y's
+        content in context. Returns the extra blocks to APPEND (never mutates
+        `results`); the caller adds them after rerank so they never enter the
+        rerank pool (M2.6 CPU-latency cap). Any failure -> [] (never breaks
+        the route).
+        """
+        if not self.cross_ref_expansion:
+            return []
+        try:
+            graph = self.metadata_store.get_graph()
+            edges = graph.get("edges", [])
+            nodes = graph.get("nodes", [])
+            if not edges:
+                return []
+
+            adjacency: Dict[str, List[str]] = {}
+            for e in edges:
+                adjacency.setdefault(e.get("source", ""), []).append(e.get("target", ""))
+            node_map = {n["id"]: n for n in nodes}
+
+            existing = {
+                (r.document_id, self._article_num(r.article))
+                for r in results if r.document_id and r.article
+            }
+
+            collected: List[SearchResult] = []
+            collected_keys: set = set()
+            for seed in results[:CROSS_REF_SEED_COUNT]:
+                if not (seed.document_id and seed.article):
+                    continue
+                node_id = f"doc_{seed.document_id}_{seed.article.lower().replace(' ', '_')}"
+                for nid in self._graph_neighbors(node_id, adjacency, CROSS_REF_HOPS):
+                    if len(collected) >= CROSS_REF_MAX_EXPANDED:
+                        break
+                    node = node_map.get(nid)
+                    if not node:
+                        continue
+                    for r in self._fetch_neighbor(node):
+                        if len(collected) >= CROSS_REF_MAX_EXPANDED:
+                            break
+                        if not (r.document_id and r.article):
+                            continue
+                        key = (r.document_id, self._article_num(r.article))
+                        if key in existing or key in collected_keys:
+                            continue
+                        collected_keys.add(key)
+                        collected.append(r)
+                if len(collected) >= CROSS_REF_MAX_EXPANDED:
+                    break
+
+            if not collected:
+                return []
+            annotations = self._annotate_phase2(collected)
+            collected = self._filter_in_effect(
+                collected, annotations, keep_superseded=is_comparison,
+            )
+            return collected[:CROSS_REF_MAX_EXPANDED]
+        except Exception as e:
+            print(f"⚠️ Cross-ref expansion failed (skip): {e}")
+            return []
+
+    @staticmethod
+    def _article_num(article: Optional[str]) -> str:
+        """Extract the article number ('Điều 12a' -> '12a') for scroll_article
+        + dedup keys. Falls back to the raw string if no digit is present."""
+        m = re.search(r'(\d+[a-z]?)', article or "")
+        return m.group(1) if m else (article or "")
+
+    @staticmethod
+    def _graph_neighbors(
+        start: str, adjacency: Dict[str, List[str]], hops: int,
+    ) -> List[str]:
+        """BFS out-direction from `start`, limited to `hops`. First-seen order."""
+        seen = {start}
+        frontier = {start}
+        out: List[str] = []
+        for _ in range(hops):
+            nxt: set = set()
+            for node in frontier:
+                for nb in adjacency.get(node, []):
+                    if nb not in seen:
+                        seen.add(nb)
+                        nxt.add(nb)
+                        out.append(nb)
+            frontier = nxt
+            if not frontier:
+                break
+        return out
+
+    def _fetch_neighbor(self, node: Dict) -> List[SearchResult]:
+        """Fetch the chunk(s) for one graph neighbor node via server-side
+        scroll_article. Article nodes fetch directly; external_ref nodes
+        resolve the law name to a doc first (skip if ambiguous/not in corpus)."""
+        num = self._article_num(node.get("article", ""))
+        if not num:
+            return []
+        if node.get("node_type") == "external_ref":
+            law_name = node.get("law_name", "")
+            if not law_name:
+                return []
+            cl = self._get_citation_lookup()
+            doc_ids = cl.resolve_doc(law_name, year=None)
+            all_ids = list(cl._get_alias_index().keys())
+            if not doc_ids or set(doc_ids) == set(all_ids):
+                return []  # law not unambiguously in corpus
+            return self.vector_store.scroll_article(doc_ids[:1], num, cap=CROSS_REF_SCROLL_CAP)
+        doc_id = node.get("doc_id")
+        if not doc_id:
+            return []
+        return self.vector_store.scroll_article([doc_id], num, cap=CROSS_REF_SCROLL_CAP)
 
     # ── Context Compression ──────────────────────────────────
 
