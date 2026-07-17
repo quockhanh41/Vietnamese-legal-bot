@@ -121,10 +121,10 @@ class EnrichmentPipeline:
 
                 meta = DocumentMeta(doc_id=doc_id, title=title)
 
-                # ── M1: Cross-References ──
-                refs = self.ref_extractor.extract(
-                    text=full_text, doc_id=doc_id, law_name=title
-                )
+                # ── M1: Cross-References (per-article — graph edges carry an
+                # article-level source so query-time expansion can traverse
+                # from a retrieved article; M3.5 spec §3bis) ──
+                refs = self._extract_refs_per_article(info["chunks"], doc_id, title)
                 meta.ref_count = len(refs)
                 meta.internal_refs = sum(1 for r in refs if r.ref_type.value == "internal")
                 meta.external_refs = sum(1 for r in refs if r.ref_type.value == "external")
@@ -318,6 +318,34 @@ class EnrichmentPipeline:
             )
 
         return documents
+
+    def _extract_refs_per_article(self, chunks, doc_id, title):
+        """Extract cross-references PER ARTICLE (not over whole-doc text), so
+        each Reference.source_article is set and the graph gets article-level
+        source nodes (M3.5 spec §3bis). Keys articles by the `article` payload
+        string and uses each article's parent_chunk_text (full Điều) once — the
+        exact string query-time expansion builds its seed node id from, so
+        source node ids match seed lookups. Chunks with no `article` (preamble)
+        fall back to doc-level extraction (source_article=None)."""
+        refs = []
+        seen_articles = set()
+        for ch in chunks:
+            payload = ch.payload or {}
+            article = payload.get("article")
+            if article:
+                if article in seen_articles:
+                    continue
+                seen_articles.add(article)
+                text = payload.get("parent_chunk_text") or payload.get("chunk_text") or ""
+                refs.extend(self.ref_extractor.extract(
+                    text=text, doc_id=doc_id, law_name=title, current_article=article,
+                ))
+            else:
+                text = payload.get("chunk_text") or ""
+                refs.extend(self.ref_extractor.extract(
+                    text=text, doc_id=doc_id, law_name=title,
+                ))
+        return refs
 
     def get_status(self) -> Dict[str, Any]:
         """Get current enrichment status."""

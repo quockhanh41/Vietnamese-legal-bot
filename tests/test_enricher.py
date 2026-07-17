@@ -55,3 +55,55 @@ def test_backfill_returns_zero_when_all_unknown(tmp_path):
 
     assert n == 0
     assert vector_store.calls == []
+
+
+def test_extract_refs_per_article_sets_full_source_article():
+    """Per-article extraction sets source_article to the FULL `article` payload
+    string — the exact string query-time expansion builds its seed node id from."""
+    from unittest.mock import MagicMock
+    from src.pipeline.enricher import EnrichmentPipeline
+
+    class Ch:
+        def __init__(self, payload):
+            self.payload = payload
+
+    p = EnrichmentPipeline(vector_store=MagicMock(), metadata_store=MagicMock())
+    chunks = [
+        Ch({"article": "Điều 5. Giải thích từ ngữ",
+            "parent_chunk_text": "Điều 5. ... áp dụng theo quy định tại Điều 10 của Luật này ..."}),
+    ]
+    refs = p._extract_refs_per_article(chunks, doc_id=1, title="Luật Test 2020")
+    assert refs, "should extract at least one reference"
+    assert all(r.source_article == "Điều 5. Giải thích từ ngữ" for r in refs)
+    assert any(r.target_article == "Điều 10" for r in refs)
+
+
+def test_extract_refs_per_article_dedupes_article_by_payload_string():
+    """Multiple chunks of the same article extract that article's text once."""
+    from unittest.mock import MagicMock
+    from src.pipeline.enricher import EnrichmentPipeline
+
+    class Ch:
+        def __init__(self, payload):
+            self.payload = payload
+
+    p = EnrichmentPipeline(vector_store=MagicMock(), metadata_store=MagicMock())
+    same = {"article": "Điều 7. X", "parent_chunk_text": "Điều 7. ... tại Điều 3 của Luật này ..."}
+    refs = p._extract_refs_per_article([Ch(same), Ch(dict(same))], doc_id=1, title="Luật Test")
+    # article 7 processed once → its single internal ref to Điều 3, not doubled
+    assert sum(1 for r in refs if r.target_article == "Điều 3") == 1
+
+
+def test_extract_refs_no_article_stays_doc_level():
+    """A chunk with no `article` (preamble) keeps source_article=None."""
+    from unittest.mock import MagicMock
+    from src.pipeline.enricher import EnrichmentPipeline
+
+    class Ch:
+        def __init__(self, payload):
+            self.payload = payload
+
+    p = EnrichmentPipeline(vector_store=MagicMock(), metadata_store=MagicMock())
+    chunks = [Ch({"article": None, "chunk_text": "... theo Điều 3 của Luật này ..."})]
+    refs = p._extract_refs_per_article(chunks, doc_id=1, title="Luật Test")
+    assert refs and all(r.source_article is None for r in refs)
