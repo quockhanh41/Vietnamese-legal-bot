@@ -374,18 +374,18 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         # single LLM call — see COMPLEXITY_CLASSIFIER_PROMPT). A question
         # that resolves to real articles via the citation route above is
         # in-scope by construction and never reaches this gate.
-        complexity, in_scope = self._classify_and_scope(question)
+        complexity, in_scope, is_comparison = self._classify_and_scope(question)
 
         if not in_scope:
             return self._out_of_scope_response(question, start_time)
 
         # Step 2-6: Route to appropriate pipeline
         if complexity == "simple":
-            return self._simple_pipeline(question, start_time)
+            return self._simple_pipeline(question, start_time, is_comparison)
         elif complexity == "medium":
-            return self._medium_pipeline(question, start_time)
+            return self._medium_pipeline(question, start_time, is_comparison)
         else:
-            return self._complex_pipeline(question, start_time)
+            return self._complex_pipeline(question, start_time, is_comparison)
 
     def _out_of_scope_response(self, question: str, start_time: float) -> RAGResponse:
         """Refuse immediately, WITHOUT retrieval/generation — the SCOPE gate
@@ -538,17 +538,17 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             parsed.disclaimer += "\n\n" + "\n".join(ver_result.warnings[:3])
         return parsed
 
-    def _simple_pipeline(self, question: str, start_time: float) -> RAGResponse:
+    def _simple_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
         """SIMPLE: dense search → generate (2 LLM calls including classify)."""
         query_vector = self.embedder.encode_queries([question])[0]
         # Use a broader initial pool, then dynamically select
         results = self.vector_store.search_dense(query_vector.tolist(), top_k=20,
-                                                  exclude_superseded=True)
+                                                  exclude_superseded=not is_comparison)
 
         # Phase 2 (Plan §3.6): default temporal filter, computed on the broad
         # pool before dynamic-top-k picks the final candidate count.
         annotations = self._annotate_phase2(results)
-        results = self._filter_in_effect(results, annotations)
+        results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
 
         top_k = self._dynamic_top_k(results, min_k=3, max_k=15)
         results = results[:top_k]
@@ -570,7 +570,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         parsed = self._enrich_response(parsed, conf_result, ver_result)
         return parsed
 
-    def _medium_pipeline(self, question: str, start_time: float) -> RAGResponse:
+    def _medium_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
         """MEDIUM: hybrid search → dynamic top-k → rerank → generate."""
         output = self.embedder.encode([question], return_dense=True, return_sparse=True)
         dense_vec = output["dense_vecs"][0]
@@ -578,11 +578,11 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
         # Broader initial pool
         results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20,
-                                                  exclude_superseded=True)
+                                                  exclude_superseded=not is_comparison)
 
         # Phase 2 (Plan §3.6): default temporal filter, before dynamic-top-k/rerank.
         annotations = self._annotate_phase2(results)
-        results = self._filter_in_effect(results, annotations)
+        results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
 
         top_k = self._dynamic_top_k(results, min_k=5, max_k=15)
         results = results[:top_k]
@@ -610,7 +610,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         parsed = self._enrich_response(parsed, conf_result, ver_result)
         return parsed
 
-    def _complex_pipeline(self, question: str, start_time: float) -> RAGResponse:
+    def _complex_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
         """COMPLEX: full pipeline (rewrite → multi-query → HyDE → hybrid → rerank → compress → generate)."""
         # 1. Query rewrite
         rewritten = self.llm.generate(QUERY_REWRITE_PROMPT.format(question=question), temperature=0.1).strip()
@@ -631,7 +631,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             dense_vec = output["dense_vecs"][0]
             sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
             results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10,
-                                                      exclude_superseded=True)
+                                                      exclude_superseded=not is_comparison)
             all_results.extend(results)
 
         # 5. Deduplicate and apply dynamic top-k
@@ -643,7 +643,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
                 unique_results.append(r)
         # Phase 2 (Plan §3.6): default temporal filter, before dynamic-top-k/rerank.
         annotations = self._annotate_phase2(unique_results)
-        unique_results = self._filter_in_effect(unique_results, annotations)
+        unique_results = self._filter_in_effect(unique_results, annotations, keep_superseded=is_comparison)
 
         top_k = self._dynamic_top_k(unique_results, min_k=5, max_k=20)
         results = unique_results[:top_k]
