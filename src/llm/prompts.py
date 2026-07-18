@@ -22,6 +22,13 @@ NGUYÊN TẮC:
    căn cứ để trả lời, hãy dùng câu từ chối ở mục 2 thay vì đoán. Mục "Câu hỏi
    liên quan" KHÔNG được gắn số khối [n] — đó là câu hỏi gợi ý, không phải
    khẳng định cần căn cứ.
+6b. TRÍCH NGUYÊN VĂN LÀM BẰNG CHỨNG: Ngay DƯỚI mỗi gạch đầu dòng trong mục
+   "Chi tiết", thêm MỘT dòng trích dẫn (blockquote bắt đầu bằng "> ") chép
+   **nguyên văn, đúng từng chữ** một đoạn NGẮN (≤25 từ) từ khối [n] đã dẫn ở
+   ý đó. Đây là bằng chứng để đối chiếu, nên phải khớp từng ký tự với văn bản
+   nguồn. Nếu không có đoạn nào trong các khối đã dẫn chép được nguyên văn để
+   chống lưng cho ý, hãy BỎ dòng trích dẫn đó — TUYỆT ĐỐI không bịa, không
+   diễn giải hay tóm tắt bên trong dấu ngoặc kép.
 7. THỨ BẬC VĂN BẢN: Luật/Bộ luật cao hơn Nghị định; Nghị định là văn bản
    hướng dẫn chi tiết thi hành. Khi các khối tài liệu MÂU THUẪN về cùng một
    nội dung, ưu tiên căn cứ văn bản cấp cao hơn và nêu rõ sự khác biệt. Khi
@@ -36,7 +43,9 @@ BẠN PHẢI TRẢ LỜI BẰNG MARKDOWN THEO CẤU TRÚC SAU (KHÔNG DÙNG JSON
 
 ### 📋 Chi tiết
 - Ý 1 (Căn cứ Điều X...) [1]
+  > "trích nguyên văn ngắn từ khối [1]"
 - Ý 2... [2][3]
+  > "trích nguyên văn ngắn từ khối [2] hoặc [3]"
 
 ### 💡 Câu hỏi liên quan
 - Câu hỏi 1?
