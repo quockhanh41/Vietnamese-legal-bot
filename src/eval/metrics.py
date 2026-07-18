@@ -110,6 +110,24 @@ def recall_at_k(
     return found / len(expected_articles)
 
 
+def multihop_recall_row(
+    expected_articles: List[Dict],
+    seed_hits: List[Dict],
+    expanded_hits: List[Dict],
+) -> Dict:
+    """M3.5 metric: referenced-article recall BEFORE vs AFTER cross-ref
+    expansion, measured on the SAME seed pass so the delta is purely
+    expansion. Lenient (article-level) match. k = full result set — we care
+    whether the expected article is present ANYWHERE in the final context,
+    not its rank."""
+    combined = seed_hits + expanded_hits
+    return {
+        "recall_before": recall_at_k(seed_hits, expected_articles, len(seed_hits) or 1, lenient=True),
+        "recall_after": recall_at_k(combined, expected_articles, len(combined) or 1, lenient=True),
+        "n_expanded": len(expanded_hits),
+    }
+
+
 def mrr(
     results: List[Dict],
     expected_articles: List[Dict],

@@ -21,6 +21,7 @@ from src.eval.metrics import (
     refusal_accuracy,
     false_refusal_rate,
     citation_accuracy,
+    multihop_recall_row,
 )
 from scripts.eval import cross_sector_leakage
 
@@ -143,6 +144,35 @@ def test_recall_at_k_lenient_vs_strict():
     expected = [{"doc_id": 296661, "article": "Điều 173"}]
     assert recall_at_k(results, expected, k=5, lenient=False) == 0.0
     assert recall_at_k(results, expected, k=5, lenient=True) == 1.0
+
+
+# ── multihop_recall_row (M3.5) ───────────────────────────────────────────
+#
+# NOTE: expected-article dicts use "doc_id" (not "document_id") — the
+# convention established above (recall_at_k/strict_match/lenient_match all
+# read expected.get("doc_id")) and matched by the real committed cohort
+# data/eval/eval_set_multihop_v1.json. seed/expanded hit dicts use
+# "document_id", mirroring _result_to_dict()'s output schema.
+
+def test_multihop_recall_row_expansion_recovers_referenced():
+    expected = [
+        {"doc_id": 1, "article": "Điều 10"},
+        {"doc_id": 1, "article": "Điều 50"},
+    ]
+    seed = [{"document_id": 1, "article": "Điều 10", "score": 0.9}]
+    expanded = [{"document_id": 1, "article": "Điều 50", "score": 1.0}]
+    row = multihop_recall_row(expected, seed, expanded)
+    assert row["recall_before"] == 0.5   # only Điều 10 in seed
+    assert row["recall_after"] == 1.0    # Điều 50 recovered by expansion
+    assert row["n_expanded"] == 1
+
+
+def test_multihop_recall_row_no_expansion_no_change():
+    expected = [{"doc_id": 1, "article": "Điều 10"}]
+    seed = [{"document_id": 1, "article": "Điều 10", "score": 0.9}]
+    row = multihop_recall_row(expected, seed, [])
+    assert row["recall_before"] == row["recall_after"] == 1.0
+    assert row["n_expanded"] == 0
 
 
 # ── MRR ───────────────────────────────────────────────────────────────────

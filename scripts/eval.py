@@ -64,6 +64,7 @@ from src.rag.orchestrator import AdaptiveRAGPipeline
 CRIMINAL_SET = "data/eval/eval_set_criminal_v1.json"
 GENERAL_SET = "data/eval/eval_set_general_v1.json"
 SECTORS_SET = "data/eval/eval_set_sectors_v2.json"  # M2.7 — v1 + Thông tư questions
+MULTIHOP_SET = "data/eval/eval_set_multihop_v1.json"  # M3.5 — cross-ref expansion cohort
 CORPUS_PARQUET = "data/raw/corpus_600docs.parquet"  # M2.7 — doc_id -> sector, for leakage@k
 REPORT_DIR = "data/eval_reports"
 
@@ -244,6 +245,37 @@ def _aggregate_tier1(rows: List[Dict]) -> Dict:
     return agg
 
 
+# ── Multihop cross-ref expansion eval (M3.5) ──────────────────────────────
+
+def run_multihop(questions: List[Dict], pipeline) -> Dict:
+    """M3.5: deterministic referenced-article recall before/after cross-ref
+    expansion. Runs the REAL complex retrieval (rewrite/HyDE via LLM) once per
+    question, then compares expected-article presence in the seed set vs
+    seed+expanded. No generation, no confidence scoring."""
+    from src.eval.metrics import multihop_recall_row
+
+    eligible = [q for q in questions if q.get("expected_articles")]
+    rows = []
+    for q in eligible:
+        seed_results, _scores = pipeline.complex_retrieve(q["question"])
+        expanded = pipeline._expand_cross_references(seed_results)
+        seed_hits = [_result_to_dict(r) for r in seed_results]
+        expanded_hits = [_result_to_dict(r) for r in expanded]
+        row = {"id": q["id"], "legal_sector": q.get("legal_sector"),
+               "expected_articles": q["expected_articles"]}
+        row.update(multihop_recall_row(q["expected_articles"], seed_hits, expanded_hits))
+        rows.append(row)
+
+    n = len(rows) or 1
+    return {
+        "n_questions": len(rows),
+        "mean_recall_before": round(sum(r["recall_before"] for r in rows) / n, 4),
+        "mean_recall_after": round(sum(r["recall_after"] for r in rows) / n, 4),
+        "mean_n_expanded": round(sum(r["n_expanded"] for r in rows) / n, 4),
+        "rows": rows,
+    }
+
+
 # ── Tier 2: Answer/refusal eval ───────────────────────────────────────────
 
 def row_citation_accuracy(
@@ -388,10 +420,10 @@ def merge_tier2_rows(
 
 # ── Report writing + printing ─────────────────────────────────────────────
 
-def write_report(report: Dict) -> str:
+def write_report(report: Dict, suffix: str = "eval") -> str:
     os.makedirs(REPORT_DIR, exist_ok=True)
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    path = os.path.join(REPORT_DIR, f"{ts}_eval.json")
+    path = os.path.join(REPORT_DIR, f"{ts}_{suffix}.json")
     with open(path, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
     return path
@@ -565,11 +597,40 @@ def run_retry(retry_report: str, sleep_s: float):
               help="Đường dẫn report tier2_answers cũ: chạy lại CHỈ các câu lỗi "
                    "(Groq TPD chết giữa chừng), merge vào rows cũ, ghi report mới. "
                    "set/collection lấy từ config của report — bỏ qua --set/--collection.")
+@click.option("--multihop", is_flag=True, default=False,
+              help="Chạy đo referenced-article recall before/after cross-ref expansion (M3.5).")
 def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float,
          collection: str, embedder_type: str, embed_model: Optional[str],
-         reranker_model: Optional[str], retry_report: Optional[str]):
+         reranker_model: Optional[str], retry_report: Optional[str], multihop: bool):
     if retry_report:
         run_retry(retry_report, sleep_s)
+        return
+
+    if multihop:
+        with open(MULTIHOP_SET, encoding="utf-8") as f:
+            questions = json.load(f)
+        click.echo(f"📊 Multihop eval set: {MULTIHOP_SET} ({len(questions)} câu hỏi)")
+
+        vector_store = LegalVectorStore(collection_name=collection)
+        click.echo("⏳ Loading BGE-M3 embedder (~2GB RAM)...")
+        embedder = build_embedder(embedder_type, embed_model, device="cpu")
+
+        config = {
+            "collection": collection,
+            "tier": "multihop",
+            "embedder": embedder_type,
+            "embed_model": embed_model,
+            "reranker": reranker_model,
+            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        llm = LLMGateway()
+        rr_kwargs = {"reranker_model": reranker_model} if reranker_model else {}
+        pipeline = AdaptiveRAGPipeline(vector_store=vector_store, embedder=embedder,
+                                       llm_gateway=llm, **rr_kwargs)
+        multihop_result = run_multihop(questions, pipeline)
+        report = {"config": config, "multihop": multihop_result}
+        path = write_report(report, suffix="multihop")
+        click.echo(f"\n💾 Multihop report saved: {path}")
         return
 
     questions = load_questions(set_name, limit)
