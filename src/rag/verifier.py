@@ -74,6 +74,14 @@ class HallucinationVerifier:
     CLAUSE_PATTERN = re.compile(r'(?:khoản|Khoản)\s+(\d+)')
     POINT_PATTERN = re.compile(r'(?:điểm|điểm)\s+([a-zđ])')
 
+    # M3.6 verbatim-span normalization. Quote/dash/ellipsis chars an LLM may
+    # add or drop around a quoted span are neutralized before matching;
+    # diacritics are preserved (semantically load-bearing in Vietnamese).
+    _QUOTE_CHARS = "\"“”„«»‹›‘’'"
+    _DASH_CHARS = "–—"     # en dash, em dash
+    _ELLIPSIS_CHAR = "…"
+    MIN_SPAN_CHARS = 10              # normalized-length guard vs trivial matches
+
     def __init__(self):
         self._nli_model = None  # Lazy-loaded
         self._nli_tokenizer = None
@@ -329,6 +337,77 @@ class HallucinationVerifier:
                 unique_claims.append(c)
 
         return unique_claims
+
+    @classmethod
+    def _normalize_for_match(cls, text: str) -> str:
+        """Normalize a span or block for substring matching (M3.6): unify
+        dash/quote/ellipsis chars, casefold, collapse whitespace, strip edge
+        dots/spaces. Vietnamese diacritics are preserved."""
+        if not text:
+            return ""
+        t = text
+        for ch in cls._DASH_CHARS:
+            t = t.replace(ch, "-")
+        t = t.replace(cls._ELLIPSIS_CHAR, " ")
+        for ch in cls._QUOTE_CHARS:
+            t = t.replace(ch, " ")
+        t = t.casefold()
+        t = re.sub(r"\s+", " ", t).strip()
+        return t.strip(" .")
+
+    def _parse_bullet_spans(self, answer: str) -> List[Tuple[List[int], Optional[str]]]:
+        """Pair each '### 📋 Chi tiết' bullet with the verbatim span in the
+        blockquote line(s) immediately below it (M3.6). Returns
+        (block_refs, span) per bullet in order; span is None when the bullet
+        has no following blockquote. Consecutive '>' lines are joined with a
+        single space. Reuses the same section boundaries as
+        `_groundable_claims`."""
+        if not answer:
+            return []
+        clean = re.sub(r"#+\s*", "", answer)
+        in_chi_tiet = False
+        pairs: List[list] = []      # each item: [refs, [span_parts]]
+        current: Optional[list] = None
+
+        for raw_line in clean.split("\n"):
+            line = raw_line.strip()
+            if not line:
+                continue
+            if self._CHI_TIET_HEADER.match(line):
+                in_chi_tiet = True
+                current = None
+                continue
+            if self._TRA_LOI_NGAN_HEADER.match(line):
+                in_chi_tiet = False
+                current = None
+                continue
+            if self._CAU_HOI_HEADER.match(line):
+                break
+            if not in_chi_tiet:
+                continue
+
+            if line.startswith(">"):
+                if current is not None:
+                    span_text = line.lstrip(">").strip()
+                    if span_text:
+                        current[1].append(span_text)
+                continue
+
+            bullet_match = re.match(r"^[\-\*\•]\s+(.*)", line)
+            num_match = None if bullet_match else re.match(r"^\d+[\.\)]\s+(.*)", line)
+            if bullet_match or num_match:
+                item_text = (bullet_match or num_match).group(1).strip()
+                if self._LABEL_ONLY_LINE.match(item_text):
+                    current = None      # bare "**Label**:" — no span target
+                    continue
+                refs = [int(n) for n in self.BLOCK_REF_PATTERN.findall(item_text)]
+                current = [refs, []]
+                pairs.append(current)
+
+        return [
+            (refs, " ".join(parts) if parts else None)
+            for refs, parts in pairs
+        ]
 
     # ── Tier 2: Semantic NLI ────────────────────────────────────
 

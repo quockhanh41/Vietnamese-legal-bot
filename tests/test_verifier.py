@@ -270,3 +270,51 @@ def _run_grounding(verifier, answer, context):
     result = VerificationResult()
     verifier._verify_grounding(answer, context, result)
     return result
+
+
+def test_normalize_for_match_collapses_and_casefolds():
+    v = HallucinationVerifier()
+    a = v._normalize_for_match('  “Bị PHẠT   tù từ 03 năm…”  ')
+    b = v._normalize_for_match('bị phạt tù từ 03 năm')
+    assert a == b
+
+
+def test_normalize_for_match_keeps_diacritics():
+    v = HallucinationVerifier()
+    # "phạt" and "phat" must NOT normalize to the same string.
+    assert v._normalize_for_match("phạt") != v._normalize_for_match("phat")
+
+
+def test_parse_bullet_spans_pairs_bullet_with_following_blockquote():
+    v = HallucinationVerifier()
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Ý một (Điều 5) [1]\n"
+        "  > \"span một\"\n"
+        "- Ý hai (Điều 6) [2][3]\n"
+        "  > \"span hai dòng một\"\n"
+        "  > \"span hai dòng hai\"\n"
+        "- Ý ba không có span [4]"
+    )
+    pairs = v._parse_bullet_spans(answer)
+    assert pairs == [
+        ([1], "\"span một\""),
+        ([2, 3], "\"span hai dòng một\" \"span hai dòng hai\""),
+        ([4], None),
+    ]
+
+
+def test_parse_bullet_spans_ignores_tra_loi_ngan_and_trailer():
+    v = HallucinationVerifier()
+    answer = (
+        "### 💬 Trả lời ngắn\n"
+        "Tóm tắt.\n"
+        "> \"không phải span của Chi tiết\"\n"
+        "### 📋 Chi tiết\n"
+        "- Ý một [1]\n"
+        "  > \"span một\"\n"
+        "### 💡 Câu hỏi liên quan\n"
+        "- Câu hỏi 1?"
+    )
+    pairs = v._parse_bullet_spans(answer)
+    assert pairs == [([1], "\"span một\"")]
