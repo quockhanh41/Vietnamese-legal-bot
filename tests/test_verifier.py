@@ -318,3 +318,125 @@ def test_parse_bullet_spans_ignores_tra_loi_ngan_and_trailer():
     )
     pairs = v._parse_bullet_spans(answer)
     assert pairs == [([1], "\"span một\"")]
+
+
+_VS_CONTEXT = (
+    "[1] Bộ luật Hình sự 2015 — Điều 168\n"
+    "Người nào dùng vũ lực chiếm đoạt tài sản thì bị phạt tù từ 03 năm đến 10 năm."
+    "\n\n---\n\n"
+    "[2] Bộ luật Hình sự 2015 — Điều 173\n"
+    "Tội trộm cắp tài sản bị phạt cải tạo không giam giữ đến 03 năm."
+)
+
+
+def _run_verbatim(answer, context=_VS_CONTEXT):
+    from src.rag.verifier import VerificationResult
+    v = HallucinationVerifier()
+    res = VerificationResult()
+    v._verify_verbatim_spans(answer, context, res)
+    return res
+
+
+def test_verbatim_exact_match():
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản bị phạt tù (Điều 168) [1]\n"
+        "  > \"bị phạt tù từ 03 năm đến 10 năm\""
+    )
+    res = _run_verbatim(answer)
+    assert res.verbatim_match_flags == [True]
+    assert res.verbatim_match_ratio == 1.0
+    assert res.unverbatim_spans == []
+
+
+def test_verbatim_normalized_match_case_and_whitespace():
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản (Điều 168) [1]\n"
+        "  > \"…BỊ PHẠT   tù từ 03 năm đến 10 năm.\""
+    )
+    res = _run_verbatim(answer)
+    assert res.verbatim_match_flags == [True]
+
+
+def test_verbatim_fabricated_span_flagged():
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản (Điều 168) [1]\n"
+        "  > \"bị phạt tù chung thân hoặc tử hình\""
+    )
+    res = _run_verbatim(answer)
+    assert res.verbatim_match_flags == [False]
+    assert res.verbatim_match_ratio == 0.0
+    assert len(res.unverbatim_spans) == 1
+
+
+def test_verbatim_missing_span_counted_not_penalized():
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản (Điều 168) [1]\n"
+        "  > \"bị phạt tù từ 03 năm đến 10 năm\"\n"
+        "- Trộm cắp (Điều 173) [2]"
+    )
+    res = _run_verbatim(answer)
+    assert res.bullets_missing_span == 1
+    assert res.verbatim_match_flags == [True]     # only the present span counts
+    assert res.verbatim_match_ratio == 1.0
+
+
+def test_verbatim_multi_block_cite_matches_either():
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Hình phạt (Điều 173) [1][2]\n"
+        "  > \"phạt cải tạo không giam giữ đến 03 năm\""   # lives in block 2
+    )
+    res = _run_verbatim(answer)
+    assert res.verbatim_match_flags == [True]
+
+
+def test_verbatim_too_short_span_guard():
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản (Điều 168) [1]\n"
+        "  > \"tù\""                                       # < 10 chars normalized
+    )
+    res = _run_verbatim(answer)
+    assert res.verbatim_match_flags == [False]
+
+
+def test_verify_verbatim_is_observability_only(monkeypatch):
+    """Full verify(): a fabricated span adds a warning but never flips passed
+    (which stays governed solely by contradiction)."""
+    v = HallucinationVerifier()
+    monkeypatch.setattr(v, "_verify_semantic", lambda a, c, r: None)  # skip NLI
+    answer = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản (Điều 168) [1]\n"
+        "  > \"bị phạt tù chung thân hoặc tử hình\""
+    )
+    res = v.verify(answer, [], _VS_CONTEXT)
+    assert res.unverbatim_spans
+    assert any("nguyên văn không khớp" in w for w in res.warnings)
+    assert res.passed is True
+
+
+def test_calibration_invariant_grounding_and_split_ignore_blockquotes():
+    """The three pre-existing answer-derived checks must produce identical
+    output whether or not the answer carries blockquote spans — because
+    verify() strips them first. Pins the spec §5 invariant (NLI-free)."""
+    from src.rag.context_blocks import strip_blockquotes
+    v = HallucinationVerifier()
+    plain = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản bị phạt tù (Điều 168) [1]\n"
+        "- Trộm cắp bị cải tạo (Điều 173) [2]"
+    )
+    quoted = (
+        "### 📋 Chi tiết\n"
+        "- Cướp tài sản bị phạt tù (Điều 168) [1]\n"
+        "  > \"bị phạt tù từ 03 năm đến 10 năm\"\n"
+        "- Trộm cắp bị cải tạo (Điều 173) [2]\n"
+        "  > \"phạt cải tạo không giam giữ đến 03 năm\""
+    )
+    assert v._groundable_claims(strip_blockquotes(quoted)) == v._groundable_claims(plain)
+    assert v._split_claims(strip_blockquotes(quoted)) == v._split_claims(plain)
