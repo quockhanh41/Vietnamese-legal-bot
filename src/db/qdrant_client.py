@@ -28,6 +28,7 @@ from qdrant_client.models import (
 
 from src.data.constants import DEFAULT_COLLECTION_NAME
 from src.eval.metrics import artnum
+from src.observability import observe
 
 # Fixed namespace for uuid5-derived point IDs (Việc 1 — deterministic point
 # IDs so re-running ingest is idempotent instead of duplicating points on
@@ -323,6 +324,7 @@ class LegalVectorStore:
 
         return [self._to_search_result(p) for p in response.points]
 
+    @observe
     def search_hybrid(
         self,
         dense_vector: List[float],

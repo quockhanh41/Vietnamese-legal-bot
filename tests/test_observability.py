@@ -75,3 +75,21 @@ class TestEnabledMode:
         from langfuse import observe as langfuse_observe
 
         assert module.observe is langfuse_observe
+
+
+class TestDecoratedPipelineSurface:
+    """Decorators must not change the callable surface (disabled baseline)."""
+
+    def test_orchestrator_methods_preserved(self):
+        import inspect
+
+        from src.rag.orchestrator import AdaptiveRAGPipeline
+
+        assert AdaptiveRAGPipeline.query.__name__ == "query"
+        assert inspect.isgeneratorfunction(AdaptiveRAGPipeline.query_stream)
+        assert AdaptiveRAGPipeline._classify_and_scope.__name__ == "_classify_and_scope"
+
+    def test_search_hybrid_preserved(self):
+        from src.db.qdrant_client import LegalVectorStore
+
+        assert LegalVectorStore.search_hybrid.__name__ == "search_hybrid"

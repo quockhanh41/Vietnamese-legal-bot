@@ -20,6 +20,7 @@ from src.db.qdrant_client import LegalVectorStore, SearchResult
 from src.data.embedder import BGEEmbedder
 from src.data.metadata_store import MetadataStore
 from src.pipeline.retriever import get_phase2_status
+from src.observability import observe
 from src.llm.gateway import LLMGateway
 from src.llm.prompts import (
     SYSTEM_PROMPT,
@@ -373,6 +374,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         else:
             return max_k
 
+    @observe
     def query(self, question: str) -> RAGResponse:
         """Process with adaptive routing."""
         start_time = time.time()
@@ -421,6 +423,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             refused=True,
         )
 
+    @observe
     def _lookup_pipeline(self, question: str, start_time: float) -> RAGResponse:
         """LOOKUP: direct metadata lookup for 'Điều N' citations (+ dense fill) → generate.
 
@@ -454,6 +457,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         parsed = self._enrich_response(parsed, conf_result, ver_result)
         return parsed
 
+    @observe
     def _classify_and_scope(self, question: str) -> Tuple[str, bool, bool]:
         """
         Combined SCOPE + complexity classification — ONE LLM call (zero added
@@ -493,6 +497,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
         return complexity, in_scope, is_comparison
 
+    @observe
     def _post_process(self, question: str, answer: str, results: List[SearchResult],
                       context: str, rerank_scores: Optional[List[float]] = None) -> tuple:
         """
@@ -708,6 +713,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
     # ── Re-ranking ───────────────────────────────────────────
 
+    @observe
     def _rerank_results(
         self, question: str, results: List[SearchResult]
     ) -> Tuple[List[SearchResult], Optional[List[float]]]:
@@ -741,6 +747,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
     # ── Cross-reference graph expansion (M3.5) ───────────────────
 
+    @observe
     def _expand_cross_references(
         self, results: List[SearchResult], is_comparison: bool = False,
     ) -> List[SearchResult]:
@@ -885,6 +892,7 @@ Các câu liên quan (giữ nguyên văn):"""
     # ── Streaming ────────────────────────────────────────────
 
 
+    @observe(capture_output=False)
     def query_stream(self, question: str) -> Generator[str, None, None]:
         """Process a question with streaming response and intermediate steps."""
         start_time = time.time()
