@@ -6,6 +6,7 @@ v1.0: Adaptive RAG (query classifier + routing)
 """
 
 import json
+import logging
 import os
 import re
 import sys
@@ -34,6 +35,8 @@ from src.llm.prompts import (
 from src.rag.confidence import ConfidenceScorer, REFUSAL_ANSWER, OUT_OF_SCOPE_ANSWER_TEMPLATE
 from src.rag.verifier import HallucinationVerifier
 from src.rag.citation_lookup import parse_citation, CitationLookup, retrieve_routed
+
+logger = logging.getLogger(__name__)
 
 # M3.5 cross-reference expansion budget (see
 # docs/superpowers/specs/2026-07-17-m3.5-cross-reference-expansion-design.md).
@@ -343,9 +346,9 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
                     use_fp16=True,
                     device='cpu',
                 )
-                print(f"✅ Reranker loaded: {self._reranker_model}")
+                logger.info(f"Reranker loaded: {self._reranker_model}")
             except Exception as e:
-                print(f"⚠️ Reranker not available (skip): {e}")
+                logger.warning(f"Reranker not available (skip): {e}")
                 self._reranker = False  # Sentinel — don't retry
         return self._reranker if self._reranker else None
 
@@ -742,7 +745,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             sorted_scores = [scores[i] for i, _ in indexed]
             return sorted_results, sorted_scores
         except Exception as e:
-            print(f"⚠️ Reranking failed (skip): {e}")
+            logger.warning(f"Reranking failed (skip): {e}")
             return results, None
 
     # ── Cross-reference graph expansion (M3.5) ───────────────────
@@ -812,7 +815,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             )
             return collected[:CROSS_REF_MAX_EXPANDED]
         except Exception as e:
-            print(f"⚠️ Cross-ref expansion failed (skip): {e}")
+            logger.warning(f"Cross-ref expansion failed (skip): {e}")
             return []
 
     @staticmethod
