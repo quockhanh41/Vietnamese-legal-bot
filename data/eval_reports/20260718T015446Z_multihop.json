@@ -1,0 +1,188 @@
+{
+  "config": {
+    "collection": "luat_law_ctx_v4_aiteamvn",
+    "tier": "multihop",
+    "embedder": "bge-m3",
+    "embed_model": null,
+    "reranker": null,
+    "generated_at_utc": "2026-07-18T01:51:10.674563+00:00"
+  },
+  "multihop": {
+    "n_questions": 10,
+    "mean_recall_before": 0.9,
+    "mean_recall_after": 0.95,
+    "mean_n_expanded": 1.6,
+    "rows": [
+      {
+        "id": "mh-001",
+        "legal_sector": "dan_su",
+        "expected_articles": [
+          {
+            "doc_id": 296861,
+            "article": "Điều 327"
+          },
+          {
+            "doc_id": 296861,
+            "article": "Điều 331"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 0
+      },
+      {
+        "id": "mh-002",
+        "legal_sector": "dat_dai",
+        "expected_articles": [
+          {
+            "doc_id": 613131,
+            "article": "Điều 36"
+          },
+          {
+            "doc_id": 613131,
+            "article": "Điều 31"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 4
+      },
+      {
+        "id": "mh-003",
+        "legal_sector": "lao_dong",
+        "expected_articles": [
+          {
+            "doc_id": 404051,
+            "article": "Điều 14"
+          },
+          {
+            "doc_id": 404051,
+            "article": "Điều 10"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 1
+      },
+      {
+        "id": "mh-004",
+        "legal_sector": "doanh_nghiep",
+        "expected_articles": [
+          {
+            "doc_id": 427301,
+            "article": "Điều 169"
+          },
+          {
+            "doc_id": 427301,
+            "article": "Điều 17"
+          }
+        ],
+        "recall_before": 0.5,
+        "recall_after": 0.5,
+        "n_expanded": 0
+      },
+      {
+        "id": "mh-005",
+        "legal_sector": "lao_dong",
+        "expected_articles": [
+          {
+            "doc_id": 333670,
+            "article": "Điều 83"
+          },
+          {
+            "doc_id": 333670,
+            "article": "Điều 76"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 1
+      },
+      {
+        "id": "mh-006",
+        "legal_sector": "hinh_su",
+        "expected_articles": [
+          {
+            "doc_id": 296884,
+            "article": "Điều 203"
+          },
+          {
+            "doc_id": 296884,
+            "article": "Điều 178"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 0
+      },
+      {
+        "id": "mh-007",
+        "legal_sector": "dan_su",
+        "expected_articles": [
+          {
+            "doc_id": 628717,
+            "article": "Điều 86"
+          },
+          {
+            "doc_id": 628717,
+            "article": "Điều 89"
+          }
+        ],
+        "recall_before": 0.5,
+        "recall_after": 1.0,
+        "n_expanded": 4
+      },
+      {
+        "id": "mh-008",
+        "legal_sector": "lao_dong",
+        "expected_articles": [
+          {
+            "doc_id": 439844,
+            "article": "Điều 16"
+          },
+          {
+            "doc_id": 439844,
+            "article": "Điều 10"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 4
+      },
+      {
+        "id": "mh-009",
+        "legal_sector": "nha_o",
+        "expected_articles": [
+          {
+            "doc_id": 685655,
+            "article": "Điều 31"
+          },
+          {
+            "doc_id": 685655,
+            "article": "Điều 22"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 0
+      },
+      {
+        "id": "mh-010",
+        "legal_sector": "dan_su",
+        "expected_articles": [
+          {
+            "doc_id": 296215,
+            "article": "Điều 6"
+          },
+          {
+            "doc_id": 296215,
+            "article": "Điều 3"
+          }
+        ],
+        "recall_before": 1.0,
+        "recall_after": 1.0,
+        "n_expanded": 2
+      }
+    ]
+  }
+}
