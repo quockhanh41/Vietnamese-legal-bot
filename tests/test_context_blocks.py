@@ -156,3 +156,39 @@ def test_select_premise_reuses_preparsed_blocks():
     premise_a = select_premise(claim, CONTEXT_3_BLOCKS)
     premise_b = select_premise(claim, CONTEXT_3_BLOCKS, blocks=blocks)
     assert premise_a == premise_b
+
+
+from src.rag.context_blocks import strip_blockquotes
+
+
+def test_strip_blockquotes_removes_quote_lines():
+    text = (
+        "### 📋 Chi tiết\n"
+        "- Ý một (Điều 5) [1]\n"
+        "  > \"trích nguyên văn một\"\n"
+        "- Ý hai (Điều 6) [2]\n"
+        ">   \"trích nguyên văn hai\""
+    )
+    out = strip_blockquotes(text)
+    assert ">" not in out
+    assert "trích nguyên văn một" not in out
+    assert "trích nguyên văn hai" not in out
+    # Non-blockquote lines are preserved verbatim.
+    assert "- Ý một (Điều 5) [1]" in out
+    assert "- Ý hai (Điều 6) [2]" in out
+
+
+def test_strip_blockquotes_keeps_plain_text_identical():
+    text = "### 💬 Trả lời ngắn\nĐồng phạm là ...\n\n### 📋 Chi tiết\n- Ý một [1]"
+    assert strip_blockquotes(text) == text
+
+
+def test_strip_blockquotes_idempotent():
+    text = "- Ý [1]\n  > \"span\"\n- Ý 2 [2]"
+    once = strip_blockquotes(text)
+    assert strip_blockquotes(once) == once
+
+
+def test_strip_blockquotes_empty():
+    assert strip_blockquotes("") == ""
+    assert strip_blockquotes(None) == ""
