@@ -4,20 +4,25 @@
 > **Spec**: [`docs/superpowers/specs/2026-07-18-m4.3-langfuse-observability-design.md`](../superpowers/specs/2026-07-18-m4.3-langfuse-observability-design.md)
 > **Langfuse project**: `jp.cloud.langfuse.com`, project id `cmrqc6lpy001ead0ddwcfxwmb`
 
-## Verdict: implemented, live-verified — with two documented gaps
+## Verdict: implemented, live-verified — with three documented gaps
 
 `/api/chat` produces one Langfuse trace per query with the expected stage spans
 correctly nested, and the underlying LiteLLM call data (model, prompt, tokens)
 travels in the **same trace** rather than an orphan trace — the design's core
-risk (§5.1, two tracer providers must share one trace) is resolved for the
-synchronous path. Two gaps surfaced during live verification and are documented
+risk (spec §5 risk 1, two tracer providers must share one trace) is resolved for the
+synchronous path. Three gaps surfaced during live verification and are documented
 below rather than silently accepted: (1) `/api/chat/stream` still splits into
-multiple orphan traces (the design's stated risk #1 — accepted per spec
+multiple orphan traces (the design's stated risk 1 — accepted per spec
 fallback, gate demo runs on `/api/chat`); (2) even on the synchronous path,
 LiteLLM's generation calls land as `type: SPAN` observations, not Langfuse's
 native `type: GENERATION` — model/token data is present but not in Langfuse's
 structured Generation UI fields (cost/token dashboard columns). Root cause
-identified precisely below (§4).
+identified precisely below (§4); (3) `_expand_cross_references` was never exercised
+live (both test questions classified SIMPLE/MEDIUM, not COMPLEX — the
+classifier's CLASS rubric requires "cần thông tin từ nhiều văn bản khác nhau",
+and single-document multi-hop questions legitimately route to non-COMPLEX
+stages), so the expand stage remains verified only by unit tests, not by
+live-request nesting.
 
 Live verification also surfaced **two real, pre-existing production bugs**,
 unrelated to the M4.3 code itself — the kind of thing this feature exists to
@@ -42,7 +47,7 @@ catch:
    next model" rather than "rotate key," and every real query in this
    verification run silently fell back to `groq/llama-3.3-70b-versatile`
    (Fallback 1). Confirmed via a Langfuse `GENERATION` observation with
-   `level: ERROR` and the full Groq error body attached (see §3.3). **Not
+   `level: ERROR` and the full Groq error body attached (see §5 table, row 4). **Not
    fixed** — out of scope for Task 4 (verification/docs only); flagged for a
    follow-up to update `MODEL_CHAIN`. This is exactly the "fallback attempts
    visible" value the design spec called out as the highest-value diagnostic
@@ -77,7 +82,9 @@ Question: mh-001 (`data/eval/eval_set_multihop_v1.json`) — "Theo Bộ luật T
 tụng dân sự 2015, khi phát hiện bản án đã có hiệu lực pháp luật cần xem xét
 lại theo thủ tục giám đốc thẩm, những người nào có thẩm quyền kháng nghị bản
 án đó?" `pipeline_used: "simple"` (classifier routed this single-document
-multi-hop question to SIMPLE, not COMPLEX — see §5).
+multi-hop question to SIMPLE, not COMPLEX — the CLASS rubric requires "cần
+thông tin từ nhiều văn bản khác nhau", and single-document questions
+legitimately classify SIMPLE/MEDIUM even if multi-hop).
 
 Trace `cfd03ddf99143555059a57d13b4cf0d0`
 (`https://jp.cloud.langfuse.com/project/cmrqc6lpy001ead0ddwcfxwmb/traces/cfd03ddf99143555059a57d13b4cf0d0`):
@@ -118,7 +125,7 @@ query (root, f6478d7214084e84)
 ```
 
 `_expand_cross_references` did not fire — the classifier routed this
-question MEDIUM, not COMPLEX (see §5). `search_hybrid` and `_rerank_results`
+question MEDIUM, not COMPLEX (see §3.1, note on single-document routing). `search_hybrid` and `_rerank_results`
 both fired and nested correctly, which is the higher-risk half of the
 dashboard check (the same call site the M3.5 cross-ref feature already has
 extensive standalone coverage for — `docs/notes/m3-5-expansion-results.md`).
@@ -207,7 +214,7 @@ child of `query_stream`. Within each individually-broken-off piece, nesting
 `raw_gen_ai_request` child nests fine) — only the cross-boundary link back to
 `query_stream` is lost.
 
-**Per the spec's accepted fallback (§5.1)**: this is not a task failure. The
+**Per the spec's accepted fallback (spec §5, risk 1)**: this is not a task failure. The
 M4 gate demo runs on `/api/chat` (§3), which is confirmed correct. SSE
 nesting stays a known, documented limitation.
 
@@ -218,7 +225,7 @@ nesting stays a known, documented limitation.
   verification is $0 (free tier). The `costDetails.total: 0` / `totalPrice: 0`
   fields seen in the raw observation JSON reflect $0 free-tier usage, not a
   broken cost calculator.
-- **Orphan traces from scripts** (spec §5.2): any `search_hybrid` call or
+- **Orphan traces from scripts** (spec §5, risk 2): any `search_hybrid` call or
   LiteLLM call with no active `@observe` parent (eval Tier-1 runs, the
   enricher) creates its own one-span trace, same as the stream-path
   `litellm_request` traces above. Use `LANGFUSE_TRACING_ENVIRONMENT=<tag>`
