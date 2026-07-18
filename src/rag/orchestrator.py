@@ -53,6 +53,13 @@ class RAGResponse:
     related_questions: List[str] = field(default_factory=list)
     confidence_score: float = 0.0   # NEW: 0.0-1.0
     refused: bool = False            # NEW: did confidence gate refuse?
+    # M3.6 Tier 1.6 verbatim-span observability (OBSERVABILITY-ONLY — carried
+    # here so eval can measure the verbatim_match_ratio distribution; does NOT
+    # feed confidence or the API ChatResponse). None ratio = no spans present.
+    verbatim_match_ratio: Optional[float] = None
+    verbatim_n_spans: int = 0
+    verbatim_unmatched: List[str] = field(default_factory=list)
+    bullets_missing_span: int = 0
 
 
 class NaiveRAGPipeline:
@@ -546,6 +553,14 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         # Store verification data in disclaimer for now (API model updated separately)
         if not ver_result.passed:
             parsed.disclaimer += "\n\n" + "\n".join(ver_result.warnings[:3])
+        # M3.6: surface Tier 1.6 verbatim-span observability (ratio is None when
+        # the answer carried no spans, so a span-less answer isn't scored 0%).
+        parsed.verbatim_n_spans = len(ver_result.verbatim_spans)
+        parsed.verbatim_match_ratio = (
+            ver_result.verbatim_match_ratio if ver_result.verbatim_spans else None
+        )
+        parsed.verbatim_unmatched = list(ver_result.unverbatim_spans)
+        parsed.bullets_missing_span = ver_result.bullets_missing_span
         return parsed
 
     def _simple_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:

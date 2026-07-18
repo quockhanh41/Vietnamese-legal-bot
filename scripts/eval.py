@@ -336,6 +336,11 @@ def run_tier2(
                 "citation_accuracy": row_citation_accuracy(
                     expected_behavior, resp.refused, resp.answer, expected_articles
                 ),
+                # M3.6 Phase 2: Tier 1.6 verbatim-span observability per row.
+                "verbatim_match_ratio": resp.verbatim_match_ratio,
+                "verbatim_n_spans": resp.verbatim_n_spans,
+                "verbatim_unmatched": resp.verbatim_unmatched,
+                "bullets_missing_span": resp.bullets_missing_span,
             })
         else:
             row.update({
