@@ -1,0 +1,49 @@
+{
+  "config": {
+    "set": "criminal",
+    "limit": 1,
+    "collection": "luat_law_ctx_v4_aiteamvn",
+    "tier": "tier2_answers",
+    "generated_at_utc": "2026-07-18T07:29:21.737196+00:00",
+    "sleep_s": 0.0,
+    "embedder": "mixed",
+    "embed_model": null,
+    "reranker": "AITeamVN/Vietnamese_Reranker"
+  },
+  "tier2": {
+    "aggregate": {
+      "n": 1,
+      "n_errors": 0,
+      "refusal_accuracy": null,
+      "false_refusal_rate": 0.0,
+      "mean_citation_accuracy": 1.0,
+      "confidence_distribution": {
+        "answer": {
+          "n": 1,
+          "mean": 1.0,
+          "min": 1.0,
+          "max": 1.0,
+          "median": 1.0
+        }
+      }
+    },
+    "rows": [
+      {
+        "id": "crim-001",
+        "type": "citation-lookup",
+        "expected_behavior": "answer",
+        "error": null,
+        "refused": false,
+        "confidence_score": 1.0,
+        "confidence_label": "high",
+        "pipeline_used": "lookup",
+        "latency_ms": 62486.0,
+        "citation_accuracy": 1.0,
+        "verbatim_match_ratio": 1.0,
+        "verbatim_n_spans": 3,
+        "verbatim_unmatched": [],
+        "bullets_missing_span": 0
+      }
+    ]
+  }
+}
