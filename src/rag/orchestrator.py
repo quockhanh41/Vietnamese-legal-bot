@@ -91,6 +91,7 @@ class NaiveRAGPipeline:
         reranker: Optional[object] = None,
         top_k: int = 5,
         metadata_store: Optional[MetadataStore] = None,
+        citation_lookup: Optional[CitationLookup] = None,
     ):
         self.vector_store = vector_store
         self.embedder = embedder
@@ -101,6 +102,7 @@ class NaiveRAGPipeline:
         # Callers with an existing MetadataStore (api/main.py) should pass it in
         # to avoid loading the same JSON files twice.
         self._metadata_store = metadata_store
+        self._citation_lookup = citation_lookup
 
     @property
     def metadata_store(self) -> MetadataStore:
@@ -346,7 +348,6 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         self._reranker = None  # Lazy-loaded FlagReranker
         self._confidence_scorer = None  # Lazy-loaded
         self._verifier = None  # Lazy-loaded
-        self._citation_lookup = None  # Lazy-loaded CitationLookup
         # M3.5: cross-reference graph expansion on the complex route.
         # Instance flag so eval / debugging can disable it without a code change.
         self.cross_ref_expansion = True

@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
-from starlette.concurrency import iterate_in_threadpool
+from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 
 from src.db.qdrant_client import LegalVectorStore
 from src.data.mixed_embedder import build_embedder
@@ -26,6 +26,7 @@ from src.data.metadata_store import MetadataStore
 from src.llm.gateway import LLMGateway
 from src.rag.orchestrator import NaiveRAGPipeline, AdaptiveRAGPipeline
 from src.pipeline.retriever import EnhancedRetriever
+from src.rag.citation_lookup import CitationLookup
 
 
 # --- Models ---
@@ -76,6 +77,10 @@ async def lifespan(app: FastAPI):
     app.state.llm = LLMGateway()
     app.state.metadata_store = MetadataStore()
     app.state.enhanced_retriever = None  # Lazy load
+    app.state.citation_lookup = CitationLookup(app.state.vector_store)
+    # Warm up the cache in the background so the server can start accepting connections
+    import asyncio
+    asyncio.create_task(run_in_threadpool(app.state.citation_lookup.corpus_summary_compact))
     yield
     # Shutdown
     pass
@@ -122,6 +127,7 @@ def get_naive_pipeline() -> NaiveRAGPipeline:
         embedder=get_embedder(),
         llm_gateway=app.state.llm,
         metadata_store=app.state.metadata_store,
+        citation_lookup=app.state.citation_lookup,
     )
 
 
@@ -132,6 +138,7 @@ def get_adaptive_pipeline() -> AdaptiveRAGPipeline:
         llm_gateway=app.state.llm,
         metadata_store=app.state.metadata_store,
         reranker_model="AITeamVN/Vietnamese_Reranker",
+        citation_lookup=app.state.citation_lookup,
     )
 
 
