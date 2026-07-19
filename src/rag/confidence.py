@@ -35,6 +35,14 @@ from src.llm.gateway import LLMGateway
 from src.llm.prompts import CONFIDENCE_EVAL_PROMPT
 from src.rag.context_blocks import parse_context_blocks, select_premise
 
+def _get_model_chain(env_var: str, default: List[str]) -> List[str]:
+    val = os.getenv(env_var)
+    if val:
+        return [m.strip() for m in val.split(',') if m.strip()]
+    return default
+
+MODEL_EVAL = _get_model_chain("LLM_MODEL_EVAL", ["groq/openai/gpt-oss-120b", "gemini/gemini-3.5-flash", "openrouter/meta-llama/llama-3.3-70b-instruct:free"])
+
 logger = logging.getLogger(__name__)
 
 # Default weights from the plan (§4.3).
@@ -232,6 +240,7 @@ class ConfidenceScorer:
         rerank_scores: Optional[List[float]] = None,
         entailment_ratio: Optional[float] = None,
         grounding_ratio: Optional[float] = None,
+        generation_model: Optional[str] = None,
     ) -> ConfidenceResult:
         """
         Compute multi-signal confidence score.
@@ -255,6 +264,10 @@ class ConfidenceScorer:
                 claims at all — NOT "0% grounded". Caller is responsible for
                 making that distinction (see orchestrator._post_process,
                 which mirrors the existing entailment_ratio convention).
+            generation_model: The exact model (e.g. "groq/openai/gpt-oss-120b")
+                that produced `answer`, if known. Passed through to LLM
+                self-eval so it can exclude that model from its own candidate
+                chain — avoids a model grading its own generation (2026-07-19).
 
         Returns:
             ConfidenceResult with score, refusal flag, and per-signal breakdown
@@ -264,7 +277,7 @@ class ConfidenceScorer:
         sig_overlap = self._context_overlap(answer, context)
         sig_entailment = entailment_ratio
         sig_grounding = grounding_ratio
-        sig_llm = self._llm_self_eval(question, answer, context)
+        sig_llm = self._llm_self_eval(question, answer, context, exclude_model=generation_model)
 
         # Weighted aggregation over available signals only — when a signal is
         # unavailable (None), drop it and renormalize the remaining weights so
@@ -353,7 +366,9 @@ class ConfidenceScorer:
         for label in _RUBRIC_CRITERIA
     }
 
-    def _llm_self_eval(self, question: str, answer: str, context: str) -> float:
+    def _llm_self_eval(
+        self, question: str, answer: str, context: str, exclude_model: Optional[str] = None,
+    ) -> float:
         """
         Ask the LLM to grade its own answer against a rubric of separate,
         coarse (0/1/2) criteria, then combine them into a 0-1 score in code.
@@ -368,6 +383,14 @@ class ConfidenceScorer:
         cites via `[n]` (same selector as the per-claim NLI premise), capped
         to ~3000 chars — falling back to lexical-overlap / blind truncation
         per `context_blocks.select_premise`.
+
+        Args:
+            exclude_model: If set and present in `MODEL_EVAL`, dropped from the
+                candidate chain before grading (2026-07-19) — otherwise
+                `MODEL_COMPLEX`/`MODEL_EVAL` sharing a primary (both
+                `gpt-oss-120b`) means the same model would generate the answer
+                AND grade it. Falls back to the full `MODEL_EVAL` chain if
+                excluding would empty it out.
         """
         try:
             blocks = parse_context_blocks(context)
@@ -377,8 +400,19 @@ class ConfidenceScorer:
                 answer=answer[:1000],  # Keep prompt manageable
                 context=eval_context,
             )
+            eval_chain = MODEL_EVAL
+            if exclude_model:
+                filtered = [m for m in MODEL_EVAL if m != exclude_model]
+                if filtered:
+                    eval_chain = filtered
             result = self.llm.generate(
-                prompt=prompt, temperature=0, max_tokens=150, reasoning_effort="none",
+                # 250 not 150: gpt-oss-120b (MODEL_EVAL primary) still burns
+                # ~50-100 tokens on residual reasoning even at effort="low"
+                # (Groq rejects effort="none" for gpt-oss — see
+                # LLMGateway._normalize_reasoning_effort) — 150 truncated the
+                # rubric answer before all 4 criteria, live-verified 2026-07-19.
+                prompt=prompt, temperature=0, max_tokens=250, reasoning_effort="none",
+                model=eval_chain,
             )
             score = self._parse_rubric_score(result)
             if score is not None:

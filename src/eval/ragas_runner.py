@@ -156,7 +156,7 @@ class RagasEvaluator:
         class GatewayLLM(LLM):
             """LangChain-compatible wrapper around our LLMGateway."""
 
-            model_name: str = "groq/qwen/qwen3-32b"
+            model_name: str = "groq/llama-3.3-70b-versatile"
 
             def _call(
                 self,

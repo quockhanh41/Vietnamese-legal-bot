@@ -173,7 +173,7 @@ def _scorer_with_pinned_signals(llm_score: float = 1.0) -> ConfidenceScorer:
     scorer._retriever_signal = lambda results: llm_score
     scorer._reranker_signal = lambda scores: llm_score
     scorer._context_overlap = lambda answer, context: llm_score
-    scorer._llm_self_eval = lambda question, answer, context: llm_score
+    scorer._llm_self_eval = lambda question, answer, context, exclude_model=None: llm_score
     return scorer
 
 

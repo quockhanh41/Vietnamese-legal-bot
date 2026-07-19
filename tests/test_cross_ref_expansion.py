@@ -175,6 +175,7 @@ def test_complex_pipeline_appends_expansion_to_citations():
     p.complex_retrieve = MagicMock(return_value=(seeds, None))
     p._expand_cross_references = MagicMock(return_value=extra)
     p.llm.generate = MagicMock(return_value="Trả lời [1][2]")
+    p.llm.generate_with_model = MagicMock(return_value=("Trả lời [1][2]", "mock/model"))
     conf = MagicMock(); conf.label = "high"; conf.score = 0.8; conf.refused = False
     ver = MagicMock(); ver.passed = True; ver.warnings = []
     p._post_process = MagicMock(return_value=(conf, ver, "Trả lời [1][2]"))

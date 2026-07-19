@@ -25,6 +25,7 @@ def _adaptive_with_mocks() -> AdaptiveRAGPipeline:
     embedder.encode.return_value = {"dense_vecs": [np.array([0.1, 0.2])], "lexical_weights": [{}]}
     llm = MagicMock()
     llm.generate.return_value = "answer"
+    llm.generate_with_model.return_value = ("answer", "mock/model")
     return AdaptiveRAGPipeline(
         vector_store=MagicMock(), embedder=embedder,
         llm_gateway=llm, metadata_store=MagicMock(),

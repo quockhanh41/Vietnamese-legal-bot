@@ -36,6 +36,24 @@ from src.rag.confidence import ConfidenceScorer, REFUSAL_ANSWER, OUT_OF_SCOPE_AN
 from src.rag.verifier import HallucinationVerifier
 from src.rag.citation_lookup import parse_citation, CitationLookup, retrieve_routed
 
+def _get_model_chain(env_var: str, default: List[str]) -> List[str]:
+    val = os.getenv(env_var)
+    if val:
+        return [m.strip() for m in val.split(',') if m.strip()]
+    return default
+
+MODEL_CLASSIFY = _get_model_chain("LLM_MODEL_CLASSIFY", ["groq/llama-3.1-8b-instant", "gemini/gemini-3.5-flash"])
+# Query rewrite / multi-query / HyDE: these SHAPE retrieval recall for the
+# complex tier, unlike the classify-only call above — deserve a stronger
+# model than the 8B classifier, not just "whatever's cheap". Groq primary
+# (2026-07-19: each GROQ_API_KEYS entry is a separate account, so quota
+# headroom is much larger than the old shared-org assumption — latency
+# (~0.25s vs ~1-2s cross-region) now outweighs spreading these 3 calls to
+# Gemini) — also a non-thinking model, so no reasoning_effort fragility.
+MODEL_QUERY_TRANSFORM = _get_model_chain("LLM_MODEL_QUERY_TRANSFORM", ["groq/llama-3.3-70b-versatile", "gemini/gemini-3.5-flash"])
+MODEL_SIMPLE = _get_model_chain("LLM_MODEL_SIMPLE", ["groq/llama-3.3-70b-versatile", "gemini/gemini-3.5-flash", "openrouter/meta-llama/llama-3.3-70b-instruct:free"])
+MODEL_COMPLEX = _get_model_chain("LLM_MODEL_COMPLEX", ["groq/openai/gpt-oss-120b", "gemini/gemini-3.5-flash", "openrouter/meta-llama/llama-3.3-70b-instruct:free"])
+
 logger = logging.getLogger(__name__)
 
 # M3.5 cross-reference expansion budget (see
@@ -121,6 +139,7 @@ class NaiveRAGPipeline:
             system_prompt=SYSTEM_PROMPT,
             temperature=0.1,
             json_mode=False,
+            model=MODEL_SIMPLE,
         )
 
         # Step 5: Parse response
@@ -170,6 +189,7 @@ class NaiveRAGPipeline:
             prompt=prompt,
             system_prompt=SYSTEM_PROMPT,
             temperature=0.1,
+            model=MODEL_SIMPLE,
         ):
             yield token
 
@@ -447,13 +467,21 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
         context = self._build_context(results, annotations)
         prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
+        raw, generation_model = self.llm.generate_with_model(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
+            temperature=0.1,
+            json_mode=False,
+            model=MODEL_SIMPLE,
+        )
 
         citations = self._build_citations(results, annotations)
         context = self._build_context(results, annotations)
 
         # Post-process: verify + confidence (same as every other route)
-        conf_result, ver_result, final_answer = self._post_process(question, raw, results, context)
+        conf_result, ver_result, final_answer = self._post_process(
+            question, raw, results, context, generation_model=generation_model,
+        )
 
         parsed = self._parse_response(final_answer, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
@@ -485,7 +513,11 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         corpus_summary = self._get_citation_lookup().corpus_summary()
         prompt = COMPLEXITY_CLASSIFIER_PROMPT.format(corpus_summary=corpus_summary, question=question)
         result = self.llm.generate(
-            prompt=prompt, temperature=0, max_tokens=150, reasoning_effort="none",
+            prompt=prompt,
+            temperature=0,
+            max_tokens=150,
+            reasoning_effort="none",
+            model=MODEL_CLASSIFY,
         )
         result = result.strip().upper()
 
@@ -503,13 +535,18 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
     @observe
     def _post_process(self, question: str, answer: str, results: List[SearchResult],
-                      context: str, rerank_scores: Optional[List[float]] = None) -> tuple:
+                      context: str, rerank_scores: Optional[List[float]] = None,
+                      generation_model: Optional[str] = None) -> tuple:
         """
         Post-generation: verifier (Tier 1 + 2) + confidence scoring + refusal gate.
 
         Args:
             rerank_scores: Cross-encoder scores from `_rerank_results`, if reranking
                 ran for this query (None otherwise — distinct from "ran but empty").
+            generation_model: The exact model that generated `answer` (from
+                `LLMGateway.generate_with_model()`/`generate_stream(used_model=...)`),
+                passed to `ConfidenceScorer` so self-eval doesn't grade the same
+                model that generated the answer (2026-07-19).
 
         Returns:
             (conf_result, ver_result, final_answer)
@@ -545,6 +582,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             rerank_scores=rerank_scores,
             entailment_ratio=entailment_ratio,
             grounding_ratio=grounding_ratio,
+            generation_model=generation_model,
         )
 
         # Refusal gate
@@ -582,13 +620,21 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         context = self._build_context(results, annotations)
 
         prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
+        raw, generation_model = self.llm.generate_with_model(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
+            temperature=0.1,
+            json_mode=False,
+            model=MODEL_SIMPLE,
+        )
 
         citations = self._build_citations(results, annotations)
         context = self._build_context(results, annotations)
 
         # Post-process: verify + confidence
-        conf_result, ver_result, final_answer = self._post_process(question, raw, results, context)
+        conf_result, ver_result, final_answer = self._post_process(
+            question, raw, results, context, generation_model=generation_model,
+        )
 
         parsed = self._parse_response(final_answer, citations)
         parsed.latency_ms = (time.time() - start_time) * 1000
@@ -620,7 +666,13 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         results = self._expand_to_parent(results)  # Plan §3.4
         context = self._build_context(results, annotations)
         prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
+        raw, generation_model = self.llm.generate_with_model(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
+            temperature=0.1,
+            json_mode=False,
+            model=MODEL_COMPLEX,
+        )
 
         citations = self._build_citations(results, annotations)
         context = self._build_context(results, annotations)
@@ -628,6 +680,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         # Post-process: verify + confidence
         conf_result, ver_result, final_answer = self._post_process(
             question, raw, results, context, rerank_scores=rerank_scores,
+            generation_model=generation_model,
         )
 
         parsed = self._parse_response(final_answer, citations)
@@ -645,11 +698,11 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         by _complex_pipeline and the M3.5 eval harness so both measure the
         same seed set. NOTE: query_stream keeps its own inline copy because it
         interleaves __STEP__ progress events between these stages."""
-        rewritten = self.llm.generate(QUERY_REWRITE_PROMPT.format(question=question), temperature=0.1).strip()
-        expanded_raw = self.llm.generate(MULTI_QUERY_PROMPT.format(question=rewritten), temperature=0.3)
+        rewritten = self.llm.generate(QUERY_REWRITE_PROMPT.format(question=question), temperature=0.1, model=MODEL_QUERY_TRANSFORM, reasoning_effort="none").strip()
+        expanded_raw = self.llm.generate(MULTI_QUERY_PROMPT.format(question=rewritten), temperature=0.3, model=MODEL_QUERY_TRANSFORM, reasoning_effort="none")
         queries = [q.strip() for q in expanded_raw.split("\n") if q.strip() and q[0].isdigit()]
         queries = [q.split(". ", 1)[-1] if ". " in q else q for q in queries]
-        hyde_text = self.llm.generate(HYDE_PROMPT.format(question=question), temperature=0.2).strip()
+        hyde_text = self.llm.generate(HYDE_PROMPT.format(question=question), temperature=0.2, model=MODEL_QUERY_TRANSFORM, reasoning_effort="none").strip()
 
         all_queries = [rewritten] + queries[:2] + [hyde_text]
         all_results = []
@@ -692,13 +745,20 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
         # 8. Generate
         prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw = self.llm.generate(prompt=prompt, system_prompt=SYSTEM_PROMPT, temperature=0.1, json_mode=False)
+        raw, generation_model = self.llm.generate_with_model(
+            prompt=prompt,
+            system_prompt=SYSTEM_PROMPT,
+            temperature=0.1,
+            json_mode=False,
+            model=MODEL_COMPLEX,
+        )
 
         citations = self._build_citations(results, annotations)
         context = self._build_context(results, annotations)
 
         conf_result, ver_result, final_answer = self._post_process(
             question, raw, results, context, rerank_scores=rerank_scores,
+            generation_model=generation_model,
         )
 
         parsed = self._parse_response(final_answer, citations)
@@ -979,13 +1039,19 @@ Các câu liên quan (giữ nguyên văn):"""
             
             # 1. Query rewrite
             rewritten = self.llm.generate(
-                QUERY_REWRITE_PROMPT.format(question=question), temperature=0.1
+                QUERY_REWRITE_PROMPT.format(question=question),
+                temperature=0.1,
+                model=MODEL_QUERY_TRANSFORM,
+                reasoning_effort="none",
             ).strip()
             yield f'__STEP__{json.dumps({"step": "Query Rewrite", "result": rewritten})}'
 
             # 2. Multi-query expansion
             expanded_raw = self.llm.generate(
-                MULTI_QUERY_PROMPT.format(question=rewritten), temperature=0.3
+                MULTI_QUERY_PROMPT.format(question=rewritten),
+                temperature=0.3,
+                model=MODEL_QUERY_TRANSFORM,
+                reasoning_effort="none",
             )
             queries = [q.strip() for q in expanded_raw.split("\n") if q.strip() and q[0].isdigit()]
             queries = [q.split(". ", 1)[-1] if ". " in q else q for q in queries]
@@ -993,7 +1059,10 @@ Các câu liên quan (giữ nguyên văn):"""
 
             # 3. HyDE
             hyde_text = self.llm.generate(
-                HYDE_PROMPT.format(question=question), temperature=0.2
+                HYDE_PROMPT.format(question=question),
+                temperature=0.2,
+                model=MODEL_QUERY_TRANSFORM,
+                reasoning_effort="none",
             ).strip()
             yield f'__STEP__{json.dumps({"step": "HyDE (Hypothetical Document)", "result": hyde_text[:100] + "..." if len(hyde_text) > 100 else hyde_text})}'
 
@@ -1046,10 +1115,15 @@ Các câu liên quan (giữ nguyên văn):"""
         yield f'__STEP__{json.dumps({"step": "LLM Prompt", "result": prompt})}'
 
         full_answer = ""
+        gen_models = MODEL_COMPLEX if complexity in ("medium", "complex") else MODEL_SIMPLE
+        used_model: dict = {}
+
         for token in self.llm.generate_stream(
             prompt=prompt,
             system_prompt=SYSTEM_PROMPT,
             temperature=0.1,
+            model=gen_models,
+            used_model=used_model,
         ):
             full_answer += token
             yield token
@@ -1063,6 +1137,7 @@ Các câu liên quan (giữ nguyên văn):"""
         clean_answer = re.sub(r'<think>[\s\S]*?(?:</think>|$)', '', full_answer, flags=re.IGNORECASE).strip()
         conf_result, ver_result, final_answer = self._post_process(
             question, clean_answer, results, context, rerank_scores=rerank_scores,
+            generation_model=used_model.get("model"),
         )
         verification_payload = {
             "confidence_score": conf_result.score,
