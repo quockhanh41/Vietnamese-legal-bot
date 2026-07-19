@@ -114,6 +114,11 @@ def render_chat_page():
             "Có được bảo lãnh cho người bị bắt tạm giam không?",
             "Tội cố ý gây thương tích theo luật năm 2015 quy định gì?",
             "Những trường hợp nào được miễn trách nhiệm hình sự?",
+            "Đồng phạm là gì? Có những loại người đồng phạm nào?",
+            "Điều kiện để được tha tù trước thời hạn có điều kiện là gì?",
+            "Bộ luật Hình sự 1999 và 2015 khác nhau thế nào về tội cố ý gây thương tích?",
+            "Tình huống: A (15 tuổi) rủ B (17 tuổi) đi trộm cắp tài sản trị giá 5 triệu đồng. Trách nhiệm hình sự của mỗi người như thế nào?",
+            "Đi xe máy vượt đèn đỏ thì bị phạt bao nhiêu tiền?",
         ]
         for s in suggestions:
             if st.button(s, key=f"sug_{s[:20]}"):
