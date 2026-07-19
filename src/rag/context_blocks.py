@@ -35,9 +35,6 @@ BLOCK_REF_PATTERN = re.compile(r'\[(\d+)\]')
 # default, so no extra flag is needed.
 _WORD_PATTERN = re.compile(r'\w+')
 
-# Markdown blockquote line: first non-space character is ">".
-_BLOCKQUOTE_LINE = re.compile(r'^\s*>')
-
 
 def parse_context_blocks(context: str) -> Dict[int, str]:
     """
@@ -64,26 +61,6 @@ def parse_context_blocks(context: str) -> Dict[int, str]:
         blocks[idx] = raw_block
 
     return blocks
-
-
-def strip_blockquotes(text: str) -> str:
-    """
-    Remove Markdown blockquote lines (first non-space char is `>`) from
-    `text`, returning the remaining lines joined by `\\n`.
-
-    M3.6: the verbatim-span blockquotes hold verbatim SOURCE text. This helper
-    keeps them out of every answer-derived signal that feeds the calibrated
-    confidence score (context_overlap, llm_self_eval, NLI claim split,
-    grounding), so the calibrated REFUSAL_THRESHOLD is not perturbed by the
-    span-carrying answer format. Only the verbatim-span verifier (Tier 1.6)
-    sees the raw answer. Idempotent.
-    """
-    if not text:
-        return ""
-    return "\n".join(
-        line for line in text.split("\n")
-        if not _BLOCKQUOTE_LINE.match(line)
-    )
 
 
 def extract_block_refs(text: str) -> List[int]:

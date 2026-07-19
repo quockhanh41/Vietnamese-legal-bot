@@ -57,13 +57,6 @@ class RAGResponse:
     related_questions: List[str] = field(default_factory=list)
     confidence_score: float = 0.0   # NEW: 0.0-1.0
     refused: bool = False            # NEW: did confidence gate refuse?
-    # M3.6 Tier 1.6 verbatim-span observability (OBSERVABILITY-ONLY — carried
-    # here so eval can measure the verbatim_match_ratio distribution; does NOT
-    # feed confidence or the API ChatResponse). None ratio = no spans present.
-    verbatim_match_ratio: Optional[float] = None
-    verbatim_n_spans: int = 0
-    verbatim_unmatched: List[str] = field(default_factory=list)
-    bullets_missing_span: int = 0
 
 
 class NaiveRAGPipeline:
@@ -280,7 +273,10 @@ class NaiveRAGPipeline:
                 "block_index": i,
                 "document_title": r.document_title,
                 "article": r.article,
-                "chunk_text": r.chunk_text[:200] if r.chunk_text else "",
+                # Same 2000-char cap as `_build_context`'s blocks, so the
+                # citation card shows enough of the source to be checked
+                # against the answer (a 200-char excerpt usually cut it off).
+                "chunk_text": r.chunk_text[:2000] if r.chunk_text else "",
                 "legal_type": r.legal_type,
                 "url": r.url,
                 "score": round(r.score, 4),
@@ -297,7 +293,12 @@ class NaiveRAGPipeline:
         return RAGResponse(
             answer=clean_raw,
             citations=citations,
-            confidence="high" if len(citations) >= 2 else "medium",
+            # No verification/confidence scoring ran on this path — the old
+            # `len(citations) >= 2 → "high"` heuristic counted RETRIEVED
+            # blocks (not cited ones), so it claimed "high" nearly always.
+            # Adaptive routes overwrite this with the real label in
+            # `_enrich_response`.
+            confidence="unverified",
             disclaimer="⚠️ Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.",
             latency_ms=0,
             pipeline_used="naive",
@@ -561,14 +562,6 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         # Store verification data in disclaimer for now (API model updated separately)
         if not ver_result.passed:
             parsed.disclaimer += "\n\n" + "\n".join(ver_result.warnings[:3])
-        # M3.6: surface Tier 1.6 verbatim-span observability (ratio is None when
-        # the answer carried no spans, so a span-less answer isn't scored 0%).
-        parsed.verbatim_n_spans = len(ver_result.verbatim_spans)
-        parsed.verbatim_match_ratio = (
-            ver_result.verbatim_match_ratio if ver_result.verbatim_spans else None
-        )
-        parsed.verbatim_unmatched = list(ver_result.unverbatim_spans)
-        parsed.bullets_missing_span = ver_result.bullets_missing_span
         return parsed
 
     def _simple_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:

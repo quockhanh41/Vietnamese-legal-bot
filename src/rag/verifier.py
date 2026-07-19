@@ -25,7 +25,6 @@ from src.rag.context_blocks import (
     BLOCK_REF_PATTERN,
     parse_context_blocks,
     select_premise,
-    strip_blockquotes,
 )
 
 logger = logging.getLogger(__name__)
@@ -46,16 +45,6 @@ class VerificationResult:
     grounding_ratio: float = 0.0
     invalid_block_refs: List[int] = field(default_factory=list)
     ungrounded_article_citations: List[str] = field(default_factory=list)
-
-    # Tier 1.6: Verbatim-span (M3.6) — each "Chi tiết" bullet may carry a
-    # verbatim blockquote span; we string-match it against the block(s) it
-    # cites. OBSERVABILITY-ONLY: never affects `passed` or any confidence
-    # signal.
-    verbatim_spans: List[str] = field(default_factory=list)
-    verbatim_match_flags: List[bool] = field(default_factory=list)
-    verbatim_match_ratio: float = 0.0
-    unverbatim_spans: List[str] = field(default_factory=list)
-    bullets_missing_span: int = 0
 
     # Tier 2: Semantic
     claims: List[str] = field(default_factory=list)
@@ -85,14 +74,6 @@ class HallucinationVerifier:
     CLAUSE_PATTERN = re.compile(r'(?:khoản|Khoản)\s+(\d+)')
     POINT_PATTERN = re.compile(r'(?:điểm|điểm)\s+([a-zđ])')
 
-    # M3.6 verbatim-span normalization. Quote/dash/ellipsis chars an LLM may
-    # add or drop around a quoted span are neutralized before matching;
-    # diacritics are preserved (semantically load-bearing in Vietnamese).
-    _QUOTE_CHARS = "\"“”„«»‹›‘’'"
-    _DASH_CHARS = "–—"     # en dash, em dash
-    _ELLIPSIS_CHAR = "…"
-    MIN_SPAN_CHARS = 10              # normalized-length guard vs trivial matches
-
     def __init__(self):
         self._nli_model = None  # Lazy-loaded
         self._nli_tokenizer = None
@@ -113,26 +94,17 @@ class HallucinationVerifier:
             result.passed = False
             return result
 
-        # M3.6 calibration invariant: only Tier 1.6 sees blockquote spans.
-        # Every pre-existing answer-derived check runs on the stripped answer,
-        # so its output is identical to pre-M3.6 for the same underlying answer
-        # (protects the calibrated REFUSAL_THRESHOLD). See spec §5.
-        stripped = strip_blockquotes(answer)
-
         # Tier 1: Structural citation check — verify articles cited IN THE ANSWER
         # actually appear in the retrieved context (citations list is not used here,
         # since it's built from the same retrieval results as context and would be vacuous).
-        self._verify_citations(stripped, context, result)
+        self._verify_citations(answer, context, result)
 
         # Tier 1.5: Grounding — does each claim point at a specific, valid
         # context block, and does that block actually back the claim?
-        self._verify_grounding(stripped, context, result)
-
-        # Tier 1.6: Verbatim-span (M3.6) — observability-only, raw answer
-        self._verify_verbatim_spans(answer, context, result)
+        self._verify_grounding(answer, context, result)
 
         # Tier 2: Semantic NLI verification
-        self._verify_semantic(stripped, context, result)
+        self._verify_semantic(answer, context, result)
 
         # Overall assessment
         if result.contradiction_ratio > 0.30:
@@ -151,10 +123,6 @@ class HallucinationVerifier:
         if result.ungrounded_article_citations:
             result.warnings.append(
                 f"⚠️ {len(result.ungrounded_article_citations)} trích dẫn Điều không khớp với khối nguồn đã dẫn."
-            )
-        if result.unverbatim_spans:
-            result.warnings.append(
-                f"⚠️ {len(result.unverbatim_spans)} trích dẫn nguyên văn không khớp nguồn."
             )
 
         # Grounding is an observability/quality signal only — it must NOT
@@ -361,120 +329,6 @@ class HallucinationVerifier:
                 unique_claims.append(c)
 
         return unique_claims
-
-    @classmethod
-    def _normalize_for_match(cls, text: str) -> str:
-        """Normalize a span or block for substring matching (M3.6): unify
-        dash/quote/ellipsis chars, casefold, collapse whitespace, strip edge
-        dots/spaces. Vietnamese diacritics are preserved."""
-        if not text:
-            return ""
-        t = text
-        for ch in cls._DASH_CHARS:
-            t = t.replace(ch, "-")
-        t = t.replace(cls._ELLIPSIS_CHAR, " ")
-        for ch in cls._QUOTE_CHARS:
-            t = t.replace(ch, " ")
-        t = t.casefold()
-        t = re.sub(r"\s+", " ", t).strip()
-        return t.strip(" .")
-
-    def _parse_bullet_spans(self, answer: str) -> List[Tuple[List[int], Optional[str]]]:
-        """Pair each '### 📋 Chi tiết' bullet with the verbatim span in the
-        blockquote line(s) immediately below it (M3.6). Returns
-        (block_refs, span) per bullet in order; span is None when the bullet
-        has no following blockquote. Consecutive '>' lines are joined with a
-        single space. Reuses the same section boundaries as
-        `_groundable_claims`."""
-        if not answer:
-            return []
-        clean = re.sub(r"#+\s*", "", answer)
-        in_chi_tiet = False
-        pairs: List[list] = []      # each item: [refs, [span_parts]]
-        current: Optional[list] = None
-
-        for raw_line in clean.split("\n"):
-            line = raw_line.strip()
-            if not line:
-                continue
-            if self._CHI_TIET_HEADER.match(line):
-                in_chi_tiet = True
-                current = None
-                continue
-            if self._TRA_LOI_NGAN_HEADER.match(line):
-                in_chi_tiet = False
-                current = None
-                continue
-            if self._CAU_HOI_HEADER.match(line):
-                break
-            if not in_chi_tiet:
-                continue
-
-            if line.startswith(">"):
-                if current is not None:
-                    span_text = line.lstrip(">").strip()
-                    if span_text:
-                        current[1].append(span_text)
-                continue
-
-            bullet_match = re.match(r"^[\-\*\•]\s+(.*)", line)
-            num_match = None if bullet_match else re.match(r"^\d+[\.\)]\s+(.*)", line)
-            if bullet_match or num_match:
-                item_text = (bullet_match or num_match).group(1).strip()
-                if self._LABEL_ONLY_LINE.match(item_text):
-                    current = None      # bare "**Label**:" — no span target
-                    continue
-                refs = [int(n) for n in self.BLOCK_REF_PATTERN.findall(item_text)]
-                current = [refs, []]
-                pairs.append(current)
-
-        return [
-            (refs, " ".join(parts) if parts else None)
-            for refs, parts in pairs
-        ]
-
-    def _verify_verbatim_spans(self, answer: str, context: str, result: VerificationResult):
-        """
-        Tier 1.6 (M3.6): string-match each "Chi tiết" bullet's verbatim span
-        against the block(s) it cites. A span matches iff its normalized form
-        is a substring of a cited block's normalized text (and is at least
-        MIN_SPAN_CHARS long). Records a ratio + the unmatched spans (the
-        hallucinated-quote evidence) + a count of bullets with no span.
-
-        OBSERVABILITY-ONLY — this method NEVER touches `result.passed`,
-        `has_contradiction`, or any confidence signal. It takes the RAW answer
-        (the only check that sees blockquotes; every other check receives the
-        stripped answer from `verify()`).
-        """
-        blocks = self._parse_context_blocks(context)
-        pairs = self._parse_bullet_spans(answer)
-
-        spans: List[str] = []
-        flags: List[bool] = []
-        unmatched: List[str] = []
-        missing = 0
-
-        for refs, span in pairs:
-            if span is None:
-                missing += 1
-                continue
-            spans.append(span)
-            norm_span = self._normalize_for_match(span)
-            matched = False
-            if len(norm_span) >= self.MIN_SPAN_CHARS:
-                for n in refs:
-                    if n in blocks and norm_span in self._normalize_for_match(blocks[n]):
-                        matched = True
-                        break
-            flags.append(matched)
-            if not matched:
-                unmatched.append(span)
-
-        result.verbatim_spans = spans
-        result.verbatim_match_flags = flags
-        result.unverbatim_spans = unmatched
-        result.bullets_missing_span = missing
-        result.verbatim_match_ratio = (sum(flags) / len(flags)) if flags else 0.0
 
     # ── Tier 2: Semantic NLI ────────────────────────────────────
 

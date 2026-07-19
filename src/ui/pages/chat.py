@@ -16,29 +16,15 @@ API_BASE = os.environ.get("API_URL", "http://localhost:8000")
 
 
 def _highlight_legal_refs(text: str) -> str:
-    """Bôi đậm các tham chiếu điều khoản pháp lý trong câu trả lời."""
-    # Highlight patterns in order: longer phrases first to avoid overlap
-    patterns = [
-        (r'(Điều\s+\d+\s*và\s+Điều\s+\d+)', r'**\1**'),
-        (r'(Điều\s+\d+\s*,\s*Điều\s+\d+)', r'**\1**'),
-        (r'(Điều\s+\d+)', r'**\1**'),
-        (r'(Khoản\s+\d+)', r'**\1**'),
-        (r'(khoản\s+\d+)', r'**\1**'),
-        (r'(Chương\s+[IVXLCDM]+\d*)', r'**\1**'),
-        (r'(Bộ\s+luật\s+[^"“\n,.;:()]+?)(?:\s|$|[,.;:()])', r'**\1**'),
-        (r'(Luật\s+[^"“\n,.;:()]+?\s+\d+)', r'**\1**'),
-        (r'(Luật\s+[^"“\n,.;:()]+?)(?:\s|$|[,.;:()])', r'**\1**'),
-        (r'(Nghị\s+định\s+\d+)', r'**\1**'),
-        (r'(Thông\s+tư\s+\d+)', r'**\1**'),
-        # Grounded block-citation markers, e.g. "[2]" or "[2][3]" at the end
-        # of a "Chi tiết" bullet — bold them so they read as a distinct
-        # footnote-style marker rather than blending into the sentence.
-        (r'(\[\d{1,3}\])', r'**\1**'),
-    ]
-    result = text
-    for pattern, replacement in patterns:
-        result = re.sub(pattern, replacement, result, flags=re.IGNORECASE)
-    return result
+    """Bôi đậm các marker trích khối [n] trong câu trả lời.
+
+    Chỉ xử lý [n] — SYSTEM_PROMPT (rule 4) đã yêu cầu model tự bôi đậm thuật
+    ngữ pháp lý, và lớp re-bold từng có ở đây match lồng vào text đã bold sẵn
+    rồi nuốt dấu câu sau tên luật ("Luật Đất đai 2024," → "**Luật Đất**đai
+    2024**"). Lookaround bỏ qua marker đã nằm trong "**...**" nên hàm
+    idempotent trên text model đã bold.
+    """
+    return re.sub(r'(?<!\*)(\[\d{1,3}\])(?!\*)', r'**\1**', text)
 
 
 def _cited_block_indices(answer_text: str) -> set:
@@ -47,6 +33,64 @@ def _cited_block_indices(answer_text: str) -> set:
     if not answer_text:
         return set()
     return {int(n) for n in re.findall(r'\[(\d+)\]', answer_text)}
+
+
+# Refusal-style answers come in 3 shapes: REFUSAL_ANSWER (confidence gate),
+# OUT_OF_SCOPE_ANSWER_TEMPLATE (scope gate), and the model's own SYSTEM_PROMPT
+# rule-2 refusal line — all share one of these phrases and carry no [n].
+_REFUSAL_MARKERS = ("không tìm thấy", "ngoài phạm vi dữ liệu")
+
+
+def _is_refusal_text(answer_text: str) -> bool:
+    """Câu trả lời kiểu từ chối (template gate hoặc model tự từ chối).
+
+    Câu trả lời có marker [n] luôn là câu trả lời thực — cụm "không tìm thấy"
+    bên trong một bullet có dẫn nguồn không tính là từ chối.
+    """
+    if not answer_text or _cited_block_indices(answer_text):
+        return False
+    lowered = answer_text.lower()
+    return any(marker in lowered for marker in _REFUSAL_MARKERS)
+
+
+_RELATED_HEADER = re.compile(r'^\W*câu\s*hỏi\s*liên\s*quan\W*$', re.IGNORECASE)
+_MD_HEADING = re.compile(r'^#{1,6}\s')
+
+
+def _split_related_questions(answer_text: str):
+    """Tách mục "Câu hỏi liên quan" khỏi markdown câu trả lời.
+
+    Returns (main_text, questions): main_text là câu trả lời đã bỏ mục này
+    (mục được render riêng thành button qua `_render_related_questions`),
+    questions là list câu hỏi gợi ý. Không có mục → (text nguyên vẹn, []).
+    """
+    if not answer_text:
+        return answer_text, []
+
+    lines = answer_text.split('\n')
+    start = None
+    for i, line in enumerate(lines):
+        stripped = re.sub(r'#+\s*', '', line).strip()
+        if stripped and _RELATED_HEADER.match(stripped):
+            start = i
+            break
+    if start is None:
+        return answer_text, []
+
+    end = len(lines)
+    for j in range(start + 1, len(lines)):
+        if _MD_HEADING.match(lines[j].strip()):
+            end = j
+            break
+
+    questions = []
+    for line in lines[start + 1:end]:
+        s = line.strip()
+        if s.startswith('- ') or s.startswith('* '):
+            questions.append(s[2:].strip())
+
+    main_text = '\n'.join(lines[:start] + lines[end:]).rstrip()
+    return main_text, questions
 
 
 def render_chat_page():
@@ -80,26 +124,18 @@ def render_chat_page():
         st.session_state.messages = []
 
     # --- Display Chat History ---
-    for msg in st.session_state.messages:
+    for msg_idx, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg["role"]):
-            if msg.get("steps"):
-                with st.expander("🔍 Pipeline Steps (Debug)", expanded=False):
-                    lines = []
-                    for s in msg["steps"]:
-                        lines.append(f"**{s['step']}**:")
-                        if len(s['result']) > 150 or "\n" in s['result']:
-                            lines.append(f"```text\n{s['result']}\n```")
-                        else:
-                            lines.append(f"> {s['result']}")
-                        lines.append("---")
-                    st.markdown("\n".join(lines))
-            st.markdown(_highlight_legal_refs(msg["content"]))
+            # "Câu hỏi liên quan" is stripped from the displayed markdown —
+            # _render_answer_extras renders it as clickable buttons instead.
+            display_text, _ = _split_related_questions(msg["content"])
+            st.markdown(_highlight_legal_refs(display_text))
             # Phase B: original (pre-refusal) answer, kept available for inspection
             if msg.get("original_answer"):
                 with st.expander("Xem câu trả lời gốc (độ tin cậy thấp)", expanded=False):
                     st.markdown(_highlight_legal_refs(msg["original_answer"]))
             if msg.get("role") == "assistant":
-                _render_answer_extras(msg["content"], msg)
+                _render_answer_extras(msg["content"], msg, key_ns=f"m{msg_idx}")
                 st.caption("⚠️ *Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.*")
 
     # --- Chat Input ---
@@ -122,21 +158,29 @@ def render_chat_page():
                 response_data = _stream_response(question, use_adaptive)
             else:
                 response_data = _get_response(question, use_adaptive)
+                # _stream_response renders the answer itself (via its
+                # placeholder); the non-streaming path must render here or
+                # the answer only appears after the next rerun.
+                display_text, _ = _split_related_questions(response_data["answer"])
+                st.markdown(_highlight_legal_refs(display_text))
 
             # Render citations/confidence/warnings for THIS turn immediately —
             # the history loop above already ran before this message existed
             # in session_state, so without this the current turn's cards
-            # would only appear after the *next* rerun.
-            _render_answer_extras(response_data["answer"], response_data)
+            # would only appear after the *next* rerun. key_ns is the index
+            # this assistant message gets when appended below, so its
+            # related-question buttons keep the same widget keys on the
+            # history re-render (a changed key would swallow the click).
+            _render_answer_extras(response_data["answer"], response_data,
+                                  key_ns=f"m{len(st.session_state.messages)}")
             st.caption("⚠️ *Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.*")
 
             # Store in history
             st.session_state.messages.append({
                 "role": "assistant",
                 "content": response_data["answer"],
-                "steps": response_data.get("steps", []),
                 "citations": response_data.get("citations", []),
-                "confidence": response_data.get("confidence", "medium"),
+                "confidence": response_data.get("confidence", "unverified"),
                 "confidence_score": response_data.get("confidence_score", 0.0),
                 "refused": response_data.get("refused", False),
                 "original_answer": response_data.get("original_answer"),
@@ -163,20 +207,16 @@ def _get_response(question: str, use_adaptive: bool) -> dict:
 
 def _stream_response(question: str, use_adaptive: bool) -> dict:
     """Stream response from API and return full data."""
-    steps_expander = st.expander("🔍 Pipeline Steps (Debug)", expanded=True)
-    steps_placeholder = steps_expander.empty()
-    
     answer_placeholder = st.empty()
     full_answer = ""
     citations = []
-    confidence = "medium"
+    confidence = "unverified"
     confidence_score = 0.0
     refused = False
     warnings = []
     refusal_answer = None
     latency_ms = 0
     pipeline_used = "naive"
-    steps = []
 
     try:
         with requests.post(
@@ -202,16 +242,9 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
                         continue
 
                     if event_type == "step":
-                        steps.append(data)
-                        lines = []
-                        for s in steps:
-                            lines.append(f"**{s['step']}**:")
-                            if len(s['result']) > 150 or "\n" in s['result']:
-                                lines.append(f"```text\n{s['result']}\n```")
-                            else:
-                                lines.append(f"> {s['result']}")
-                            lines.append("---")
-                        steps_placeholder.markdown("\n".join(lines))
+                        # Pipeline-step debug events still arrive over SSE but
+                        # are no longer displayed — consume and ignore.
+                        pass
                     elif event_type == "citations":
                         citations = data
                     elif event_type == "token" and "token" in data:
@@ -249,12 +282,14 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
                             with st.expander("Xem câu trả lời gốc (độ tin cậy thấp)", expanded=False):
                                 st.markdown(_highlight_legal_refs(full_answer))
                         else:
-                            answer_placeholder.markdown(_highlight_legal_refs(full_answer))
+                            # Final render drops the "Câu hỏi liên quan" section —
+                            # it's rendered as buttons by _render_answer_extras.
+                            display_text, _ = _split_related_questions(full_answer)
+                            answer_placeholder.markdown(_highlight_legal_refs(display_text))
 
         return {
             "answer": refusal_answer if (refused and refusal_answer) else full_answer,
             "original_answer": full_answer if (refused and refusal_answer) else None,
-            "steps": steps,
             "citations": citations,
             "confidence": confidence,
             "confidence_score": confidence_score,
@@ -266,7 +301,7 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
     except Exception as e:
         error_msg = f"Lỗi streaming: {e}"
         answer_placeholder.error(error_msg)
-        return {"answer": error_msg, "steps": steps, "citations": [], "confidence": "low"}
+        return {"answer": error_msg, "citations": [], "confidence": "low"}
 
 
 def _render_citation_card(cite: Dict):
@@ -297,7 +332,7 @@ def _render_citation_card(cite: Dict):
             st.caption(f"🔗 {cite['url']}")
 
 
-def _render_citations(answer_text: str, citations: List[Dict]):
+def _render_citations(answer_text: str, citations: List[Dict], refused: bool = False):
     """Render citation cards.
 
     Every card is tagged with `block_index` — the same 1-based number the
@@ -307,8 +342,20 @@ def _render_citations(answer_text: str, citations: List[Dict]):
     under a collapsed "Xem tất cả nguồn" expander. If the answer carries no
     `[n]` markers at all (refusal template, old-format answers), fall back
     to showing everything flat.
+
+    `refused` (or a refusal-style answer text): a refusal followed by a
+    prominent "📚 Căn cứ pháp lý" wall is a visual contradiction — the
+    retrieved sources are kept inspectable but tucked into one collapsed
+    expander instead.
     """
     if not citations:
+        return
+
+    if refused or _is_refusal_text(answer_text):
+        st.divider()
+        with st.expander(f"Nguồn đã truy xuất ({len(citations)} khối — không đủ căn cứ để trả lời)"):
+            for cite in citations:
+                _render_citation_card(cite)
         return
 
     cited_indices = _cited_block_indices(answer_text)
@@ -332,19 +379,39 @@ def _render_citations(answer_text: str, citations: List[Dict]):
                 _render_citation_card(cite)
 
 
-def _render_answer_extras(answer_text: str, data: dict):
-    """Render citations/confidence/warnings/latency for one assistant turn.
+def _render_related_questions(answer_text: str, key_ns: str):
+    """Render mục "Câu hỏi liên quan" thành các button bấm được — bấm sẽ gửi
+    câu hỏi đó như một lượt chat mới (cùng cơ chế `pending_question` với các
+    gợi ý ở sidebar). `key_ns` phải ổn định giữa render lượt-hiện-tại và
+    render lại từ history (dùng index của message) để click không bị nuốt
+    giữa hai lần rerun."""
+    _, questions = _split_related_questions(answer_text)
+    if not questions:
+        return
+    st.markdown("**💡 Câu hỏi liên quan:**")
+    for i, q in enumerate(questions):
+        if st.button(q, key=f"rel_{key_ns}_{i}"):
+            st.session_state.pending_question = q
+
+
+def _render_answer_extras(answer_text: str, data: dict, key_ns: str = "cur"):
+    """Render related-questions/citations/confidence/warnings/latency for one
+    assistant turn.
 
     Shared between the history-replay loop (`msg` dict) and the just-answered
     turn (`response_data` dict) — both use the same key names for these
     fields, so one function keeps the two render paths from drifting apart.
     """
+    _render_related_questions(answer_text, key_ns)
+    refused = bool(data.get("refused")) or _is_refusal_text(answer_text)
     if data.get("citations"):
-        _render_citations(answer_text, data["citations"])
+        _render_citations(answer_text, data["citations"], refused=refused)
     if data.get("confidence"):
         _render_confidence(data["confidence"])
+    # Truthy check (not `is not None`): a 0.0 score means "no signal ran"
+    # (naive pipeline), which must not render as an alarming red 0% badge.
     conf_score = data.get("confidence_score")
-    if conf_score is not None:
+    if conf_score:
         _render_confidence_score(conf_score)
     if data.get("warnings"):
         st.warning("\n".join(data["warnings"]))
@@ -360,6 +427,9 @@ def _render_confidence(confidence: str):
         "high": ("🟢", "Cao", "green"),
         "medium": ("🟡", "Trung bình", "orange"),
         "low": ("🔴", "Thấp", "red"),
+        # Naive pipeline: no verification/confidence scoring ran at all —
+        # an honest "unverified" instead of a fabricated level.
+        "unverified": ("⚪", "Chưa xác minh", "gray"),
     }
     icon, text, color = colors.get(confidence, ("⚪", "Không xác định", "gray"))
     st.markdown(f"**{icon} Độ tin cậy:** :{color}[**{text}**]")

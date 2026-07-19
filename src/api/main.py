@@ -181,8 +181,9 @@ async def chat_stream(request: ChatRequest):
             citations = []
             citations_sent = False
             # Falls back to these when the pipeline never emits __VERIFICATION__
-            # (e.g. NaiveRAGPipeline, which has no confidence/verification step).
-            confidence_label = "medium"
+            # (e.g. NaiveRAGPipeline, which has no confidence/verification step
+            # — hence "unverified", not a fabricated level).
+            confidence_label = "unverified"
             confidence_score = 0.0
 
             # pipeline.query_stream is a sync generator (blocking model/network

@@ -33,7 +33,7 @@ from dataclasses import dataclass, field
 from src.db.qdrant_client import SearchResult
 from src.llm.gateway import LLMGateway
 from src.llm.prompts import CONFIDENCE_EVAL_PROMPT
-from src.rag.context_blocks import parse_context_blocks, select_premise, strip_blockquotes
+from src.rag.context_blocks import parse_context_blocks, select_premise
 
 logger = logging.getLogger(__name__)
 
@@ -261,17 +261,10 @@ class ConfidenceScorer:
         """
         sig_retriever = self._retriever_signal(search_results)
         sig_reranker = self._reranker_signal(rerank_scores)
-        # M3.6: keep verbatim-span blockquotes (verbatim SOURCE text) out of
-        # the two answer-derived calibrated signals, so the calibrated
-        # REFUSAL_THRESHOLD is not perturbed by the span-carrying answer
-        # format. See docs/superpowers/specs/2026-07-18-m3.6-verbatim-span-
-        # quotes-design.md §5. (entailment/grounding are already computed by
-        # the verifier on the stripped answer — see Task 4.)
-        answer_for_signals = strip_blockquotes(answer)
-        sig_overlap = self._context_overlap(answer_for_signals, context)
+        sig_overlap = self._context_overlap(answer, context)
         sig_entailment = entailment_ratio
         sig_grounding = grounding_ratio
-        sig_llm = self._llm_self_eval(question, answer_for_signals, context)
+        sig_llm = self._llm_self_eval(question, answer, context)
 
         # Weighted aggregation over available signals only — when a signal is
         # unavailable (None), drop it and renormalize the remaining weights so
