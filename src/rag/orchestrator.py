@@ -510,7 +510,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         pipeline, maybe wrong route" instead of wrongly refusing a real
         question outright.
         """
-        corpus_summary = self._get_citation_lookup().corpus_summary()
+        corpus_summary = self._get_citation_lookup().corpus_summary_compact()
         prompt = COMPLEXITY_CLASSIFIER_PROMPT.format(corpus_summary=corpus_summary, question=question)
         result = self.llm.generate(
             prompt=prompt,
