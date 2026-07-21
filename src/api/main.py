@@ -77,6 +77,7 @@ async def lifespan(app: FastAPI):
     app.state.llm = LLMGateway()
     app.state.metadata_store = MetadataStore()
     app.state.enhanced_retriever = None  # Lazy load
+    app.state.reranker = None  # Lazy load
     app.state.citation_lookup = CitationLookup(app.state.vector_store)
     # Warm up the cache in the background so the server can start accepting connections
     import asyncio
@@ -121,6 +122,24 @@ def get_enhanced_retriever() -> EnhancedRetriever:
     return app.state.enhanced_retriever
 
 
+def get_reranker():
+    """Lazy-load the reranker model globally."""
+    if getattr(app.state, "reranker", None) is None:
+        try:
+            from FlagEmbedding import FlagReranker
+            import torch
+            device = 'cuda' if torch.cuda.is_available() else 'mps' if torch.backends.mps.is_available() else 'cpu'
+            app.state.reranker = FlagReranker(
+                "AITeamVN/Vietnamese_Reranker",
+                use_fp16=True,
+                device=device,
+            )
+        except Exception as e:
+            print(f"Reranker not available (skip): {e}")
+            app.state.reranker = False  # Sentinel
+    return app.state.reranker if app.state.reranker else None
+
+
 def get_naive_pipeline() -> NaiveRAGPipeline:
     return NaiveRAGPipeline(
         vector_store=app.state.vector_store,
@@ -138,6 +157,7 @@ def get_adaptive_pipeline() -> AdaptiveRAGPipeline:
         llm_gateway=app.state.llm,
         metadata_store=app.state.metadata_store,
         reranker_model="AITeamVN/Vietnamese_Reranker",
+        reranker=get_reranker(),
         citation_lookup=app.state.citation_lookup,
     )
 

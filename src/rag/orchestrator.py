@@ -103,6 +103,7 @@ class NaiveRAGPipeline:
         # to avoid loading the same JSON files twice.
         self._metadata_store = metadata_store
         self._citation_lookup = citation_lookup
+        self._reranker = reranker
 
     @property
     def metadata_store(self) -> MetadataStore:
@@ -345,7 +346,6 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
     def __init__(self, *args, reranker_model: str = "BAAI/bge-reranker-v2-m3", **kwargs):
         super().__init__(*args, **kwargs)
         self._reranker_model = reranker_model
-        self._reranker = None  # Lazy-loaded FlagReranker
         self._confidence_scorer = None  # Lazy-loaded
         self._verifier = None  # Lazy-loaded
         # M3.5: cross-reference graph expansion on the complex route.

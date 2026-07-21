@@ -30,6 +30,8 @@ def test_adaptive_pipeline_passes_aiteamvn_reranker(monkeypatch):
     main.app.state.vector_store = MagicMock()
     main.app.state.llm = MagicMock()
     main.app.state.metadata_store = MagicMock()
+    main.app.state.citation_lookup = MagicMock()
+    main.app.state.reranker = MagicMock()
     main.get_adaptive_pipeline()
     assert seen["reranker_model"] == "AITeamVN/Vietnamese_Reranker"
 
