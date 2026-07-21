@@ -76,6 +76,8 @@ def test_redis_store_caps_history():
     for i in range(MAX_TURNS + 3):
         store.append_turn("s1", f"q{i}", f"a{i}")
     assert len(store.get_history("s1")) == MAX_TURNS
+    # Verify underlying store is actually trimmed (ltrim working), not just read-sliced
+    assert len(store._r.store[store._key("s1")]) == MAX_TURNS
 
 
 def test_redis_store_errors_degrade_to_empty():
@@ -83,6 +85,26 @@ def test_redis_store_errors_degrade_to_empty():
         def lrange(self, *a):
             raise RuntimeError("down")
     assert RedisSessionStore(Boom()).get_history("s1") == []
+
+
+def test_redis_store_append_turn_fail_open_on_rpush():
+    class BoomOnWrite:
+        def rpush(self, *a):
+            raise RuntimeError("down")
+    # append_turn should not propagate exception (fail-open)
+    store = RedisSessionStore(BoomOnWrite())
+    store.append_turn("s1", "q", "a")  # Should not raise
+
+
+def test_redis_store_append_turn_fail_open_on_ltrim():
+    class BoomOnTrim:
+        def rpush(self, k, v):
+            pass
+        def ltrim(self, *a):
+            raise RuntimeError("trim failed")
+    # append_turn should not propagate exception (fail-open)
+    store = RedisSessionStore(BoomOnTrim())
+    store.append_turn("s1", "q", "a")  # Should not raise
 
 
 def test_from_env_uses_memory_without_redis(monkeypatch):

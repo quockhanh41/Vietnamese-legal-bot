@@ -39,7 +39,7 @@ class MemorySessionStore(SessionStore):
     def get_history(self, session_id):
         if not session_id:
             return []
-        return list(self._data[session_id])
+        return list(self._data.get(session_id, ()))
 
     def append_turn(self, session_id, question, answer):
         if not session_id:
