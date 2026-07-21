@@ -79,9 +79,12 @@ async def lifespan(app: FastAPI):
     app.state.enhanced_retriever = None  # Lazy load
     app.state.reranker = None  # Lazy load
     app.state.citation_lookup = CitationLookup(app.state.vector_store)
-    # Warm up the cache in the background so the server can start accepting connections
+    # Warm up the corpus cache and reranker model in the background so the server
+    # can start accepting connections immediately — both otherwise load on the
+    # first request (the reranker model load alone is ~60s on the complex route).
     import asyncio
     asyncio.create_task(run_in_threadpool(app.state.citation_lookup.corpus_summary_compact))
+    asyncio.create_task(run_in_threadpool(get_reranker))
     yield
     # Shutdown
     pass

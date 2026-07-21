@@ -439,7 +439,7 @@ class LegalVectorStore:
         offset = None
         while True:
             points, offset = self.client.scroll(
-                collection_name=self.collection_name, limit=256, offset=offset,
+                collection_name=self.collection_name, limit=2000, offset=offset,
                 with_payload=self._DOC_INDEX_FIELDS, with_vectors=False)
             if not points:
                 break
