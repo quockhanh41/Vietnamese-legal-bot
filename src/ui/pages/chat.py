@@ -128,6 +128,10 @@ def render_chat_page():
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
+    import uuid
+    if "session_id" not in st.session_state:
+        st.session_state.session_id = str(uuid.uuid4())
+
     # --- Display Chat History ---
     for msg_idx, msg in enumerate(st.session_state.messages):
         with st.chat_message(msg["role"]):
@@ -180,6 +184,12 @@ def render_chat_page():
                                   key_ns=f"m{len(st.session_state.messages)}")
             st.caption("⚠️ *Nội dung chỉ mang tính tham khảo, không thay thế tư vấn pháp lý.*")
 
+            if response_data.get("cache_hit"):
+                st.caption("⚡ Trả lời từ cache ngữ nghĩa")
+            cq = response_data.get("condensed_question")
+            if cq and cq != question:
+                st.caption(f"🔗 Hiểu câu hỏi là: *{cq}*")
+
             # Store in history
             st.session_state.messages.append({
                 "role": "assistant",
@@ -200,7 +210,7 @@ def _get_response(question: str, use_adaptive: bool) -> dict:
     try:
         resp = requests.post(
             f"{API_BASE}/api/chat",
-            json={"question": question, "use_adaptive": use_adaptive},
+            json={"question": question, "use_adaptive": use_adaptive, "session_id": st.session_state.session_id},
             timeout=30,
         )
         if resp.status_code == 200:
@@ -222,11 +232,12 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
     refusal_answer = None
     latency_ms = 0
     pipeline_used = "naive"
+    cache_hit = False
 
     try:
         with requests.post(
             f"{API_BASE}/api/chat/stream",
-            json={"question": question, "use_adaptive": use_adaptive},
+            json={"question": question, "use_adaptive": use_adaptive, "session_id": st.session_state.session_id},
             stream=True,
             timeout=60,
         ) as resp:
@@ -275,6 +286,7 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
                         confidence = data.get("confidence", confidence)
                         confidence_score = data.get("confidence_score", confidence_score)
                         latency_ms = data.get("latency_ms", 0)
+                        cache_hit = data.get("cache_hit", False)
 
                         # Clean thinking tags from final answer
                         full_answer = re.sub(r'<think>[\s\S]*?</think>', '', full_answer, flags=re.IGNORECASE)
@@ -302,6 +314,7 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
             "warnings": warnings,
             "latency_ms": latency_ms,
             "pipeline_used": pipeline_used,
+            "cache_hit": cache_hit,
         }
     except Exception as e:
         error_msg = f"Lỗi streaming: {e}"
