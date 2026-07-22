@@ -1,0 +1,182 @@
+{
+  "config": {
+    "collection": "luat_law_ctx_v4_aiteamvn",
+    "tier": "multiturn",
+    "embedder": "mixed",
+    "embed_model": null,
+    "generated_at_utc": "2026-07-22T11:41:18.606986+00:00"
+  },
+  "multiturn": {
+    "n_scenarios": 10,
+    "n_followups": 11,
+    "followup_pass_rate": 1.0,
+    "mean_recall": 1.0,
+    "rows": [
+      {
+        "scenario_id": "mt-hinhsu-01",
+        "legal_sector": "hinh_su",
+        "turn_index": 1,
+        "question": "Vậy còn tội lừa đảo chiếm đoạt tài sản thì sao?",
+        "condensed": "Tội lừa đảo chiếm đoạt tài sản được quy định như thế nào trong Bộ luật Hình sự 2015?",
+        "expected_articles": [
+          {
+            "doc_id": 296661,
+            "article": "Điều 174"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-hinhsu-01",
+        "legal_sector": "hinh_su",
+        "turn_index": 2,
+        "question": "Còn tội trộm cắp tài sản thì thế nào?",
+        "condensed": "Còn tội trộm cắp tài sản thì thế nào?",
+        "expected_articles": [
+          {
+            "doc_id": 296661,
+            "article": "Điều 173"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-dansu-01",
+        "legal_sector": "dan_su",
+        "turn_index": 1,
+        "question": "Thế còn chậm trả tiền theo hợp đồng thì bên vi phạm phải chịu hậu quả gì?",
+        "condensed": "Bên vay chậm trả tiền theo hợp đồng thì phải chịu hậu quả gì theo Bộ luật Dân sự 2015?",
+        "expected_articles": [
+          {
+            "doc_id": 296215,
+            "article": "Điều 357"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-datdai-01",
+        "legal_sector": "dat_dai",
+        "turn_index": 1,
+        "question": "Vậy một cá nhân trực tiếp sản xuất nông nghiệp thì được Nhà nước giao tối đa bao nhiêu đất?",
+        "condensed": "Một cá nhân trực tiếp sản xuất nông nghiệp thì được Nhà nước giao tối đa bao nhiêu đất theo Luật Đất đai 2024?",
+        "expected_articles": [
+          {
+            "doc_id": 523642,
+            "article": "Điều 176"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-doanhnghiep-01",
+        "legal_sector": "doanh_nghiep",
+        "turn_index": 1,
+        "question": "Vậy còn công ty cổ phần thì sao?",
+        "condensed": "Công ty cổ phần được định nghĩa thế nào theo Luật Doanh nghiệp 2020?",
+        "expected_articles": [
+          {
+            "doc_id": 427301,
+            "article": "Điều 111"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-laodong-01",
+        "legal_sector": "lao_dong",
+        "turn_index": 1,
+        "question": "Thế lao động nữ mang thai đến tháng thứ 7 có bị bắt làm việc ban đêm không?",
+        "condensed": "Lao động nữ mang thai đến tháng thứ 7 có bị bắt làm việc ban đêm không theo Bộ luật Lao động 2019?",
+        "expected_articles": [
+          {
+            "doc_id": 333670,
+            "article": "Điều 137"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-hngd-01",
+        "legal_sector": "hngd",
+        "turn_index": 1,
+        "question": "Vậy còn đứa trẻ thì bao nhiêu tuổi mới được nhận làm con nuôi?",
+        "condensed": "Đứa trẻ phải bao nhiêu tuổi mới được nhận làm con nuôi theo Luật Nuôi con nuôi 2010?",
+        "expected_articles": [
+          {
+            "doc_id": 108082,
+            "article": "Điều 8"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-ttahinhsu-01",
+        "legal_sector": "tố tụng hình sự",
+        "turn_index": 1,
+        "question": "Vậy khi nào thì cơ quan điều tra được tạm đình chỉ điều tra vụ án?",
+        "condensed": "Khi nào thì cơ quan điều tra được tạm đình chỉ điều tra vụ án theo Bộ luật Tố tụng hình sự 2015?",
+        "expected_articles": [
+          {
+            "doc_id": 296884,
+            "article": "Điều 229"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-datdai-02",
+        "legal_sector": "dat_dai",
+        "turn_index": 1,
+        "question": "Thế còn tranh chấp đất đai giữa hàng xóm thì có bắt buộc hòa giải ở UBND cấp xã không?",
+        "condensed": "Tranh chấp đất đai giữa hàng xóm thì có bắt buộc hòa giải ở UBND cấp xã không?",
+        "expected_articles": [
+          {
+            "doc_id": 523642,
+            "article": "Điều 235"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-doanhnghiep-02",
+        "legal_sector": "doanh_nghiep",
+        "turn_index": 1,
+        "question": "Vậy thành viên góp vốn vào công ty TNHH hai thành viên trở lên phải góp đủ trong thời hạn bao lâu?",
+        "condensed": "Thành viên góp vốn vào công ty TNHH hai thành viên trở lên phải góp đủ trong thời hạn bao lâu?",
+        "expected_articles": [
+          {
+            "doc_id": 427301,
+            "article": "Điều 47"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      },
+      {
+        "scenario_id": "mt-laodong-02",
+        "legal_sector": "lao_dong",
+        "turn_index": 1,
+        "question": "Vậy còn Điều 125 thì liệt kê những trường hợp nào?",
+        "condensed": "Điều 125 Bộ luật Lao động 2019 liệt kê những trường hợp nào?",
+        "expected_articles": [
+          {
+            "doc_id": 333670,
+            "article": "Điều 125"
+          }
+        ],
+        "recall@5": 1.0,
+        "passed": true
+      }
+    ]
+  }
+}
