@@ -76,9 +76,19 @@ defense-in-depth nhưng vẫn là code thật, mô tả được trong portfolio
 - **Admin auth**: header `X-Admin-Key` (so với env `ADMIN_KEY`) trên
   `/api/pipeline/enrich`. **Fail-safe**: `ADMIN_KEY` không set → endpoint trả
   **403** (disabled), không bao giờ mở. Dùng FastAPI dependency, không middleware.
-- **Rate limit**: `slowapi` per-IP trên `/api/chat` + `/api/chat/stream`
-  (mặc định 30/phút, env `RATE_LIMIT` override). README ghi rõ đây là
-  defense-in-depth vì topology internal-API. `slowapi` là dep mới.
+- **Rate limit — key theo `session_id`, KHÔNG per-IP** (sửa sau review
+  2026-07-22): đã verify UI gọi FastAPI server-side qua `requests.post` chỉ gửi
+  JSON body (`session_id`), **không** header IP nào, không `X-Forwarded-For`
+  (`src/ui/pages/chat.py:211,238`). ⇒ mọi request tới FastAPI đến từ
+  `127.0.0.1` → `slowapi` per-IP (`get_remote_address`) dồn mọi user vào 1
+  bucket = vô dụng. `session_id` (UUID per-tab, có trong mọi request) là key
+  đúng và **thực sự** chặn 1 user spam đốt Groq budget. Dùng `slowapi` với
+  `key_func` custom = `request.json()["session_id"]`, fallback `get_remote_address`
+  khi thiếu. Mặc định 30/phút, env `RATE_LIMIT`. README ghi đúng: rate-limit
+  best-effort (topology internal-API), lá chắn budget thật là degraded-path (§2).
+  `slowapi` là dep mới.
+- **Input bound**: `question` gắn `max_length=2000` (pydantic `Field`) trên
+  `ChatRequest` — chặn query khổng lồ làm nổ token embedding/Groq. Rẻ, hợp lý.
 
 Không nhận secret từ client (đã đúng — không endpoint nào đọc secret từ body).
 
@@ -88,25 +98,43 @@ Không nhận secret từ client (đã đúng — không endpoint nào đọc se
   `RuntimeError` "All models failed" từ gateway trong `/api/chat` (+ stream),
   trả 200 với payload degraded (`answer` = câu tiếng Việt "hệ thống đang quá tải
   hạn mức miễn phí, vui lòng thử lại sau", cờ `degraded: true`, `confidence:
-  "low"`, `refused: false`). Non-degraded exception khác vẫn 500. Stream: emit
-  1 `token` event + `done` với `degraded: true`.
+  "low"`, `refused: false`). Non-degraded exception khác vẫn 500.
+  **Stream degraded — format SSE cụ thể** (tránh ambiguous cho impl): 1 event
+  `token` `{"token": "<câu degraded>"}` → 1 event `done`
+  `{"full_answer": "<câu degraded>", "citations": [], "confidence": "low",
+  "refused": false, "degraded": true, "latency_ms": <ms>, "cache_hit": false}`.
+  KHÔNG emit `verification`; **KHÔNG** persist vào memory/cache (giống refusal).
 - **Warm-up / readiness**: thêm `GET /ready` báo model đã nạp chưa (đọc
   `app.state.embedder`/`reranker` — lifespan đã background-load ở `main.py:94`).
   Trả `{"ready": bool, "models_loaded": {...}}`.
-- **UI cold-start UX**: `src/ui/app.py` sidebar dùng `/ready` (không chỉ
-  `/health`) → 3 trạng thái: 🟢 sẵn sàng / 🟡 đang khởi động (cold start ~1–2
-  phút, model đang nạp) / 🔴 offline. Render `degraded` message như notice thân
-  thiện, không stack trace.
+- **UI cold-start UX + timeout interaction**: `src/ui/app.py` sidebar dùng
+  `/ready` (không chỉ `/health`) → 3 trạng thái: 🟢 sẵn sàng / 🟡 đang khởi động
+  (cold start ~1–2 phút, model đang nạp) / 🔴 offline. **Quan trọng**: UI đã có
+  timeout `requests` (30s non-stream / 60s stream, `chat.py:214,242`) — khi model
+  đang load, `/api/chat` có thể treo > 30s → gate: nếu `/ready` = false thì UI
+  **chặn gửi query** và hiện notice "đang khởi động" thay vì bắn request rồi ăn
+  timeout error. Render `degraded` message như notice thân thiện, không stack trace.
 
-### 3. Performance / P95 (gate)
+### 3. Performance / P95 (gate = measure-and-report, KHÔNG pass/fail)
 
-- **Đo warm P50/P95 trên HF CPU** qua flow thật (script probe N câu MEDIUM/
-  COMPLEX sau khi model đã nạp), ghi **số thật** vào README (trung thực kể cả
-  chậm — không hứa <3s).
-- **Không đổi code rerank pool một cách suy đoán**: pool hiện đã nhỏ (MEDIUM
-  rerank dynamic 5–15 qua `_dynamic_top_k(min_k=5,max_k=15)`;
-  `orchestrator.py:660`). Thêm env knob `RERANK_MAX_K` (mặc định 15) để **hạ
-  xuống 10 CHỈ KHI** P95 đo được đòi hỏi. Measure-then-tune, không đổi mặc định.
+Gate M5 cố ý **không** có ngưỡng P95 đạt/trượt — plan ghi "số thật, kể cả nếu
+CPU chậm — trung thực hơn là hứa <3s". Nên KHÔNG đặt "P95 > Xs = blocker" (giữ
+đúng gate đã chốt). Cái reviewer đòi mà spec THIẾU là **độ cụ thể** — bổ sung:
+
+- **Script probe cụ thể** `scripts/measure_latency.py`: sau khi `/ready`=true,
+  bắn **N=20** câu warm mỗi route (MEDIUM + COMPLEX, lấy từ eval set), bỏ câu
+  đầu (JIT), báo P50/P95/max end-to-end + tách stage (retrieval/rerank/generate/
+  verify) → ghi số thật vào README.
+- **Kỳ vọng đặt theo M2 CPU bench** (`scale-journey`): reranker P95 pool-20 =
+  894ms, pool-50 = 2180ms. MEDIUM hiện rerank ≤15 → rerank ~700ms; end-to-end
+  P95 dự kiến bị chi phối bởi generate (Groq mạng) + NLI verify. Ghi rõ số M2
+  làm mốc so sánh.
+- **Decision-tree tuning `RERANK_MAX_K`** (mặc định 15, env): (1) đo P95;
+  (2) nếu demo *khó dùng* (chủ quan, không phải blocker gate) VÀ rerank là thủ
+  phạm rõ theo stage-timing → hạ `RERANK_MAX_K`→10 (M2: pool-10 P95 482ms), đo
+  lại; (3) nếu vẫn khó dùng, đòn sâu hơn (giảm candidate COMPLEX / bỏ NLI Tier 2)
+  là **đánh đổi chất lượng** → **document, không âm thầm đổi**. Measure-then-tune,
+  không đổi mặc định trước khi có số.
 
 ### 4. Metadata shipping (blocker)
 
@@ -128,7 +156,18 @@ Không nhận secret từ client (đã đúng — không endpoint nào đọc se
 - **`start.sh`**: `uvicorn src.api.main:app --port 8000 &` rồi
   `streamlit run src/ui/app.py --server.port 8501 --server.address 0.0.0.0`
   (foreground) + `trap`/`wait -n` để container thoát nếu 1 process chết.
+  (`wait -n` cần bash ≥ 4.3; `python:3.11-slim` = Debian bookworm ship bash 5.x ✓
+  — vẫn dùng shebang `#!/usr/bin/env bash`, không `sh`.)
 - **Secrets** qua HF Space settings (không commit). `.env` vẫn gitignored.
+- **store.db size — KHÔNG cần LFS** (đã verify HF docs): hard limit HF per-file
+  = **500 GB**, GitHub = 100 MB; `store.db` 11 MB commit git thường thoải mái ở
+  cả hai. Giữ "simplest" (commit thẳng). **Rollback nếu HF build/push fail** (vd
+  `.gitattributes` mặc định của Space template auto-LFS `*.db` gây trục trặc):
+  fallback = tải `store.db` từ HF dataset lúc container startup (option đã cân
+  nhắc ở §Metadata shipping) — không dựng sẵn, chỉ ghi làm plan B.
+- **Secret-scan cụ thể** (gate "không secret trong repo"): chạy `gitleaks detect
+  --no-git` trên tree + `git grep -nE 'gsk_|sk-lf-|pk-lf-|QDRANT_API_KEY='` trước
+  khi push; verify `.env` trong `.gitignore`. (Không cần tool nặng; gitleaks $0.)
 - **RAM budget**: ~7 GB model (AITeamVN dense ~2 + BGE-M3 sparse ~2 + reranker
   ~2 + NLI ~1) + app, trên 16 GB free. **Risk item**: đo RSS thật lúc deploy;
   nếu sát trần → cân nhắc bỏ NLI Tier 2 hoặc lazy hơn (ghi ở §Rủi ro).
@@ -138,14 +177,19 @@ Không nhận secret từ client (đã đúng — không endpoint nào đọc se
 Vì API không public, "e2e từ ngoài" tách 2 phần:
 
 - **Functional smoke** (`scripts/smoke_test.py`): tự launch API (uvicorn/hoặc
-  image) với secrets, đánh `/api/chat` 4 câu chuẩn:
+  image) với secrets, **poll `GET /ready` tới khi `ready=true` (timeout 120s,
+  interval 3s) TRƯỚC KHI** bắn query — chống flaky do model đang load (~60–90s).
+  Mỗi câu có **assert timeout riêng** (120s warm; quá = FAIL rõ ràng, không treo).
+  Sau khi ready, đánh `/api/chat` 4 câu chuẩn:
   1. Câu luật trả lời được → assert có citations **và** `refused=False`.
   2. Câu ngoài phạm vi (OOS) → assert `refused=True`.
   3. Câu dạng citation-lookup ("Điều X Bộ luật Y…") → assert route citation-lookup
      resolve (có citation đúng doc/điều).
   4. Follow-up 2 lượt (cùng `session_id`) → assert `condensed_question` khác câu
      gốc (condensation chạy) **và** vẫn trả lời được.
-  Chạy **weekly trong CI** (Groq burn nhỏ, gated như Tier-2 — KHÔNG nightly).
+  Chạy **weekly trong CI** (gated như Tier-2 — KHÔNG nightly). **Budget**: 4
+  query/tuần ≈ vài nghìn token Groq — không đáng kể; dùng lại secret `GROQ_API_KEY`
+  của CI (chung daily bucket, 4 câu/tuần vô hại), không cần key riêng.
 - **Liveness**: ping URL Streamlit public (`GET /_stcore/health` → 200) → thỏa
   "URL public sống".
 
@@ -153,13 +197,14 @@ Vì API không public, "e2e từ ngoài" tách 2 phần:
 
 | File | Thay đổi |
 |---|---|
-| `src/api/main.py` | CORS whitelist theo env; `slowapi` limiter + decorator; `X-Admin-Key` dependency trên enrich; `/ready`; bắt quota-exhaustion → degraded payload (chat + stream) |
-| `src/ui/app.py`, `src/ui/pages/chat.py` | `/ready` 3-trạng-thái sidebar; render `degraded` notice |
-| `Dockerfile` | target `space` + pre-fetch models + copy store.db |
-| `start.sh` | mới — launcher 2 process + trap |
-| `README.md` (Space) | frontmatter HF + P95 thật + ghi chú security defense-in-depth |
-| `scripts/smoke_test.py` | mới — 4-query functional smoke |
-| `.github/workflows/` | job smoke weekly (functional + liveness ping) |
+| `src/api/main.py` | CORS whitelist theo env; `slowapi` limiter **key=`session_id`** (fallback IP) + decorator; `ChatRequest.question` `max_length=2000`; `X-Admin-Key` dependency trên enrich; `/ready`; bắt quota-exhaustion → degraded payload (chat + stream, format §2) |
+| `src/ui/app.py`, `src/ui/pages/chat.py` | `/ready` 3-trạng-thái sidebar; **chặn gửi query khi chưa ready** (tránh timeout); render `degraded` notice |
+| `Dockerfile` | target `space` + pre-fetch models (bake HF cache) + copy store.db; shebang bash |
+| `start.sh` | mới — launcher 2 process + `trap`/`wait -n` (bash ≥4.3) |
+| `README.md` (Space) | frontmatter HF (`sdk: docker`, `app_port: 8501`) + P95 thật (M2 mốc) + ghi chú security defense-in-depth |
+| `scripts/smoke_test.py` | mới — poll `/ready` (120s) → 4-query functional smoke, per-query timeout |
+| `scripts/measure_latency.py` | mới — N=20/route warm P50/P95 + stage breakdown → README |
+| `.github/workflows/` | job smoke weekly (functional + liveness ping) + `gitleaks` secret-scan |
 | `.gitignore` | bỏ `data/metadata/store.db` |
 | `pyproject.toml` | thêm `slowapi` |
 | `.env.example` | thêm `ALLOWED_ORIGINS`, `ADMIN_KEY`, `RATE_LIMIT`, `RERANK_MAX_K` |
@@ -167,9 +212,11 @@ Vì API không public, "e2e từ ngoài" tách 2 phần:
 ## Testing
 
 - **Unit/integration (local, pytest)**: CORS whitelist enforce; enrich 403 khi
-  thiếu `ADMIN_KEY` + 200 khi đúng key; rate-limit trả 429 khi vượt; `/ready`
-  phản ánh trạng thái model; quota-exhaustion → degraded payload (mock gateway
-  raise) **cả** chat lẫn stream; `RERANK_MAX_K` cắt pool đúng.
+  thiếu `ADMIN_KEY` + 200 khi đúng key; rate-limit trả 429 khi vượt **và key
+  theo `session_id`** (2 session khác nhau không share bucket; thiếu session_id →
+  fallback IP); `question` > 2000 ký tự → 422; `/ready` phản ánh trạng thái
+  model; quota-exhaustion → degraded payload (mock gateway raise) **cả** chat lẫn
+  stream (đúng format SSE §2); `RERANK_MAX_K` cắt pool đúng.
 - **Smoke (CI weekly)**: 4 câu như §6, gated.
 - **Verify-before-completion**: `make test` xanh trước khi claim; smoke chạy tay
   1 lần trước khi bật CI schedule.
@@ -201,3 +248,28 @@ Vì API không public, "e2e từ ngoài" tách 2 phần:
   internal).
 - Upstash Redis wiring (để opt-in 0-code; in-memory đủ cho demo).
 - Đổi mặc định rerank pool (chỉ tune sau khi đo).
+
+## Cập nhật sau review (nhan-xet.md, 2026-07-22)
+
+Review ngoài chấm 87/100. Đối chiếu code trước khi sửa. Kết quả:
+
+**Đã nhận (valid, sửa vào spec):**
+1. **Rate-limit per-IP hỏng** (reviewer gọi blocker) — CONFIRM: UI gọi FastAPI
+   qua localhost, `requests.post` chỉ gửi body `session_id`, 0 header IP →
+   mọi request từ `127.0.0.1`. Đổi key rate-limit sang `session_id` (§1).
+2. Secret-scan cụ thể → `gitleaks` + `git grep` (§5).
+3. Input `max_length=2000` cho `question` (§1).
+4. Stream degraded → format SSE cụ thể (§2).
+5. Smoke test: poll `/ready` (120s) + per-query timeout + budget note (§6).
+6. Performance: script `measure_latency.py` + N=20 + mốc M2 + decision-tree
+   `RERANK_MAX_K` (§3).
+7. `wait -n` cần bash ≥4.3 (slim = bash 5.x ✓); UI chặn query khi chưa ready để
+   né timeout 30s (§5, §2).
+
+**Đẩy lại (verified, không sửa theo):**
+- **store.db 11 MB "vượt LFS policy"** — SAI: HF hard limit per-file = 500 GB,
+  GitHub = 100 MB; 11 MB commit git thường OK. Không cần LFS; giữ commit thẳng.
+  Có thêm rollback (HF dataset download) làm plan B (§5).
+- **"P95 > Xs = blocker"** — mâu thuẫn gate M5 đã chốt (measure-and-report, KHÔNG
+  pass/fail; plan: "số thật kể cả nếu chậm"). Không đặt ngưỡng trượt; thay bằng
+  độ-cụ-thể + decision-tree tuning (§3).
