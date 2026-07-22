@@ -4,7 +4,9 @@ Phase 2: Integrated with cross-referencing, temporal versioning, and amendments.
 """
 
 import json
+import os
 import time
+from collections import defaultdict, deque
 from typing import Optional
 from contextlib import asynccontextmanager
 from datetime import date as DateType
@@ -12,10 +14,10 @@ from datetime import date as DateType
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Header, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sse_starlette.sse import EventSourceResponse
 from starlette.concurrency import iterate_in_threadpool, run_in_threadpool
 
@@ -35,7 +37,7 @@ from src.rag.chat_turn import run_chat_turn
 
 # --- Models ---
 class ChatRequest(BaseModel):
-    question: str
+    question: str = Field(..., max_length=2000)
     session_id: Optional[str] = None
     use_adaptive: bool = False
     expand_context: bool = False  # Phase 2: cross-reference expansion
@@ -54,6 +56,7 @@ class ChatResponse(BaseModel):
     expanded_results: int = 0  # Phase 2: context expansion count
     cache_hit: bool = False          # M4.2: served from semantic cache?
     condensed_question: str = ""     # M4.1: standalone rewrite of a follow-up
+    degraded: bool = False           # M5.3: served a graceful quota-exhaustion notice
 
 
 class EnrichRequest(BaseModel):
@@ -105,12 +108,61 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+def _parse_origins(raw):
+    """Comma-separated origins from env → list. Empty/None → [] (no cross-origin).
+    Deploy topology is UI→localhost→API, so cross-origin is normally unused; this
+    is defense-in-depth if the API port is ever exposed."""
+    if not raw:
+        return []
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+ALLOWED_ORIGINS = _parse_origins(os.getenv("ALLOWED_ORIGINS"))
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+ADMIN_KEY = os.getenv("ADMIN_KEY")
+
+
+def require_admin(x_admin_key: Optional[str] = Header(None)):
+    """Fail-safe admin gate: if ADMIN_KEY is unset the endpoint is DISABLED (403),
+    never open. Guards the expensive, state-mutating enrichment endpoint."""
+    if not ADMIN_KEY or x_admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+
+RATE_LIMIT = int(os.getenv("RATE_LIMIT", "30"))  # requests per minute per session
+_RATE_WINDOW = 60.0
+_rate_buckets: dict = defaultdict(deque)  # key -> deque[timestamp]
+
+
+def rate_limit_session(http_request: Request, request: ChatRequest):
+    """Best-effort per-session throttle. Topology is UI→localhost→API so per-IP
+    is meaningless (all 127.0.0.1); key on session_id, fall back to IP. Fail-open
+    by construction (pure in-memory; a restart resets buckets)."""
+    key = request.session_id or (http_request.client.host if http_request.client else "anon")
+    now = time.time()
+    bucket = _rate_buckets[key]
+    while bucket and now - bucket[0] > _RATE_WINDOW:
+        bucket.popleft()
+    if len(bucket) >= RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many requests")
+    bucket.append(now)
+
+
+DEGRADED_MSG = ("Xin lỗi, hệ thống đang quá tải hạn mức miễn phí. "
+                "Vui lòng thử lại sau ít phút.")
+
+
+def _is_exhaustion(e):
+    """True for the gateway's 'all providers exhausted' signal (gateway.py)."""
+    return isinstance(e, RuntimeError) and str(e).startswith("All models failed")
+
 
 
 def get_embedder():
@@ -209,7 +261,19 @@ async def health():
     return {"status": "ok", "version": "0.1.0"}
 
 
-@app.post("/api/chat", response_model=ChatResponse)
+@app.get("/ready")
+async def ready():
+    """Readiness (vs liveness /health): true once heavy models are loaded.
+    Lifespan background-loads embedder+reranker; the UI uses this to show a
+    cold-start state and to gate sending queries that would otherwise time out."""
+    emb = getattr(app.state, "embedder", None)
+    rr = getattr(app.state, "reranker", None)
+    loaded = {"embedder": emb is not None, "reranker": rr is not None}
+    return {"ready": all(loaded.values()), "models_loaded": loaded}
+
+
+@app.post("/api/chat", response_model=ChatResponse,
+          dependencies=[Depends(rate_limit_session)])
 def chat(request: ChatRequest):
     """Non-streaming chat. Sync `def` so FastAPI runs it in the threadpool.
     Threads session memory + condensation + semantic cache around the pipeline."""
@@ -233,10 +297,14 @@ def chat(request: ChatRequest):
             cache_hit=result.cache_hit, condensed_question=result.condensed_question,
         )
     except Exception as e:
+        if _is_exhaustion(e):
+            return ChatResponse(answer=DEGRADED_MSG, degraded=True,
+                                confidence="low", refused=False,
+                                pipeline_used="degraded")
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/api/chat/stream")
+@app.post("/api/chat/stream", dependencies=[Depends(rate_limit_session)])
 async def chat_stream(request: ChatRequest):
     """Streaming chat (SSE). Cache HIT → replay cached response as SSE (<500ms);
     MISS → stream normally, then persist to memory + cache."""
@@ -273,40 +341,52 @@ async def chat_stream(request: ChatRequest):
             # pipeline.query_stream is a sync generator (blocking model/network
             # calls) — run its iteration in the threadpool so it doesn't block
             # the event loop while other requests are being served.
-            async for token in iterate_in_threadpool(pipeline.query_stream(condensed)):
-                # Intercept step marker
-                if token.startswith("__STEP__"):
-                    try:
-                        step_data = json.loads(token[len("__STEP__"):])
-                        yield {"event": "step", "data": json.dumps(step_data, ensure_ascii=False)}
-                    except json.JSONDecodeError:
-                        pass
-                    continue
+            try:
+                async for token in iterate_in_threadpool(pipeline.query_stream(condensed)):
+                    # Intercept step marker
+                    if token.startswith("__STEP__"):
+                        try:
+                            step_data = json.loads(token[len("__STEP__"):])
+                            yield {"event": "step", "data": json.dumps(step_data, ensure_ascii=False)}
+                        except json.JSONDecodeError:
+                            pass
+                        continue
 
-                # Intercept citations marker
-                if token.startswith("__CITATIONS__"):
-                    try:
-                        citations = json.loads(token[len("__CITATIONS__"):])
-                        yield {"event": "citations", "data": json.dumps(citations, ensure_ascii=False)}
-                    except json.JSONDecodeError:
-                        pass
-                    continue
+                    # Intercept citations marker
+                    if token.startswith("__CITATIONS__"):
+                        try:
+                            citations = json.loads(token[len("__CITATIONS__"):])
+                            yield {"event": "citations", "data": json.dumps(citations, ensure_ascii=False)}
+                        except json.JSONDecodeError:
+                            pass
+                        continue
 
-                # Intercept verification marker (confidence + hallucination check,
-                # computed after the full answer has streamed)
-                if token.startswith("__VERIFICATION__"):
-                    try:
-                        verification = json.loads(token[len("__VERIFICATION__"):])
-                        confidence_label = verification.get("confidence", confidence_label)
-                        confidence_score = verification.get("confidence_score", confidence_score)
-                        refused = verification.get("refused", refused)
-                        yield {"event": "verification", "data": json.dumps(verification, ensure_ascii=False)}
-                    except json.JSONDecodeError:
-                        pass
-                    continue
+                    # Intercept verification marker (confidence + hallucination check,
+                    # computed after the full answer has streamed)
+                    if token.startswith("__VERIFICATION__"):
+                        try:
+                            verification = json.loads(token[len("__VERIFICATION__"):])
+                            confidence_label = verification.get("confidence", confidence_label)
+                            confidence_score = verification.get("confidence_score", confidence_score)
+                            refused = verification.get("refused", refused)
+                            yield {"event": "verification", "data": json.dumps(verification, ensure_ascii=False)}
+                        except json.JSONDecodeError:
+                            pass
+                        continue
 
-                full_answer += token
-                yield {"event": "token", "data": json.dumps({"token": token}, ensure_ascii=False)}
+                    full_answer += token
+                    yield {"event": "token", "data": json.dumps({"token": token}, ensure_ascii=False)}
+            except Exception as e:
+                if _is_exhaustion(e):
+                    yield {"event": "token",
+                           "data": json.dumps({"token": DEGRADED_MSG}, ensure_ascii=False)}
+                    yield {"event": "done", "data": json.dumps({
+                        "full_answer": DEGRADED_MSG, "citations": [], "confidence": "low",
+                        "refused": False, "degraded": True,
+                        "latency_ms": (time.time() - start_time) * 1000, "cache_hit": False,
+                    }, ensure_ascii=False)}
+                    return  # do NOT persist/cache
+                raise
 
             # Final event with metadata
             yield {"event": "done", "data": json.dumps({
@@ -389,7 +469,7 @@ async def stats():
 # Phase 2 Endpoints
 # ═══════════════════════════════════════════════════════════════
 
-@app.post("/api/pipeline/enrich")
+@app.post("/api/pipeline/enrich", dependencies=[Depends(require_admin)])
 async def run_enrichment(request: EnrichRequest = None):
     """
     Run the Phase 2 enrichment pipeline on all documents.
