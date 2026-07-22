@@ -80,13 +80,16 @@ defense-in-depth nhưng vẫn là code thật, mô tả được trong portfolio
   2026-07-22): đã verify UI gọi FastAPI server-side qua `requests.post` chỉ gửi
   JSON body (`session_id`), **không** header IP nào, không `X-Forwarded-For`
   (`src/ui/pages/chat.py:211,238`). ⇒ mọi request tới FastAPI đến từ
-  `127.0.0.1` → `slowapi` per-IP (`get_remote_address`) dồn mọi user vào 1
-  bucket = vô dụng. `session_id` (UUID per-tab, có trong mọi request) là key
-  đúng và **thực sự** chặn 1 user spam đốt Groq budget. Dùng `slowapi` với
-  `key_func` custom = `request.json()["session_id"]`, fallback `get_remote_address`
-  khi thiếu. Mặc định 30/phút, env `RATE_LIMIT`. README ghi đúng: rate-limit
-  best-effort (topology internal-API), lá chắn budget thật là degraded-path (§2).
-  `slowapi` là dep mới.
+  `127.0.0.1` → rate-limit per-IP dồn mọi user vào 1 bucket = vô dụng.
+  `session_id` (UUID per-tab, có trong mọi request) là key đúng và **thực sự**
+  chặn 1 user spam đốt Groq budget. **Cơ chế: FastAPI dependency tự viết**
+  (sliding-window in-memory, `deque[timestamp]` theo `session_id`, fallback
+  `request.client.host`), **KHÔNG dùng `slowapi`** — đơn giản hơn (không cần
+  đọc body trong `key_func`, không cần header phụ), 0 dep mới, và vì gắn qua
+  `dependencies=[Depends(...)]` nên **không đổi signature endpoint** → test
+  direct-call `main.chat(ChatRequest(...))` hiện có không vỡ. Fail-open, mặc định
+  30/phút, env `RATE_LIMIT`. README ghi đúng: rate-limit best-effort (topology
+  internal-API), lá chắn budget thật là degraded-path (§2).
 - **Input bound**: `question` gắn `max_length=2000` (pydantic `Field`) trên
   `ChatRequest` — chặn query khổng lồ làm nổ token embedding/Groq. Rẻ, hợp lý.
 
@@ -197,7 +200,7 @@ Vì API không public, "e2e từ ngoài" tách 2 phần:
 
 | File | Thay đổi |
 |---|---|
-| `src/api/main.py` | CORS whitelist theo env; `slowapi` limiter **key=`session_id`** (fallback IP) + decorator; `ChatRequest.question` `max_length=2000`; `X-Admin-Key` dependency trên enrich; `/ready`; bắt quota-exhaustion → degraded payload (chat + stream, format §2) |
+| `src/api/main.py` | CORS whitelist theo env; **per-session rate-limit dependency** (in-memory sliding window, key=`session_id`, fallback IP, no slowapi); `ChatRequest.question` `max_length=2000`; `X-Admin-Key` dependency trên enrich; `/ready`; bắt quota-exhaustion → degraded payload (chat + stream, format §2) |
 | `src/ui/app.py`, `src/ui/pages/chat.py` | `/ready` 3-trạng-thái sidebar; **chặn gửi query khi chưa ready** (tránh timeout); render `degraded` notice |
 | `Dockerfile` | target `space` + pre-fetch models (bake HF cache) + copy store.db; shebang bash |
 | `start.sh` | mới — launcher 2 process + `trap`/`wait -n` (bash ≥4.3) |
@@ -206,7 +209,6 @@ Vì API không public, "e2e từ ngoài" tách 2 phần:
 | `scripts/measure_latency.py` | mới — N=20/route warm P50/P95 + stage breakdown → README |
 | `.github/workflows/` | job smoke weekly (functional + liveness ping) + `gitleaks` secret-scan |
 | `.gitignore` | bỏ `data/metadata/store.db` |
-| `pyproject.toml` | thêm `slowapi` |
 | `.env.example` | thêm `ALLOWED_ORIGINS`, `ADMIN_KEY`, `RATE_LIMIT`, `RERANK_MAX_K` |
 
 ## Testing

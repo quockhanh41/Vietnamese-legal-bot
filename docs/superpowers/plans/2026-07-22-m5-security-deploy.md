@@ -1,0 +1,1364 @@
+# M5 — Security + Deploy public Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Harden the FastAPI backend (defense-in-depth security + graceful degradation) and ship the whole stack as a single public HF Docker Space, with an honest measured P95 and a weekly smoke test.
+
+**Architecture:** One HF Docker Space runs `start.sh` → uvicorn (background, `:8000`) + Streamlit (foreground public `:8501`); Streamlit calls FastAPI over `localhost`. The 600-doc `store.db` is committed so metadata ships in the image. Security items (CORS whitelist, per-session rate limit, admin key, input bound) are defense-in-depth given the internal API. Quota exhaustion returns a graceful "degraded" payload instead of a 500. Smoke test = functional-in-CI (`/api/chat`) + public-URL liveness ping.
+
+**Tech Stack:** FastAPI, Streamlit, pydantic v2, pytest + `fastapi.testclient.TestClient`, Docker (HF Spaces), GitHub Actions, gitleaks.
+
+## Global Constraints
+
+- **Spec:** [`docs/superpowers/specs/2026-07-22-m5-security-deploy-design.md`](../specs/2026-07-22-m5-security-deploy-design.md). Every task implements a part of it.
+- **Locked decisions:** single HF Space (Streamlit public / FastAPI internal); commit `store.db` (no LFS — 11 MB < HF 500 GB / GitHub 100 MB limit); session/cache persistence = in-memory fallback (Upstash opt-in via `REDIS_URL`, no code).
+- **Refusal integrity (non-negotiable):** degraded responses are NOT refusals — `refused=False`, and they are **never** written to memory/cache (same rule as refusals). Both confidence gates stay intact.
+- **Rate limit key = `session_id`, NOT IP** (verified: UI→FastAPI is server-side localhost, every request from `127.0.0.1`). Mechanism = hand-rolled per-session sliding-window FastAPI dependency (no slowapi), applied via `dependencies=[...]` so endpoint signatures — and existing direct-call tests — are untouched. Fail-open.
+- **Gate M5 = measure-and-report**, NOT pass/fail on P95 ("số thật kể cả nếu chậm"). No hard latency threshold anywhere.
+- **Test conventions:** `import src.api.main as main`; set `main.app.state.*` to `MagicMock()`; monkeypatch `main.get_naive_pipeline`; direct `main.chat(main.ChatRequest(...))` for non-stream, `TestClient(main.app)` (WITHOUT `with`, so lifespan does NOT run) for HTTP/stream paths. `conftest.py` already forces `LANGFUSE_TRACING_ENABLED=false`.
+- **Env-config pattern:** module-level `NAME = type(os.getenv("NAME", "<default>"))` (mirrors `REFUSAL_THRESHOLD` in `confidence.py:153`).
+- **Verify before done:** `.venv/bin/python -m pytest -q` (full suite, currently 484 passing) green before any completion claim; never claim a measurement not actually run.
+
+---
+
+## PHASE 1 — Pre-deploy hardening (code, TDD, local)
+
+### Task 1: Ship 600-doc metadata (commit store.db)
+
+**Files:**
+- Modify: `.gitignore:16` (remove the `store.db` ignore)
+- Add (git): `data/metadata/store.db` (11 MB, existing runtime file)
+- Modify: `data/metadata/README.md` (one-line source-of-truth note)
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: a committed `store.db` so `MetadataStore()` on a fresh checkout reads 600 docs (auto-seed at `metadata_store.py:136` is skipped because the `documents` table is non-empty).
+
+- [ ] **Step 1: Verify the runtime db really has ~600 docs (guard against committing an empty one)**
+
+Run:
+```bash
+.venv/bin/python -c "from src.data.metadata_store import MetadataStore; print(len(MetadataStore().get_all_documents()))"
+```
+Expected: a number ≥ 600 (e.g. `605`). If it prints ~100 or 0, STOP — the local db is stale; do not commit.
+
+- [ ] **Step 2: Un-ignore store.db**
+
+In `.gitignore`, delete the line `data/metadata/store.db` (line 16).
+
+- [ ] **Step 3: Add the source-of-truth note**
+
+Append to `data/metadata/README.md`:
+```markdown
+
+## Runtime source of truth (M5)
+
+`store.db` (committed) is the authoritative metadata for the deployed 600-doc
+corpus. The `*.json` files are a stale 100-doc M1 snapshot kept only as the
+auto-seed fallback for environments without `store.db`; they are NOT loaded when
+`store.db` is present (auto-seed is skipped when the `documents` table is non-empty).
+```
+
+- [ ] **Step 4: Stage and verify tracking**
+
+Run:
+```bash
+git add .gitignore data/metadata/store.db data/metadata/README.md
+git status --short
+git check-ignore data/metadata/store.db || echo "OK: store.db no longer ignored"
+```
+Expected: `store.db` staged; `git check-ignore` prints nothing → the `|| echo` fires "OK".
+
+- [ ] **Step 5: Commit**
+
+```bash
+git commit -m "feat(m5): commit 600-doc store.db so metadata ships in deploy image"
+```
+
+---
+
+### Task 2: Bound question length (`max_length=2000`)
+
+**Files:**
+- Modify: `src/api/main.py` (ChatRequest, import Field)
+- Test: `tests/test_api_security.py` (new)
+
+**Interfaces:**
+- Consumes: nothing.
+- Produces: `ChatRequest.question` rejects >2000 chars with HTTP 422 before any handler/dependency logic runs.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/test_api_security.py`:
+```python
+from fastapi.testclient import TestClient
+import src.api.main as main
+
+
+def test_question_over_2000_chars_rejected():
+    client = TestClient(main.app)  # no `with` → lifespan does not run
+    r = client.post("/api/chat", json={"question": "x" * 2001, "session_id": "s"})
+    assert r.status_code == 422
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py::test_question_over_2000_chars_rejected -q`
+Expected: FAIL (currently returns 500/200, not 422).
+
+- [ ] **Step 3: Implement**
+
+In `src/api/main.py`, change the import and the model:
+```python
+from pydantic import BaseModel, Field
+```
+```python
+class ChatRequest(BaseModel):
+    question: str = Field(..., max_length=2000)
+    session_id: Optional[str] = None
+    use_adaptive: bool = False
+    expand_context: bool = False  # Phase 2: cross-reference expansion
+    expansion_hops: int = 1
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/api/main.py tests/test_api_security.py
+git commit -m "feat(m5): bound chat question at 2000 chars (422)"
+```
+
+---
+
+### Task 3: CORS whitelist from env
+
+**Files:**
+- Modify: `src/api/main.py` (add `import os`, `_parse_origins`, `ALLOWED_ORIGINS`, CORS middleware)
+- Modify: `.env.example`
+- Test: `tests/test_api_security.py`
+
+**Interfaces:**
+- Consumes: env `ALLOWED_ORIGINS` (comma-separated).
+- Produces: `main._parse_origins(raw: Optional[str]) -> list[str]`; `main.ALLOWED_ORIGINS: list[str]` used by CORSMiddleware (default `[]` = no cross-origin).
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/test_api_security.py`:
+```python
+def test_parse_origins():
+    assert main._parse_origins(None) == []
+    assert main._parse_origins("") == []
+    assert main._parse_origins("https://a.hf.space") == ["https://a.hf.space"]
+    assert main._parse_origins("https://a, https://b") == ["https://a", "https://b"]
+
+
+def test_default_cors_is_not_wildcard():
+    assert main.ALLOWED_ORIGINS != ["*"]
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py -q`
+Expected: FAIL (`_parse_origins`/`ALLOWED_ORIGINS` undefined).
+
+- [ ] **Step 3: Implement**
+
+In `src/api/main.py` add `import os` near the top imports. Then replace the CORS block (currently `main.py:108-113`):
+```python
+def _parse_origins(raw):
+    """Comma-separated origins from env → list. Empty/None → [] (no cross-origin).
+    Deploy topology is UI→localhost→API, so cross-origin is normally unused; this
+    is defense-in-depth if the API port is ever exposed."""
+    if not raw:
+        return []
+    return [o.strip() for o in raw.split(",") if o.strip()]
+
+
+ALLOWED_ORIGINS = _parse_origins(os.getenv("ALLOWED_ORIGINS"))
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Document the env var**
+
+Append to `.env.example`:
+```bash
+
+# ── M5 security (defense-in-depth; API is internal in the HF Space) ──────
+# Comma-separated allowed CORS origins. Empty = no cross-origin (default).
+# ALLOWED_ORIGINS=https://<your-space>.hf.space
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/api/main.py .env.example tests/test_api_security.py
+git commit -m "feat(m5): CORS whitelist from ALLOWED_ORIGINS (drop wildcard)"
+```
+
+---
+
+### Task 4: Admin API-key on `/api/pipeline/enrich`
+
+**Files:**
+- Modify: `src/api/main.py` (`ADMIN_KEY`, `require_admin`, apply dependency)
+- Modify: `.env.example`
+- Test: `tests/test_api_security.py`
+
+**Interfaces:**
+- Consumes: env `ADMIN_KEY`.
+- Produces: `main.require_admin(x_admin_key: Optional[str] = Header(None))` — raises `HTTPException(403)` when `ADMIN_KEY` is unset OR the header mismatches (fail-safe: unset ⇒ endpoint disabled). Applied to `/api/pipeline/enrich` via `dependencies=[Depends(require_admin)]`.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/test_api_security.py`:
+```python
+import pytest
+from fastapi import HTTPException
+
+
+def test_require_admin_forbidden_when_key_unset(monkeypatch):
+    monkeypatch.setattr(main, "ADMIN_KEY", None)
+    with pytest.raises(HTTPException) as e:
+        main.require_admin(x_admin_key="anything")
+    assert e.value.status_code == 403
+
+
+def test_require_admin_forbidden_on_wrong_key(monkeypatch):
+    monkeypatch.setattr(main, "ADMIN_KEY", "secret")
+    with pytest.raises(HTTPException) as e:
+        main.require_admin(x_admin_key="nope")
+    assert e.value.status_code == 403
+
+
+def test_require_admin_ok_on_correct_key(monkeypatch):
+    monkeypatch.setattr(main, "ADMIN_KEY", "secret")
+    main.require_admin(x_admin_key="secret")  # no raise
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py -k require_admin -q`
+Expected: FAIL (`require_admin`/`ADMIN_KEY` undefined).
+
+- [ ] **Step 3: Implement**
+
+In `src/api/main.py`, extend the fastapi import:
+```python
+from fastapi import FastAPI, HTTPException, Query, Header, Depends, Request
+```
+Add near the other module constants (after `ALLOWED_ORIGINS`):
+```python
+ADMIN_KEY = os.getenv("ADMIN_KEY")
+
+
+def require_admin(x_admin_key: Optional[str] = Header(None)):
+    """Fail-safe admin gate: if ADMIN_KEY is unset the endpoint is DISABLED (403),
+    never open. Guards the expensive, state-mutating enrichment endpoint."""
+    if not ADMIN_KEY or x_admin_key != ADMIN_KEY:
+        raise HTTPException(status_code=403, detail="Forbidden")
+```
+Apply to the enrich route decorator (`main.py:392`):
+```python
+@app.post("/api/pipeline/enrich", dependencies=[Depends(require_admin)])
+async def run_enrichment(request: EnrichRequest = None):
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py -k require_admin -q`
+Expected: PASS.
+
+- [ ] **Step 5: Document the env var**
+
+Append to `.env.example` (under the M5 section):
+```bash
+# Admin key required (header X-Admin-Key) for /api/pipeline/enrich.
+# Unset = endpoint DISABLED (403). Set a long random value in HF Secrets.
+# ADMIN_KEY=
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/api/main.py .env.example tests/test_api_security.py
+git commit -m "feat(m5): X-Admin-Key gate on enrich (fail-safe 403)"
+```
+
+---
+
+### Task 5: Per-session rate-limit dependency
+
+**Files:**
+- Modify: `src/api/main.py` (`RATE_LIMIT`, `_rate_buckets`, `rate_limit_session`, apply to chat routes)
+- Modify: `.env.example`
+- Test: `tests/test_api_security.py`
+
+**Interfaces:**
+- Consumes: env `RATE_LIMIT` (int, requests/minute, default 30); `ChatRequest` (for `session_id`).
+- Produces: `main.rate_limit_session(request: Request, body: ChatRequest)` — raises `HTTPException(429)` when a `session_id` (fallback: client IP) exceeds `RATE_LIMIT` in a rolling 60 s window. Applied to `/api/chat` and `/api/chat/stream` via `dependencies=[Depends(rate_limit_session)]`. In-memory `main._rate_buckets: dict[str, deque]`.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/test_api_security.py`:
+```python
+from unittest.mock import MagicMock
+
+
+def _req(ip="127.0.0.1"):
+    r = MagicMock()
+    r.client.host = ip
+    return r
+
+
+def test_rate_limit_blocks_after_limit(monkeypatch):
+    monkeypatch.setattr(main, "RATE_LIMIT", 2)
+    main._rate_buckets.clear()
+    body = main.ChatRequest(question="q", session_id="s1")
+    main.rate_limit_session(_req(), body)
+    main.rate_limit_session(_req(), body)
+    with pytest.raises(HTTPException) as e:
+        main.rate_limit_session(_req(), body)
+    assert e.value.status_code == 429
+
+
+def test_rate_limit_sessions_are_independent(monkeypatch):
+    monkeypatch.setattr(main, "RATE_LIMIT", 1)
+    main._rate_buckets.clear()
+    main.rate_limit_session(_req(), main.ChatRequest(question="q", session_id="A"))
+    main.rate_limit_session(_req(), main.ChatRequest(question="q", session_id="B"))  # ok
+
+
+def test_rate_limit_falls_back_to_ip_without_session(monkeypatch):
+    monkeypatch.setattr(main, "RATE_LIMIT", 1)
+    main._rate_buckets.clear()
+    main.rate_limit_session(_req("1.2.3.4"), main.ChatRequest(question="q"))
+    with pytest.raises(HTTPException):
+        main.rate_limit_session(_req("1.2.3.4"), main.ChatRequest(question="q"))
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py -k rate_limit -q`
+Expected: FAIL (`rate_limit_session`/`_rate_buckets`/`RATE_LIMIT` undefined).
+
+- [ ] **Step 3: Implement**
+
+In `src/api/main.py`, add near the top imports:
+```python
+from collections import defaultdict, deque
+```
+Add with the other constants:
+```python
+RATE_LIMIT = int(os.getenv("RATE_LIMIT", "30"))  # requests per minute per session
+_RATE_WINDOW = 60.0
+_rate_buckets = defaultdict(deque)  # key -> deque[timestamp]
+
+
+def rate_limit_session(request: Request, body: ChatRequest):
+    """Best-effort per-session throttle. Topology is UI→localhost→API so per-IP
+    is meaningless (all 127.0.0.1); key on session_id, fall back to IP. Fail-open
+    by construction (pure in-memory; a restart resets buckets)."""
+    key = body.session_id or (request.client.host if request.client else "anon")
+    now = time.time()
+    bucket = _rate_buckets[key]
+    while bucket and now - bucket[0] > _RATE_WINDOW:
+        bucket.popleft()
+    if len(bucket) >= RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Too many requests")
+    bucket.append(now)
+```
+Apply to both chat routes (add the dependency to the existing decorators):
+```python
+@app.post("/api/chat", response_model=ChatResponse,
+          dependencies=[Depends(rate_limit_session)])
+def chat(request: ChatRequest):
+```
+```python
+@app.post("/api/chat/stream", dependencies=[Depends(rate_limit_session)])
+async def chat_stream(request: ChatRequest):
+```
+(The dependency's `body: ChatRequest` param and the endpoint's `request: ChatRequest` param resolve to the same parsed body — FastAPI caches it. Direct calls `main.chat(...)` bypass dependencies, so existing tests are unaffected.)
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_api_security.py -k rate_limit -q`
+Expected: PASS.
+
+- [ ] **Step 5: Document the env var**
+
+Append to `.env.example` (M5 section):
+```bash
+# Per-session chat rate limit (requests/minute). Best-effort budget guard.
+# RATE_LIMIT=30
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/api/main.py .env.example tests/test_api_security.py
+git commit -m "feat(m5): per-session sliding-window rate limit on chat routes"
+```
+
+---
+
+### Task 6: `/ready` readiness endpoint
+
+**Files:**
+- Modify: `src/api/main.py` (add `ready` route)
+- Test: `tests/test_api_degraded.py` (new)
+
+**Interfaces:**
+- Consumes: `app.state.embedder`, `app.state.reranker`.
+- Produces: `GET /ready` → `{"ready": bool, "models_loaded": {"embedder": bool, "reranker": bool}}`. `ready` is true once both are non-None (lifespan background-loads them; `reranker=False` sentinel still counts as resolved).
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/test_api_degraded.py`:
+```python
+from unittest.mock import MagicMock
+import src.api.main as main
+
+
+async def test_ready_false_before_models_loaded():
+    main.app.state.embedder = None
+    main.app.state.reranker = None
+    out = await main.ready()
+    assert out["ready"] is False
+    assert out["models_loaded"] == {"embedder": False, "reranker": False}
+
+
+async def test_ready_true_once_loaded():
+    main.app.state.embedder = MagicMock()
+    main.app.state.reranker = MagicMock()
+    out = await main.ready()
+    assert out["ready"] is True
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_api_degraded.py -k ready -q`
+Expected: FAIL (`main.ready` undefined).
+
+- [ ] **Step 3: Implement**
+
+In `src/api/main.py`, add after the `/health` route:
+```python
+@app.get("/ready")
+async def ready():
+    """Readiness (vs liveness /health): true once heavy models are loaded.
+    Lifespan background-loads embedder+reranker; the UI uses this to show a
+    cold-start state and to gate sending queries that would otherwise time out."""
+    emb = getattr(app.state, "embedder", None)
+    rr = getattr(app.state, "reranker", None)
+    loaded = {"embedder": emb is not None, "reranker": rr is not None}
+    return {"ready": all(loaded.values()), "models_loaded": loaded}
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_api_degraded.py -k ready -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/api/main.py tests/test_api_degraded.py
+git commit -m "feat(m5): /ready readiness endpoint (embedder+reranker loaded)"
+```
+
+---
+
+### Task 7: Graceful degradation — non-stream `/api/chat`
+
+**Files:**
+- Modify: `src/api/main.py` (`DEGRADED_MSG`, `_is_exhaustion`, `ChatResponse.degraded`, `chat` handler)
+- Test: `tests/test_api_degraded.py`
+
+**Interfaces:**
+- Consumes: gateway's `RuntimeError("All models failed. Last error: ...")` (`gateway.py:231`).
+- Produces: `main.DEGRADED_MSG: str`; `main._is_exhaustion(e) -> bool`; `ChatResponse.degraded: bool`. On exhaustion `/api/chat` returns HTTP 200 with `degraded=True, refused=False, confidence="low"` — NOT a 500, NOT persisted.
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/test_api_degraded.py`:
+```python
+import pytest
+from fastapi import HTTPException
+
+
+def test_chat_degraded_on_exhaustion(monkeypatch):
+    main.app.state.session_store = MagicMock()
+    main.app.state.semantic_cache = MagicMock()
+    main.app.state.llm = MagicMock()
+    monkeypatch.setattr(main, "get_naive_pipeline", lambda: MagicMock())
+
+    def boom(**k):
+        raise RuntimeError("All models failed. Last error: 429 rate limit")
+    monkeypatch.setattr(main, "run_chat_turn", boom)
+
+    out = main.chat(main.ChatRequest(question="q", session_id="s1"))
+    assert out.degraded is True
+    assert out.refused is False
+    assert "quá tải" in out.answer
+
+
+def test_chat_non_exhaustion_still_500(monkeypatch):
+    main.app.state.session_store = MagicMock()
+    main.app.state.semantic_cache = MagicMock()
+    main.app.state.llm = MagicMock()
+    monkeypatch.setattr(main, "get_naive_pipeline", lambda: MagicMock())
+
+    def boom(**k):
+        raise ValueError("something else")
+    monkeypatch.setattr(main, "run_chat_turn", boom)
+
+    with pytest.raises(HTTPException) as e:
+        main.chat(main.ChatRequest(question="q", session_id="s1"))
+    assert e.value.status_code == 500
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_api_degraded.py -k "degraded or non_exhaustion" -q`
+Expected: FAIL (`ChatResponse` has no `degraded`; exhaustion currently 500s).
+
+- [ ] **Step 3: Implement**
+
+In `src/api/main.py`, add the constant + helper near the top (after imports):
+```python
+DEGRADED_MSG = ("Xin lỗi, hệ thống đang quá tải hạn mức miễn phí. "
+                "Vui lòng thử lại sau ít phút.")
+
+
+def _is_exhaustion(e):
+    """True for the gateway's 'all providers exhausted' signal (gateway.py)."""
+    return isinstance(e, RuntimeError) and str(e).startswith("All models failed")
+```
+Add the field to `ChatResponse`:
+```python
+    condensed_question: str = ""     # M4.1: standalone rewrite of a follow-up
+    degraded: bool = False           # M5.3: served a graceful quota-exhaustion notice
+```
+Wrap the `chat` handler's `except` (replace the current `except Exception` at `main.py:235`):
+```python
+    except Exception as e:
+        if _is_exhaustion(e):
+            return ChatResponse(answer=DEGRADED_MSG, degraded=True,
+                                confidence="low", refused=False,
+                                pipeline_used="degraded")
+        raise HTTPException(status_code=500, detail=str(e))
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_api_degraded.py -k "degraded or non_exhaustion" -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/api/main.py tests/test_api_degraded.py
+git commit -m "feat(m5): graceful degraded reply on quota exhaustion (non-stream)"
+```
+
+---
+
+### Task 8: Graceful degradation — stream `/api/chat/stream`
+
+**Files:**
+- Modify: `src/api/main.py` (wrap the `async for` in `event_generator`)
+- Test: `tests/test_api_degraded.py`
+
+**Interfaces:**
+- Consumes: `DEGRADED_MSG`, `_is_exhaustion` (Task 7).
+- Produces: on exhaustion mid-stream, emits one `token` event (`DEGRADED_MSG`) + one `done` event with `degraded=True, refused=False`, then returns WITHOUT persisting to memory/cache. Non-exhaustion errors re-raise (unchanged).
+
+- [ ] **Step 1: Write the failing test**
+
+Append to `tests/test_api_degraded.py`:
+```python
+from fastapi.testclient import TestClient
+
+
+def test_stream_degraded_on_exhaustion(monkeypatch):
+    store = MagicMock(); store.get_history.return_value = []
+    cache = MagicMock(); cache.get.return_value = None
+    main.app.state.session_store = store
+    main.app.state.semantic_cache = cache
+    main.app.state.llm = MagicMock()
+
+    def gen(_condensed):
+        raise RuntimeError("All models failed. Last error: 429")
+        yield  # unreachable; makes this a generator
+    fake = MagicMock(); fake.query_stream = gen
+    monkeypatch.setattr(main, "get_naive_pipeline", lambda: fake)
+    monkeypatch.setattr(main, "condense_query", lambda h, q, llm: q)
+
+    client = TestClient(main.app)
+    r = client.post("/api/chat/stream", json={"question": "q", "session_id": "s1"})
+    assert r.status_code == 200
+    assert "degraded" in r.text
+    assert "quá tải" in r.text
+    cache.set.assert_not_called()
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_api_degraded.py -k stream_degraded -q`
+Expected: FAIL (exception propagates / no degraded event).
+
+- [ ] **Step 3: Implement**
+
+In `src/api/main.py` `event_generator`, wrap the streaming loop (the `async for token in iterate_in_threadpool(...)` block at `main.py:276-309`) in try/except:
+```python
+            try:
+                async for token in iterate_in_threadpool(pipeline.query_stream(condensed)):
+                    # ... existing body unchanged (step/citations/verification/token) ...
+                    full_answer += token
+                    yield {"event": "token", "data": json.dumps({"token": token}, ensure_ascii=False)}
+            except Exception as e:
+                if _is_exhaustion(e):
+                    yield {"event": "token",
+                           "data": json.dumps({"token": DEGRADED_MSG}, ensure_ascii=False)}
+                    yield {"event": "done", "data": json.dumps({
+                        "full_answer": DEGRADED_MSG, "citations": [], "confidence": "low",
+                        "refused": False, "degraded": True,
+                        "latency_ms": (time.time() - start_time) * 1000, "cache_hit": False,
+                    }, ensure_ascii=False)}
+                    return  # do NOT persist/cache
+                raise
+```
+(Keep the existing marker-interception branches inside the loop exactly as they are; only the `try:`/`except` wrapper and the `return` are new. The normal `done` + persist/cache block stays after the loop, reached only on success.)
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_api_degraded.py -k stream_degraded -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add src/api/main.py tests/test_api_degraded.py
+git commit -m "feat(m5): graceful degraded SSE on quota exhaustion (stream)"
+```
+
+---
+
+### Task 9: `RERANK_MAX_K` tuning knob
+
+**Files:**
+- Modify: `src/rag/orchestrator.py` (`RERANK_MAX_K` constant; use in `_medium_pipeline`)
+- Test: `tests/test_rerank_pool_knob.py` (new)
+
+**Interfaces:**
+- Consumes: env `RERANK_MAX_K` (int, default 15).
+- Produces: `orchestrator.RERANK_MAX_K`; `_medium_pipeline` passes it as `max_k` to `_dynamic_top_k`, capping the rerank candidate pool. No behavior change at the default (15 = current literal).
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/test_rerank_pool_knob.py`:
+```python
+import importlib
+
+
+def test_rerank_max_k_default_is_15():
+    import src.rag.orchestrator as orch
+    importlib.reload(orch)
+    assert orch.RERANK_MAX_K == 15
+
+
+def test_rerank_max_k_reads_env(monkeypatch):
+    monkeypatch.setenv("RERANK_MAX_K", "10")
+    import src.rag.orchestrator as orch
+    importlib.reload(orch)
+    assert orch.RERANK_MAX_K == 10
+    monkeypatch.delenv("RERANK_MAX_K")
+    importlib.reload(orch)  # restore default for other tests
+
+
+def test_dynamic_top_k_never_exceeds_max_k():
+    from src.rag.orchestrator import AdaptiveRAGPipeline
+    from src.db.qdrant_client import SearchResult
+    results = [SearchResult(point_id=str(i), score=0.9, chunk_text="c",
+                            document_id=1, metadata={}) for i in range(40)]
+    k = AdaptiveRAGPipeline._dynamic_top_k(results, min_k=5, max_k=10)
+    assert k <= 10
+```
+(If `SearchResult`'s constructor signature differs, match it to the one used in `tests/test_answer_format_fixes.py::_sr`.)
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_rerank_pool_knob.py -q`
+Expected: FAIL (`RERANK_MAX_K` undefined).
+
+- [ ] **Step 3: Implement**
+
+In `src/rag/orchestrator.py`, add a module constant (near other top-level constants; `os` is already imported at line 10):
+```python
+RERANK_MAX_K = int(os.getenv("RERANK_MAX_K", "15"))  # M5: rerank candidate-pool cap (CPU P95 knob)
+```
+In `_medium_pipeline` change the dynamic-top-k call (`orchestrator.py:660`):
+```python
+        top_k = self._dynamic_top_k(results, min_k=5, max_k=RERANK_MAX_K)
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_rerank_pool_knob.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Document the env var**
+
+Append to `.env.example` (M5 section):
+```bash
+# Rerank candidate-pool cap (CPU P95 knob). Default 15; lower to 10 only if
+# measured HF-CPU P95 demands it (see docs/notes M5 latency).
+# RERANK_MAX_K=15
+```
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/rag/orchestrator.py .env.example tests/test_rerank_pool_knob.py
+git commit -m "feat(m5): RERANK_MAX_K env knob for CPU rerank-pool tuning"
+```
+
+---
+
+### Task 10: UI cold-start state + degraded notice
+
+**Files:**
+- Modify: `src/ui/pages/chat.py` (add `backend_state`, `is_degraded`; render degraded notice; gate send on readiness)
+- Modify: `src/ui/app.py` (sidebar uses `/ready` → 3 states)
+- Test: `tests/test_ui_coldstart.py` (new)
+
+**Interfaces:**
+- Consumes: `/ready` JSON, `/health` status, chat response dict.
+- Produces: `chat.backend_state(ready_ok: bool, health_ok: bool) -> str` (`"ready"|"warming"|"offline"`); `chat.is_degraded(data: dict) -> bool`.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/test_ui_coldstart.py`:
+```python
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+import src.ui.pages.chat as chat
+
+
+def test_backend_state():
+    assert chat.backend_state(ready_ok=True, health_ok=True) == "ready"
+    assert chat.backend_state(ready_ok=False, health_ok=True) == "warming"
+    assert chat.backend_state(ready_ok=False, health_ok=False) == "offline"
+
+
+def test_is_degraded():
+    assert chat.is_degraded({"degraded": True}) is True
+    assert chat.is_degraded({"degraded": False}) is False
+    assert chat.is_degraded({}) is False
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_ui_coldstart.py -q`
+Expected: FAIL (`backend_state`/`is_degraded` undefined).
+
+- [ ] **Step 3: Implement the helpers**
+
+In `src/ui/pages/chat.py` add:
+```python
+def backend_state(ready_ok: bool, health_ok: bool) -> str:
+    """Three-state backend status for the UI: ready > warming (cold start,
+    models loading) > offline."""
+    if ready_ok:
+        return "ready"
+    return "warming" if health_ok else "offline"
+
+
+def is_degraded(data: dict) -> bool:
+    """True when the backend returned a graceful quota-exhaustion notice."""
+    return bool(data.get("degraded"))
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_ui_coldstart.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Wire the helpers into the UI (no unit test — Streamlit runtime)**
+
+In `src/ui/app.py`, replace the sidebar status block (`app.py:34-45`) so it queries `/ready` and shows three states:
+```python
+try:
+    import httpx
+    health_ok = httpx.get(f"{API_BASE}/health", timeout=2).status_code == 200
+    ready_ok = False
+    if health_ok:
+        rj = httpx.get(f"{API_BASE}/ready", timeout=2).json()
+        ready_ok = bool(rj.get("ready"))
+    from src.ui.pages.chat import backend_state
+    state = backend_state(ready_ok, health_ok)
+    if state == "ready":
+        st.sidebar.success("🟢 Backend sẵn sàng")
+    elif state == "warming":
+        st.sidebar.warning("🟡 Đang khởi động (cold start ~1–2 phút, đang nạp model)")
+    else:
+        st.sidebar.error("🔴 Backend offline")
+except Exception:
+    st.sidebar.error("🔴 Backend offline")
+```
+(Add `API_BASE = os.environ.get("API_URL", "http://localhost:8000")` at the top of `app.py` if not present; mirror `chat.py:15`.)
+
+In `src/ui/pages/chat.py`, in the send path of `render_chat_page`, before calling `_get_response`/`_stream_response`, gate on readiness:
+```python
+        try:
+            import httpx
+            rj = httpx.get(f"{API_BASE}/ready", timeout=2).json()
+        except Exception:
+            rj = {"ready": False}
+        if not rj.get("ready"):
+            st.warning("Hệ thống đang khởi động (cold start ~1–2 phút). "
+                       "Vui lòng chờ đến khi trạng thái chuyển 🟢 rồi hỏi lại.")
+            st.stop()
+```
+And after receiving a response, surface degraded:
+```python
+        if is_degraded(response_data):
+            st.warning(response_data.get("answer"))
+```
+
+- [ ] **Step 6: Manual smoke of the UI wiring**
+
+Run backend (`make api`) and UI (`make ui`); before models finish loading the sidebar shows 🟡 and sending is blocked; once 🟢, a normal question answers. (Manual — record that you did it.)
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add src/ui/pages/chat.py src/ui/app.py tests/test_ui_coldstart.py
+git commit -m "feat(m5): UI cold-start 3-state + degraded notice + ready-gated send"
+```
+
+---
+
+### Task 11: `scripts/measure_latency.py`
+
+**Files:**
+- Create: `scripts/measure_latency.py`
+- Test: `tests/test_measure_latency.py` (new)
+
+**Interfaces:**
+- Produces: `measure_latency.percentiles(latencies_ms: list[float]) -> dict` with keys `p50, p95, max, n`; a `main()` that polls `/ready`, sends N=20 warm questions per route to `/api/chat`, and prints/writes percentiles.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/test_measure_latency.py`:
+```python
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from scripts.measure_latency import percentiles
+
+
+def test_percentiles_basic():
+    out = percentiles([float(x) for x in range(1, 101)])  # 1..100
+    assert out["n"] == 100
+    assert out["max"] == 100.0
+    assert 49 <= out["p50"] <= 52
+    assert 94 <= out["p95"] <= 96
+
+
+def test_percentiles_empty():
+    assert percentiles([]) == {"p50": 0.0, "p95": 0.0, "max": 0.0, "n": 0}
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_measure_latency.py -q`
+Expected: FAIL (module missing).
+
+- [ ] **Step 3: Implement**
+
+Create `scripts/measure_latency.py`:
+```python
+"""M5: measure warm end-to-end latency of /api/chat against a running backend.
+Prints P50/P95/max per route. NOT a pass/fail gate — numbers go into the README
+honestly (HF CPU is slow). Usage: python scripts/measure_latency.py [BASE_URL]"""
+import sys
+import time
+
+import httpx
+
+MEDIUM_QS = ["Tội trộm cắp tài sản bị xử phạt thế nào?",
+             "Điều kiện kết hôn theo luật hôn nhân gia đình là gì?"]
+COMPLEX_QS = ["So sánh mức phạt tội cố ý gây thương tích và tội giết người",
+              "Quyền và nghĩa vụ của người lao động khi chấm dứt hợp đồng?"]
+N = 20
+
+
+def percentiles(latencies_ms):
+    if not latencies_ms:
+        return {"p50": 0.0, "p95": 0.0, "max": 0.0, "n": 0}
+    s = sorted(latencies_ms)
+
+    def pct(p):
+        idx = min(len(s) - 1, int(round((p / 100) * (len(s) - 1))))
+        return s[idx]
+    return {"p50": pct(50), "p95": pct(95), "max": s[-1], "n": len(s)}
+
+
+def _wait_ready(base_url, timeout=180, interval=3):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if httpx.get(f"{base_url}/ready", timeout=5).json().get("ready"):
+                return True
+        except Exception:
+            pass
+        time.sleep(interval)
+    return False
+
+
+def _probe(base_url, questions, use_adaptive):
+    lats = []
+    for i in range(N):
+        q = questions[i % len(questions)]
+        t0 = time.time()
+        r = httpx.post(f"{base_url}/api/chat",
+                       json={"question": q, "session_id": f"probe-{i}",
+                             "use_adaptive": use_adaptive}, timeout=180)
+        lats.append((time.time() - t0) * 1000 if r.status_code == 200 else float("nan"))
+    return percentiles([x for x in lats if x == x])  # drop NaN
+
+
+def main():
+    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+    if not _wait_ready(base_url):
+        print("Backend not ready within timeout"); sys.exit(1)
+    for name, qs, adaptive in [("MEDIUM", MEDIUM_QS, False), ("COMPLEX", COMPLEX_QS, True)]:
+        print(f"{name}: {_probe(base_url, qs, adaptive)}")
+
+
+if __name__ == "__main__":
+    main()
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_measure_latency.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/measure_latency.py tests/test_measure_latency.py
+git commit -m "feat(m5): measure_latency.py (P50/P95 warm probe)"
+```
+
+---
+
+### Task 12: `scripts/smoke_test.py`
+
+**Files:**
+- Create: `scripts/smoke_test.py`
+- Test: `tests/test_smoke_checks.py` (new)
+
+**Interfaces:**
+- Produces: `wait_ready(base_url, timeout, interval) -> bool`; pure check fns `check_answerable`, `check_refused`, `check_citation_lookup`, `check_condensed` each `(data: dict, ...) -> tuple[bool, str]`; a `main()` that waits on `/ready` then runs the 4 canonical `/api/chat` calls and exits non-zero on any failure.
+
+- [ ] **Step 1: Write the failing test**
+
+Create `tests/test_smoke_checks.py`:
+```python
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from scripts.smoke_test import (check_answerable, check_refused,
+                                 check_citation_lookup, check_condensed)
+
+
+def test_check_answerable():
+    assert check_answerable({"citations": [{"n": 1}], "refused": False})[0] is True
+    assert check_answerable({"citations": [], "refused": False})[0] is False
+    assert check_answerable({"citations": [{"n": 1}], "refused": True})[0] is False
+
+
+def test_check_refused():
+    assert check_refused({"refused": True})[0] is True
+    assert check_refused({"refused": False})[0] is False
+
+
+def test_check_citation_lookup():
+    assert check_citation_lookup({"citations": [{"n": 1}]})[0] is True
+    assert check_citation_lookup({"citations": []})[0] is False
+
+
+def test_check_condensed():
+    assert check_condensed({"condensed_question": "Tội cướp giật bị phạt sao?"},
+                           original="còn tội đó thì sao?")[0] is True
+    assert check_condensed({"condensed_question": "còn tội đó thì sao?"},
+                           original="còn tội đó thì sao?")[0] is False
+```
+
+- [ ] **Step 2: Run test to verify it fails**
+
+Run: `.venv/bin/python -m pytest tests/test_smoke_checks.py -q`
+Expected: FAIL (module missing).
+
+- [ ] **Step 3: Implement**
+
+Create `scripts/smoke_test.py`:
+```python
+"""M5: functional smoke test against a running backend (/api/chat). Waits on
+/ready first (avoids cold-start flakiness), then exercises 4 canonical paths.
+Exit 0 = all green. Usage: python scripts/smoke_test.py [BASE_URL]"""
+import sys
+import time
+
+import httpx
+
+TIMEOUT = 120
+
+
+def wait_ready(base_url, timeout=120, interval=3):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            if httpx.get(f"{base_url}/ready", timeout=5).json().get("ready"):
+                return True
+        except Exception:
+            pass
+        time.sleep(interval)
+    return False
+
+
+def check_answerable(data):
+    ok = bool(data.get("citations")) and not data.get("refused")
+    return ok, f"answerable: citations={len(data.get('citations') or [])} refused={data.get('refused')}"
+
+
+def check_refused(data):
+    return bool(data.get("refused")) is True, f"refused={data.get('refused')}"
+
+
+def check_citation_lookup(data):
+    return bool(data.get("citations")), f"citation-lookup: citations={len(data.get('citations') or [])}"
+
+
+def check_condensed(data, original):
+    cq = data.get("condensed_question") or ""
+    ok = bool(cq) and cq.strip() != original.strip()
+    return ok, f"condensed='{cq}'"
+
+
+def _post(base_url, question, session_id, use_adaptive=True):
+    return httpx.post(f"{base_url}/api/chat",
+                      json={"question": question, "session_id": session_id,
+                            "use_adaptive": use_adaptive}, timeout=TIMEOUT).json()
+
+
+def main():
+    base_url = sys.argv[1] if len(sys.argv) > 1 else "http://localhost:8000"
+    if not wait_ready(base_url):
+        print("FAIL: backend not ready"); sys.exit(1)
+
+    results = []
+    results.append(check_answerable(_post(base_url, "Tội trộm cắp tài sản bị xử phạt thế nào?", "smoke-1")))
+    results.append(check_refused(_post(base_url, "Hôm nay Hà Nội thời tiết thế nào?", "smoke-2")))
+    results.append(check_citation_lookup(_post(base_url, "Điều 173 Bộ luật Hình sự quy định gì?", "smoke-3")))
+    followup_orig = "còn tội cướp giật thì sao?"
+    _post(base_url, "Tội trộm cắp tài sản bị xử phạt thế nào?", "smoke-4")
+    results.append(check_condensed(_post(base_url, followup_orig, "smoke-4"), original=followup_orig))
+
+    ok = all(r[0] for r in results)
+    for passed, msg in results:
+        print(("PASS " if passed else "FAIL ") + msg)
+    sys.exit(0 if ok else 1)
+
+
+if __name__ == "__main__":
+    main()
+```
+
+- [ ] **Step 4: Run test to verify it passes**
+
+Run: `.venv/bin/python -m pytest tests/test_smoke_checks.py -q`
+Expected: PASS.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add scripts/smoke_test.py tests/test_smoke_checks.py
+git commit -m "feat(m5): smoke_test.py (ready-gated 4-path functional smoke)"
+```
+
+---
+
+### Task 13: Dockerfile `space` target + `start.sh`
+
+**Files:**
+- Modify: `Dockerfile` (add `space` target that pre-fetches models, copies store.db, runs start.sh)
+- Create: `start.sh`
+
+**Interfaces:**
+- Produces: a single image target `space` running both processes; `start.sh` launches uvicorn (bg) + Streamlit (fg) with a `trap` so the container exits if either dies.
+
+- [ ] **Step 1: Create `start.sh`**
+
+```bash
+#!/usr/bin/env bash
+# M5: run FastAPI (internal :8000) + Streamlit (public :8501) in one container.
+# If either process exits, kill the other so the HF Space restarts cleanly.
+set -euo pipefail
+
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000 &
+API_PID=$!
+
+export API_URL="http://localhost:8000"
+streamlit run src/ui/app.py --server.port 8501 --server.address 0.0.0.0 &
+UI_PID=$!
+
+trap 'kill "$API_PID" "$UI_PID" 2>/dev/null || true' EXIT
+wait -n "$API_PID" "$UI_PID"   # bash>=4.3 (python:3.11-slim ships bash 5.x)
+```
+
+- [ ] **Step 2: Add the `space` Dockerfile target**
+
+Append to `Dockerfile`:
+```dockerfile
+# --- Combined Space Stage (HF Docker Space: Streamlit public :8501, API internal :8000) ---
+FROM base AS space
+# Pre-fetch models at BUILD time so cold start only loads from disk (no ~5GB re-download).
+RUN python -c "from FlagEmbedding import BGEM3FlagModel, FlagReranker; \
+    BGEM3FlagModel('BAAI/bge-m3', use_fp16=True); \
+    FlagReranker('AITeamVN/Vietnamese_Reranker', use_fp16=True)" || echo "model pre-fetch skipped"
+RUN python -c "from sentence_transformers import SentenceTransformer; \
+    SentenceTransformer('AITeamVN/Vietnamese_Embedding')" || echo "embedder pre-fetch skipped"
+COPY src/ ./src/
+COPY scripts/ ./scripts/
+COPY data/metadata/store.db ./data/metadata/store.db
+COPY .env* ./
+COPY start.sh ./start.sh
+RUN chmod +x start.sh
+EXPOSE 8501
+HEALTHCHECK --interval=30s --timeout=10s --retries=5 CMD curl -f http://localhost:8501/_stcore/health || exit 1
+CMD ["bash", "start.sh"]
+```
+(If the exact pre-fetch model-loading class names differ from the runtime — cross-check `src/data/mixed_embedder.py` and `src/api/main.py:140` — match them; the `|| echo` keeps the build from failing if a name is off, and lazy-load still works at runtime, just slower on first request.)
+
+- [ ] **Step 3: Lint start.sh**
+
+Run: `shellcheck start.sh || true` (fix any real warnings; SC2086 on the trap is acceptable as written).
+
+- [ ] **Step 4: Verify the image builds**
+
+Run:
+```bash
+docker build --target space -t vlb-space:test .
+```
+Expected: build completes (model pre-fetch may be slow; the `|| echo` guards keep it from hard-failing). If Docker is unavailable locally, record that and defer the build verification to Phase 2 (it will build on HF).
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Dockerfile start.sh
+git commit -m "feat(m5): HF Space Dockerfile target + start.sh (2-process launcher)"
+```
+
+---
+
+### Task 14: HF Space README frontmatter + CI smoke/liveness/gitleaks
+
+**Files:**
+- Create: `README_HF.md` (HF Space README with YAML frontmatter — copied to the Space repo root at deploy)
+- Create: `.github/workflows/smoke.yml`
+
+**Interfaces:**
+- Produces: HF Space config (`sdk: docker`, `app_port: 8501`); a weekly CI workflow running gitleaks + functional smoke + public-URL liveness.
+
+- [ ] **Step 1: Create `README_HF.md`**
+
+```markdown
+---
+title: Vietnamese Legal Knowledge Bot
+emoji: 🏛️
+colorFrom: indigo
+colorTo: blue
+sdk: docker
+app_port: 8501
+pinned: false
+---
+
+# Vietnamese Legal Knowledge Bot
+
+Adaptive RAG over 600 Vietnamese legal documents. Streamlit UI (public) →
+FastAPI (internal). See the repo README for architecture, eval numbers, and the
+measured HF-CPU P95 (M5).
+```
+(At deploy the Space Dockerfile is `--target space`; set that in the Space's build config or a Space-root `Dockerfile` that `FROM`s this repo image — resolved in Task 15.)
+
+- [ ] **Step 2: Create `.github/workflows/smoke.yml`**
+
+```yaml
+name: Smoke (weekly) + secret scan
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: '0 3 * * 1'  # Mondays 03:00 UTC
+
+jobs:
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+  liveness:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping public Space
+        run: |
+          test -n "${{ secrets.PUBLIC_SPACE_URL }}" || { echo "PUBLIC_SPACE_URL unset"; exit 1; }
+          code=$(curl -s -o /dev/null -w "%{http_code}" -L "${{ secrets.PUBLIC_SPACE_URL }}/_stcore/health")
+          echo "liveness: $code"; test "$code" = "200"
+
+  functional-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - uses: actions/cache@v4
+        with: { path: ~/.cache/huggingface, key: ${{ runner.os }}-hf-m5 }
+      - run: pip install -e .
+      - name: Launch API + smoke
+        env:
+          QDRANT_URL: ${{ secrets.QDRANT_URL }}
+          QDRANT_API_KEY: ${{ secrets.QDRANT_API_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          uvicorn src.api.main:app --host 0.0.0.0 --port 8000 &
+          python scripts/smoke_test.py http://localhost:8000
+```
+
+- [ ] **Step 3: Validate the workflow YAML**
+
+Run: `.venv/bin/python -c "import yaml,glob; [yaml.safe_load(open(f)) for f in glob.glob('.github/workflows/*.yml')]; print('yaml ok')"`
+Expected: `yaml ok`.
+
+- [ ] **Step 4: Commit**
+
+```bash
+git add README_HF.md .github/workflows/smoke.yml
+git commit -m "feat(m5): HF Space README frontmatter + weekly smoke/liveness/gitleaks CI"
+```
+
+---
+
+### Task 15 (Phase 1 gate): Full suite + secret scan
+
+- [ ] **Step 1: Run the full test suite**
+
+Run: `.venv/bin/python -m pytest -q`
+Expected: all pass (previous baseline 484 + the new M5 tests). Fix any regression before proceeding.
+
+- [ ] **Step 2: Local secret scan**
+
+Run:
+```bash
+gitleaks detect --no-git --redact || echo "gitleaks not installed; run in CI"
+git grep -nE 'gsk_[A-Za-z0-9]|sk-lf-|pk-lf-|QDRANT_API_KEY=[^$]' -- ':!*.md' ':!.env.example' || echo "no inline secrets found"
+git check-ignore .env && echo ".env is gitignored: OK"
+```
+Expected: no secrets flagged in tracked files; `.env` is ignored.
+
+- [ ] **Step 3: Commit (if any fixes were needed)** — otherwise skip.
+
+---
+
+## PHASE 2 — Deploy + measure (infra / manual verification)
+
+> These tasks touch external services (HF Spaces) and a real CPU box; they are verification checklists, not TDD. Record actual outputs — never claim a number you didn't measure.
+
+### Task 16: Deploy to HF Spaces + secrets
+
+**Files:** none in-repo beyond Phase 1 (Space is created from this repo).
+
+- [ ] **Step 1: Create a Docker Space** on huggingface.co (`sdk: docker`). Point its build at this repo's `space` target — either (a) create a root `Dockerfile` in the Space that is the `space` stage, or (b) push a Space Dockerfile that `COPY`s from this repo build. Use `README_HF.md` content as the Space README (`app_port: 8501`).
+- [ ] **Step 2: Set Space Secrets** (Settings → Secrets): `QDRANT_URL`, `QDRANT_API_KEY`, `GROQ_API_KEY` (+ optional fallback keys), `LANGFUSE_*` (optional), `ADMIN_KEY` (long random), optionally `REDIS_URL`. Do NOT commit any of these.
+- [ ] **Step 3: Trigger build; wait for it to go live.** Confirm the build pre-fetched models (check build logs) and `store.db` is present.
+- [ ] **Step 4: Verify liveness** — open the Space URL; confirm the Streamlit UI loads and the sidebar shows 🟡 then 🟢 as models finish loading.
+- [ ] **Step 5: Verify RAM headroom** — in the Space runtime metrics, record peak RSS. If near 16 GB, note it and consider `RERANK_MAX_K=10` / NLI-lazy follow-up (do not silently change quality).
+- [ ] **Step 6: Add `PUBLIC_SPACE_URL` to GitHub repo secrets** (for the CI liveness job) + `GROQ_API_KEY`, `QDRANT_URL`, `QDRANT_API_KEY` if not already present.
+
+### Task 17: Measure P95 → README
+
+- [ ] **Step 1: Run the latency probe against the live/warm Space** (or a local `--target space` container if the Space CPU is too throttled to script against):
+
+Run: `python scripts/measure_latency.py <BASE_URL_reachable_to_api>`
+(Note: the Space exposes only Streamlit publicly; run the probe from inside the container, OR against a local `space` container where `:8000` is reachable, and record which. Capture MEDIUM + COMPLEX P50/P95/max.)
+
+- [ ] **Step 2: Write the honest numbers into `README.md`** — a short "Measured latency (HF free-tier CPU, warm)" table with P50/P95 per route, referencing the M2 CPU rerank bench (pool-20 P95 ≈ 894 ms) as context. State plainly that CPU is slow; no promise of <3 s.
+- [ ] **Step 3: Add the security note to README** — CORS whitelist, per-session rate limit, admin key, input bound — explicitly labeled defense-in-depth given the internal-API topology.
+- [ ] **Step 4: Commit**
+
+```bash
+git add README.md
+git commit -m "docs(m5): measured HF-CPU P95 + security notes in README"
+```
+
+### Task 18 (M5 gate): Smoke + liveness + secret-scan green
+
+- [ ] **Step 1: Run the functional smoke against the deployed API path**
+
+Run: `python scripts/smoke_test.py <BASE_URL>` → expect all 4 checks PASS, exit 0.
+
+- [ ] **Step 2: Trigger the CI workflow manually** (`workflow_dispatch`) and confirm all three jobs (secret-scan, liveness, functional-smoke) are green.
+
+- [ ] **Step 3: Confirm the M5 gate** and record in the plan status:
+  - URL public sống ✓ (Task 16.4 + liveness job)
+  - P95 warm ghi README ✓ (Task 17)
+  - Smoke test xanh ✓ (Step 1–2)
+  - Không secret trong repo/logs ✓ (Task 15.2 + secret-scan job + Space Secrets)
+
+- [ ] **Step 4: Update milestone status** in `docs/Plan_Giai_Doan_Cuoi_2026-07-10.md` §7 (M5 → ✅) and the M5 memory, then commit.
+
+```bash
+git add docs/Plan_Giai_Doan_Cuoi_2026-07-10.md
+git commit -m "docs(m5): mark M5 complete (security + public HF Space deploy)"
+```
+
+---
+
+## Self-Review
+
+**Spec coverage:**
+- 5.1 Security → Tasks 2 (input bound), 3 (CORS), 4 (admin), 5 (rate limit). ✓
+- 5.2 Deploy → Tasks 13 (Dockerfile/start.sh), 14 (README frontmatter), 16 (deploy). ✓
+- 5.3 Resilience → Tasks 6 (/ready), 7 (degraded non-stream), 8 (degraded stream), 10 (UI cold-start/degraded). ✓
+- 5.4 Smoke → Tasks 12 (smoke script), 14 (CI weekly + liveness). ✓
+- Metadata blocker → Task 1. ✓
+- Performance/P95 → Tasks 9 (RERANK_MAX_K), 11 (measure_latency), 17 (measure→README). ✓
+- Secret-scan → Tasks 14 (gitleaks CI) + 15 (local). ✓
+- Gate mapping → Task 18. ✓
+
+**Placeholder scan:** every code step has concrete code; manual Phase-2 steps have exact commands. The two "if names differ, match them" notes (Task 9 SearchResult ctor, Task 13 model classes) are guardrails, not placeholders — the given code is complete and runnable as written.
+
+**Type consistency:** `DEGRADED_MSG`/`_is_exhaustion` defined in Task 7 and reused in Task 8; `ChatResponse.degraded` added in Task 7 and asserted in Tasks 7/8/10; `backend_state`/`is_degraded` defined and tested in Task 10; `percentiles` (Task 11) and check fns (Task 12) match their tests; `RERANK_MAX_K` defined in Task 9 and used in `_medium_pipeline`. Consistent.
