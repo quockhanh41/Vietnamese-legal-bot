@@ -24,9 +24,13 @@ from src.data.mixed_embedder import build_embedder
 from src.data.constants import DEFAULT_COLLECTION_NAME
 from src.data.metadata_store import MetadataStore
 from src.llm.gateway import LLMGateway
-from src.rag.orchestrator import NaiveRAGPipeline, AdaptiveRAGPipeline
+from src.rag.orchestrator import NaiveRAGPipeline, AdaptiveRAGPipeline, RAGResponse
 from src.pipeline.retriever import EnhancedRetriever
 from src.rag.citation_lookup import CitationLookup
+from src.rag.condense import condense_query
+from src.rag.session_store import SessionStore
+from src.rag.semantic_cache import SemanticCache
+from src.rag.chat_turn import run_chat_turn
 
 
 # --- Models ---
@@ -48,6 +52,8 @@ class ChatResponse(BaseModel):
     latency_ms: float = 0
     pipeline_used: str = "naive"
     expanded_results: int = 0  # Phase 2: context expansion count
+    cache_hit: bool = False          # M4.2: served from semantic cache?
+    condensed_question: str = ""     # M4.1: standalone rewrite of a follow-up
 
 
 class EnrichRequest(BaseModel):
@@ -79,6 +85,8 @@ async def lifespan(app: FastAPI):
     app.state.enhanced_retriever = None  # Lazy load
     app.state.reranker = None  # Lazy load
     app.state.citation_lookup = CitationLookup(app.state.vector_store)
+    app.state.session_store = SessionStore.from_env()
+    app.state.semantic_cache = SemanticCache.from_env(_embed_query)
     # Warm up the corpus cache and reranker model in the background so the server
     # can start accepting connections immediately — both otherwise load on the
     # first request (the reranker model load alone is ~60s on the complex route).
@@ -143,6 +151,34 @@ def get_reranker():
     return app.state.reranker if app.state.reranker else None
 
 
+def _embed_query(text: str):
+    """Dense query embedding for the semantic cache. Normalized (dot == cosine),
+    matches the collection's distance metric."""
+    out = get_embedder().encode([text], return_dense=True, return_sparse=False)
+    return out["dense_vecs"][0].tolist()
+
+
+def _replay_events(resp: RAGResponse, start_time: float):
+    """Render a cached RAGResponse as the SSE event sequence the UI expects."""
+    events = []
+    if resp.citations:
+        events.append({"event": "citations",
+                       "data": json.dumps(resp.citations, ensure_ascii=False)})
+    events.append({"event": "token",
+                   "data": json.dumps({"token": resp.answer}, ensure_ascii=False)})
+    events.append({"event": "verification",
+                   "data": json.dumps({"confidence": resp.confidence,
+                                       "confidence_score": resp.confidence_score},
+                                      ensure_ascii=False)})
+    events.append({"event": "done",
+                   "data": json.dumps({
+                       "full_answer": resp.answer, "citations": resp.citations,
+                       "confidence": resp.confidence, "confidence_score": resp.confidence_score,
+                       "latency_ms": (time.time() - start_time) * 1000, "cache_hit": True,
+                   }, ensure_ascii=False)})
+    return events
+
+
 def get_naive_pipeline() -> NaiveRAGPipeline:
     return NaiveRAGPipeline(
         vector_store=app.state.vector_store,
@@ -173,24 +209,26 @@ async def health():
 
 @app.post("/api/chat", response_model=ChatResponse)
 def chat(request: ChatRequest):
-    """Non-streaming chat endpoint. Sync `def` so FastAPI runs it in the
-    threadpool instead of blocking the event loop with sync pipeline calls."""
+    """Non-streaming chat. Sync `def` so FastAPI runs it in the threadpool.
+    Threads session memory + condensation + semantic cache around the pipeline."""
     try:
-        if request.use_adaptive:
-            pipeline = get_adaptive_pipeline()
-        else:
-            pipeline = get_naive_pipeline()
-
-        response = pipeline.query(request.question)
+        pipeline = get_adaptive_pipeline() if request.use_adaptive else get_naive_pipeline()
+        result = run_chat_turn(
+            pipeline=pipeline,
+            store=app.state.session_store,
+            cache=app.state.semantic_cache,
+            llm=app.state.llm,
+            collection=DEFAULT_COLLECTION_NAME,
+            session_id=request.session_id,
+            question=request.question,
+        )
+        r = result.response
         return ChatResponse(
-            answer=response.answer,
-            citations=response.citations,
-            confidence=response.confidence,
-            confidence_score=response.confidence_score,
-            refused=response.refused,
-            disclaimer=response.disclaimer,
-            latency_ms=response.latency_ms,
-            pipeline_used=response.pipeline_used,
+            answer=r.answer, citations=r.citations, confidence=r.confidence,
+            confidence_score=r.confidence_score, refused=r.refused,
+            disclaimer=r.disclaimer, latency_ms=r.latency_ms,
+            pipeline_used=r.pipeline_used,
+            cache_hit=result.cache_hit, condensed_question=result.condensed_question,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -198,36 +236,47 @@ def chat(request: ChatRequest):
 
 @app.post("/api/chat/stream")
 async def chat_stream(request: ChatRequest):
-    """Streaming chat endpoint (SSE)."""
+    """Streaming chat (SSE). Cache HIT → replay cached response as SSE (<500ms);
+    MISS → stream normally, then persist to memory + cache."""
     try:
-        if request.use_adaptive:
-            pipeline = get_adaptive_pipeline()
-        else:
-            pipeline = get_naive_pipeline()
+        pipeline = get_adaptive_pipeline() if request.use_adaptive else get_naive_pipeline()
+        store = app.state.session_store
+        cache = app.state.semantic_cache
+
+        history = await run_in_threadpool(store.get_history, request.session_id)
+        condensed = await run_in_threadpool(condense_query, history, request.question, app.state.llm)
+        cached = None
+        if cache is not None:
+            cached = await run_in_threadpool(cache.get, condensed, DEFAULT_COLLECTION_NAME)
 
         async def event_generator():
             start_time = time.time()
+
+            if cached is not None:
+                for event in _replay_events(cached, start_time):
+                    yield event
+                await run_in_threadpool(store.append_turn, request.session_id,
+                                        request.question, cached.answer)
+                return
+
             full_answer = ""
             citations = []
-            citations_sent = False
             # Falls back to these when the pipeline never emits __VERIFICATION__
             # (e.g. NaiveRAGPipeline, which has no confidence/verification step
             # — hence "unverified", not a fabricated level).
             confidence_label = "unverified"
             confidence_score = 0.0
+            refused = False
 
             # pipeline.query_stream is a sync generator (blocking model/network
             # calls) — run its iteration in the threadpool so it doesn't block
             # the event loop while other requests are being served.
-            async for token in iterate_in_threadpool(pipeline.query_stream(request.question)):
+            async for token in iterate_in_threadpool(pipeline.query_stream(condensed)):
                 # Intercept step marker
                 if token.startswith("__STEP__"):
                     try:
                         step_data = json.loads(token[len("__STEP__"):])
-                        yield {
-                            "event": "step",
-                            "data": json.dumps(step_data, ensure_ascii=False),
-                        }
+                        yield {"event": "step", "data": json.dumps(step_data, ensure_ascii=False)}
                     except json.JSONDecodeError:
                         pass
                     continue
@@ -236,11 +285,7 @@ async def chat_stream(request: ChatRequest):
                 if token.startswith("__CITATIONS__"):
                     try:
                         citations = json.loads(token[len("__CITATIONS__"):])
-                        yield {
-                            "event": "citations",
-                            "data": json.dumps(citations, ensure_ascii=False),
-                        }
-                        citations_sent = True
+                        yield {"event": "citations", "data": json.dumps(citations, ensure_ascii=False)}
                     except json.JSONDecodeError:
                         pass
                     continue
@@ -252,31 +297,32 @@ async def chat_stream(request: ChatRequest):
                         verification = json.loads(token[len("__VERIFICATION__"):])
                         confidence_label = verification.get("confidence", confidence_label)
                         confidence_score = verification.get("confidence_score", confidence_score)
-                        yield {
-                            "event": "verification",
-                            "data": json.dumps(verification, ensure_ascii=False),
-                        }
+                        refused = verification.get("refused", refused)
+                        yield {"event": "verification", "data": json.dumps(verification, ensure_ascii=False)}
                     except json.JSONDecodeError:
                         pass
                     continue
 
                 full_answer += token
-                yield {
-                    "event": "token",
-                    "data": json.dumps({"token": token}, ensure_ascii=False),
-                }
+                yield {"event": "token", "data": json.dumps({"token": token}, ensure_ascii=False)}
 
             # Final event with metadata
-            yield {
-                "event": "done",
-                "data": json.dumps({
-                    "full_answer": full_answer,
-                    "citations": citations,
-                    "confidence": confidence_label,
-                    "confidence_score": confidence_score,
-                    "latency_ms": (time.time() - start_time) * 1000,
-                }, ensure_ascii=False),
-            }
+            yield {"event": "done", "data": json.dumps({
+                "full_answer": full_answer, "citations": citations,
+                "confidence": confidence_label, "confidence_score": confidence_score,
+                "latency_ms": (time.time() - start_time) * 1000, "cache_hit": False,
+            }, ensure_ascii=False)}
+
+            # Persist AFTER streaming completes (fail-open).
+            await run_in_threadpool(store.append_turn, request.session_id,
+                                    request.question, full_answer)
+            if cache is not None and full_answer and not refused:
+                reconstructed = RAGResponse(
+                    answer=full_answer, citations=citations, confidence=confidence_label,
+                    disclaimer="", latency_ms=(time.time() - start_time) * 1000,
+                    pipeline_used="stream", confidence_score=confidence_score, refused=refused,
+                )
+                await run_in_threadpool(cache.set, condensed, DEFAULT_COLLECTION_NAME, reconstructed)
 
         return EventSourceResponse(event_generator())
 

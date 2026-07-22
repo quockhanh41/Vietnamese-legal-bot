@@ -111,6 +111,15 @@ def test_stream_done_event_reports_unverified_for_naive(monkeypatch):
     fake.query_stream = lambda q: iter(["xin ", "chào"])
     monkeypatch.setattr(main, "get_naive_pipeline", lambda: fake)
 
+    # M4: chat_stream now reads session/cache/llm off app.state (normally set
+    # once in `lifespan`); this test calls the raw ASGI app without running
+    # lifespan, so stub them the same way tests/test_api_wiring.py does.
+    store = MagicMock(); store.get_history.return_value = []
+    cache = MagicMock(); cache.get.return_value = None
+    main.app.state.session_store = store
+    main.app.state.semantic_cache = cache
+    main.app.state.llm = MagicMock()
+
     client = TestClient(main.app)
     resp = client.post("/api/chat/stream", json={"question": "hi", "use_adaptive": False})
     assert resp.status_code == 200
