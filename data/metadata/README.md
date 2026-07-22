@@ -58,3 +58,10 @@ Lưu trữ **mạng lưới liên kết (Knowledge Graph)** của toàn bộ h�
   - `relationship`: Loại quan hệ (thường là `REFERENCES`).
   - `ref_type`: `internal` (trích dẫn trong cùng 1 luật) hoặc `external` (tham chiếu luật khác).
   - `context`: Trích đoạn văn bản gốc chứa câu tham chiếu đó.
+
+## Runtime source of truth (M5)
+
+`store.db` (committed) is the authoritative metadata for the deployed 600-doc
+corpus. The `*.json` files are a stale 100-doc M1 snapshot kept only as the
+auto-seed fallback for environments without `store.db`; they are NOT loaded when
+`store.db` is present (auto-seed is skipped when the `documents` table is non-empty).

@@ -13,7 +13,6 @@ venv/
 data/raw/
 data/processed/
 data/ingest_progress/
-data/metadata/store.db
 data/benchmarks/*
 !data/benchmarks/zalo
 data/benchmarks/zalo/*
