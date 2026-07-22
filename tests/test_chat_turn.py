@@ -37,6 +37,7 @@ def test_cache_hit_skips_pipeline():
     assert out.response.answer == "cached"
     pipeline.query.assert_not_called()
     cache.set.assert_not_called()
+    store.append_turn.assert_called_once_with("s1", "q", "cached")
 
 
 def test_condenses_with_history_before_pipeline():
@@ -50,6 +51,7 @@ def test_condenses_with_history_before_pipeline():
 
     assert out.condensed_question == "Tội cướp giật tài sản bị phạt thế nào?"
     pipeline.query.assert_called_once_with("Tội cướp giật tài sản bị phạt thế nào?")
+    store.append_turn.assert_called_once_with("s1", "vậy còn cướp giật?", "x")
 
 
 def test_no_cache_object_is_ok():
