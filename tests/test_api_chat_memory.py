@@ -1,3 +1,4 @@
+import json
 from unittest.mock import MagicMock
 
 import src.api.main as main
@@ -52,3 +53,14 @@ def test_replay_events_shape():
     events = main._replay_events(r, start_time=0.0)
     kinds = [e["event"] for e in events]
     assert kinds == ["citations", "token", "verification", "done"]
+
+
+def test_replay_events_forwards_refused():
+    r = RAGResponse(
+        answer="Xin lỗi, tôi không thể trả lời.", citations=[], confidence="low",
+        disclaimer="", latency_ms=1.0, pipeline_used="simple", refused=True,
+    )
+    events = main._replay_events(r, start_time=0.0)
+    by_event = {e["event"]: json.loads(e["data"]) for e in events}
+    assert by_event["verification"]["refused"] is True
+    assert by_event["done"]["refused"] is True

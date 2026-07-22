@@ -54,6 +54,23 @@ def test_condenses_with_history_before_pipeline():
     store.append_turn.assert_called_once_with("s1", "vậy còn cướp giật?", "x")
 
 
+def test_cache_miss_refused_response_is_not_cached():
+    store = MagicMock(); store.get_history.return_value = []
+    cache = MagicMock(); cache.get.return_value = None
+    refused_resp = RAGResponse(
+        answer="Xin lỗi, tôi không thể trả lời.", citations=[], confidence="low",
+        disclaimer="", latency_ms=1.0, pipeline_used="simple", refused=True,
+    )
+    pipeline = MagicMock(); pipeline.query.return_value = refused_resp
+
+    out = run_chat_turn(pipeline, store, cache, MagicMock(), "col", "s1", "q")
+
+    assert out.response is refused_resp
+    assert out.cache_hit is False
+    cache.set.assert_not_called()
+    store.append_turn.assert_called_once_with("s1", "q", refused_resp.answer)
+
+
 def test_no_cache_object_is_ok():
     store = MagicMock(); store.get_history.return_value = []
     pipeline = MagicMock(); pipeline.query.return_value = _resp("hi")

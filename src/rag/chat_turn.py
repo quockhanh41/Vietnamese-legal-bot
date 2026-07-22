@@ -28,7 +28,7 @@ def run_chat_turn(pipeline, store, cache, llm, collection: str,
     cache_hit = response is not None
     if response is None:
         response = pipeline.query(condensed)
-        if cache:
+        if cache and not response.refused:
             cache.set(condensed, collection, response)
 
     store.append_turn(session_id, question, response.answer)

@@ -168,12 +168,14 @@ def _replay_events(resp: RAGResponse, start_time: float):
                    "data": json.dumps({"token": resp.answer}, ensure_ascii=False)})
     events.append({"event": "verification",
                    "data": json.dumps({"confidence": resp.confidence,
-                                       "confidence_score": resp.confidence_score},
+                                       "confidence_score": resp.confidence_score,
+                                       "refused": resp.refused},
                                       ensure_ascii=False)})
     events.append({"event": "done",
                    "data": json.dumps({
                        "full_answer": resp.answer, "citations": resp.citations,
                        "confidence": resp.confidence, "confidence_score": resp.confidence_score,
+                       "refused": resp.refused,
                        "latency_ms": (time.time() - start_time) * 1000, "cache_hit": True,
                    }, ensure_ascii=False)})
     return events
