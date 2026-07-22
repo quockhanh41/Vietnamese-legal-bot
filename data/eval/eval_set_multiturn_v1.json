@@ -1,0 +1,146 @@
+[
+  {
+    "id": "mt-hinhsu-01",
+    "legal_sector": "hinh_su",
+    "turns": [
+      {
+        "question": "Tội cướp tài sản được quy định như thế nào trong Bộ luật Hình sự 2015?",
+        "expected_articles": [{"doc_id": 296661, "article": "Điều 168"}]
+      },
+      {
+        "question": "Vậy còn tội lừa đảo chiếm đoạt tài sản thì sao?",
+        "expected_articles": [{"doc_id": 296661, "article": "Điều 174"}]
+      },
+      {
+        "question": "Còn tội trộm cắp tài sản thì thế nào?",
+        "expected_articles": [{"doc_id": 296661, "article": "Điều 173"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-dansu-01",
+    "legal_sector": "dan_su",
+    "turns": [
+      {
+        "question": "Vay tiền không có lãi mà đến hạn không trả thì bên vay có phải chịu lãi không theo Bộ luật Dân sự 2015?",
+        "expected_articles": [{"doc_id": 296215, "article": "Điều 466"}]
+      },
+      {
+        "question": "Thế còn chậm trả tiền theo hợp đồng thì bên vi phạm phải chịu hậu quả gì?",
+        "expected_articles": [{"doc_id": 296215, "article": "Điều 357"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-datdai-01",
+    "legal_sector": "dat_dai",
+    "turns": [
+      {
+        "question": "Đất nông nghiệp có được chuyển sang đất ở không theo Luật Đất đai 2024?",
+        "expected_articles": [{"doc_id": 523642, "article": "Điều 121"}]
+      },
+      {
+        "question": "Vậy một cá nhân trực tiếp sản xuất nông nghiệp thì được Nhà nước giao tối đa bao nhiêu đất?",
+        "expected_articles": [{"doc_id": 523642, "article": "Điều 176"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-doanhnghiep-01",
+    "legal_sector": "doanh_nghiep",
+    "turns": [
+      {
+        "question": "Công ty trách nhiệm hữu hạn hai thành viên trở lên được định nghĩa thế nào theo Luật Doanh nghiệp 2020?",
+        "expected_articles": [{"doc_id": 427301, "article": "Điều 46"}]
+      },
+      {
+        "question": "Vậy còn công ty cổ phần thì sao?",
+        "expected_articles": [{"doc_id": 427301, "article": "Điều 111"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-laodong-01",
+    "legal_sector": "lao_dong",
+    "turns": [
+      {
+        "question": "Trả lương cho lao động nam và lao động nữ làm cùng một công việc có phải bằng nhau không theo Bộ luật Lao động 2019?",
+        "expected_articles": [{"doc_id": 333670, "article": "Điều 90"}]
+      },
+      {
+        "question": "Thế lao động nữ mang thai đến tháng thứ 7 có bị bắt làm việc ban đêm không?",
+        "expected_articles": [{"doc_id": 333670, "article": "Điều 137"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-hngd-01",
+    "legal_sector": "hngd",
+    "turns": [
+      {
+        "question": "Người nhận con nuôi phải đáp ứng những điều kiện gì theo Luật Nuôi con nuôi 2010?",
+        "expected_articles": [{"doc_id": 108082, "article": "Điều 14"}]
+      },
+      {
+        "question": "Vậy còn đứa trẻ thì bao nhiêu tuổi mới được nhận làm con nuôi?",
+        "expected_articles": [{"doc_id": 108082, "article": "Điều 8"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-ttahinhsu-01",
+    "legal_sector": "tố tụng hình sự",
+    "turns": [
+      {
+        "question": "Thời hạn điều tra vụ án hình sự là bao lâu theo Bộ luật Tố tụng hình sự 2015?",
+        "expected_articles": [{"doc_id": 296884, "article": "Điều 172"}]
+      },
+      {
+        "question": "Vậy khi nào thì cơ quan điều tra được tạm đình chỉ điều tra vụ án?",
+        "expected_articles": [{"doc_id": 296884, "article": "Điều 229"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-datdai-02",
+    "legal_sector": "dat_dai",
+    "turns": [
+      {
+        "question": "Nhà nước được thu hồi đất vì mục đích quốc phòng, an ninh trong những trường hợp nào theo Luật Đất đai 2024?",
+        "expected_articles": [{"doc_id": 523642, "article": "Điều 78"}]
+      },
+      {
+        "question": "Thế còn tranh chấp đất đai giữa hàng xóm thì có bắt buộc hòa giải ở UBND cấp xã không?",
+        "expected_articles": [{"doc_id": 523642, "article": "Điều 235"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-doanhnghiep-02",
+    "legal_sector": "doanh_nghiep",
+    "turns": [
+      {
+        "question": "Doanh nghiệp tư nhân có tư cách pháp nhân không theo Luật Doanh nghiệp 2020?",
+        "expected_articles": [{"doc_id": 427301, "article": "Điều 188"}]
+      },
+      {
+        "question": "Vậy thành viên góp vốn vào công ty TNHH hai thành viên trở lên phải góp đủ trong thời hạn bao lâu?",
+        "expected_articles": [{"doc_id": 427301, "article": "Điều 47"}]
+      }
+    ]
+  },
+  {
+    "id": "mt-laodong-02",
+    "legal_sector": "lao_dong",
+    "turns": [
+      {
+        "question": "Điều 169 Bộ luật Lao động 2019 quy định về vấn đề gì?",
+        "expected_articles": [{"doc_id": 333670, "article": "Điều 169"}]
+      },
+      {
+        "question": "Vậy còn Điều 125 thì liệt kê những trường hợp nào?",
+        "expected_articles": [{"doc_id": 333670, "article": "Điều 125"}]
+      }
+    ]
+  }
+]

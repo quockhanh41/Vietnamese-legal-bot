@@ -65,6 +65,7 @@ CRIMINAL_SET = "data/eval/eval_set_criminal_v1.json"
 GENERAL_SET = "data/eval/eval_set_general_v1.json"
 SECTORS_SET = "data/eval/eval_set_sectors_v2.json"  # M2.7 — v1 + Thông tư questions
 MULTIHOP_SET = "data/eval/eval_set_multihop_v1.json"  # M3.5 — cross-ref expansion cohort
+MULTITURN_SET = "data/eval/eval_set_multiturn_v1.json"  # M4.4 — multi-turn condensation cohort
 CORPUS_PARQUET = "data/raw/corpus_600docs.parquet"  # M2.7 — doc_id -> sector, for leakage@k
 REPORT_DIR = "data/eval_reports"
 
@@ -272,6 +273,52 @@ def run_multihop(questions: List[Dict], pipeline) -> Dict:
         "mean_recall_before": round(sum(r["recall_before"] for r in rows) / n, 4),
         "mean_recall_after": round(sum(r["recall_after"] for r in rows) / n, 4),
         "mean_n_expanded": round(sum(r["n_expanded"] for r in rows) / n, 4),
+        "rows": rows,
+    }
+
+
+def run_multiturn(scenarios, vector_store, embedder, llm) -> Dict:
+    """M4.4: multi-turn condensation eval. For each scenario, thread history
+    turn-by-turn, condense each follow-up (turn index >= 1) with prior turns,
+    and score recall@5 of the CONDENSED query vs expected_articles. History
+    uses prior questions only (answer="") — deterministic, zero generation.
+    A follow-up passes at recall@5 >= 0.5; gate = >=80% of follow-ups pass."""
+    from src.eval.metrics import recall_at_k
+    from src.rag.condense import condense_query
+
+    citation_lookup = CitationLookup(vector_store)
+    rows = []
+    for s in scenarios:
+        history = []
+        for idx, turn in enumerate(s["turns"]):
+            question = turn["question"]
+            if idx == 0:
+                condensed = question
+            else:
+                condensed = condense_query(history, question, llm)
+                hits, _route, _parsed = retrieve_routed(
+                    condensed, vector_store, embedder, citation_lookup, fill_top_k=FETCH_K)
+                hit_dicts = [_result_to_dict(r) for r in hits]
+                recall = recall_at_k(hit_dicts, turn["expected_articles"], 5, lenient=True)
+                rows.append({
+                    "scenario_id": s["id"],
+                    "legal_sector": s.get("legal_sector"),
+                    "turn_index": idx,
+                    "question": question,
+                    "condensed": condensed,
+                    "expected_articles": turn["expected_articles"],
+                    "recall@5": round(recall, 4),
+                    "passed": recall >= 0.5,
+                })
+            history.append({"question": question, "answer": ""})
+
+    n = len(rows) or 1
+    passed = sum(1 for r in rows if r["passed"])
+    return {
+        "n_scenarios": len(scenarios),
+        "n_followups": len(rows),
+        "followup_pass_rate": round(passed / n, 4),
+        "mean_recall": round(sum(r["recall@5"] for r in rows) / n, 4),
         "rows": rows,
     }
 
@@ -599,9 +646,12 @@ def run_retry(retry_report: str, sleep_s: float):
                    "set/collection lấy từ config của report — bỏ qua --set/--collection.")
 @click.option("--multihop", is_flag=True, default=False,
               help="Chạy đo referenced-article recall before/after cross-ref expansion (M3.5).")
+@click.option("--multiturn", is_flag=True, default=False,
+              help="M4.4: multi-turn condensation eval (recall@5 on condensed follow-ups)")
 def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float,
          collection: str, embedder_type: str, embed_model: Optional[str],
-         reranker_model: Optional[str], retry_report: Optional[str], multihop: bool):
+         reranker_model: Optional[str], retry_report: Optional[str], multihop: bool,
+         multiturn: bool):
     if retry_report:
         run_retry(retry_report, sleep_s)
         return
@@ -631,6 +681,28 @@ def main(set_name: str, limit: Optional[int], answers: bool, sleep_s: float,
         report = {"config": config, "multihop": multihop_result}
         path = write_report(report, suffix="multihop")
         click.echo(f"\n💾 Multihop report saved: {path}")
+        return
+
+    if multiturn:
+        with open(MULTITURN_SET, encoding="utf-8") as f:
+            scenarios = json.load(f)
+        click.echo(f"📊 Multiturn eval set: {MULTITURN_SET} ({len(scenarios)} scenarios)")
+
+        vector_store = LegalVectorStore(collection_name=collection)
+        embedder = build_embedder(embedder_type, embed_model, device="cpu")
+        llm = LLMGateway()
+
+        config = {
+            "collection": collection,
+            "tier": "multiturn",
+            "embedder": embedder_type,
+            "embed_model": embed_model,
+            "generated_at_utc": datetime.now(timezone.utc).isoformat(),
+        }
+        mt = run_multiturn(scenarios, vector_store, embedder, llm)
+        report = {"config": config, "multiturn": mt}
+        write_report(report, suffix="multiturn")
+        click.echo(json.dumps({k: v for k, v in mt.items() if k != "rows"}, ensure_ascii=False, indent=2))
         return
 
     questions = load_questions(set_name, limit)
