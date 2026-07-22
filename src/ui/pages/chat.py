@@ -198,9 +198,11 @@ def render_chat_page():
                 display_text, _ = _split_related_questions(response_data["answer"])
                 st.markdown(_highlight_legal_refs(display_text))
 
-            # Surface degraded quota-exhaustion notice as a friendly warning
+            # Surface degraded quota-exhaustion as a short banner. The notice text
+            # is already shown as the answer bubble (both stream + non-stream render
+            # it), so the banner explains it rather than repeating it in full.
             if is_degraded(response_data):
-                st.warning(response_data.get("answer"))
+                st.warning("⚠️ Phản hồi tạm thời: hệ thống đang quá tải hạn mức miễn phí.")
 
             # Render citations/confidence/warnings for THIS turn immediately —
             # the history loop above already ran before this message existed
@@ -262,6 +264,7 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
     latency_ms = 0
     pipeline_used = "naive"
     cache_hit = False
+    degraded = False
 
     try:
         with requests.post(
@@ -316,6 +319,7 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
                         confidence_score = data.get("confidence_score", confidence_score)
                         latency_ms = data.get("latency_ms", 0)
                         cache_hit = data.get("cache_hit", False)
+                        degraded = data.get("degraded", False)
 
                         # Clean thinking tags from final answer
                         full_answer = re.sub(r'<think>[\s\S]*?</think>', '', full_answer, flags=re.IGNORECASE)
@@ -344,6 +348,7 @@ def _stream_response(question: str, use_adaptive: bool) -> dict:
             "latency_ms": latency_ms,
             "pipeline_used": pipeline_used,
             "cache_hit": cache_hit,
+            "degraded": degraded,
         }
     except Exception as e:
         error_msg = f"Lỗi streaming: {e}"

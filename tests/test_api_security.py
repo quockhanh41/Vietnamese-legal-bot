@@ -75,3 +75,18 @@ def test_rate_limit_falls_back_to_ip_without_session(monkeypatch):
     main.rate_limit_session(_req("1.2.3.4"), main.ChatRequest(question="q"))
     with pytest.raises(HTTPException):
         main.rate_limit_session(_req("1.2.3.4"), main.ChatRequest(question="q"))
+
+
+def test_rate_limit_sweeps_idle_buckets_past_cap(monkeypatch):
+    import time
+    from collections import deque
+    monkeypatch.setattr(main, "RATE_LIMIT", 30)
+    monkeypatch.setattr(main, "_RATE_MAX_KEYS", 3)
+    main._rate_buckets.clear()
+    stale = time.time() - main._RATE_WINDOW - 10
+    for i in range(5):  # 5 idle sessions, all outside the window → leaked deques
+        main._rate_buckets[f"idle-{i}"] = deque([stale])
+    # A fresh request past the cap triggers the sweep of stale buckets.
+    main.rate_limit_session(_req(), main.ChatRequest(question="q", session_id="live"))
+    assert "live" in main._rate_buckets
+    assert not any(k.startswith("idle-") for k in main._rate_buckets)

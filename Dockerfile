@@ -31,6 +31,8 @@ RUN python -c "from FlagEmbedding import BGEM3FlagModel, FlagReranker; \
     FlagReranker('AITeamVN/Vietnamese_Reranker', use_fp16=True)" || echo "model pre-fetch skipped"
 RUN python -c "from sentence_transformers import SentenceTransformer; \
     SentenceTransformer('AITeamVN/Vietnamese_Embedding')" || echo "embedder pre-fetch skipped"
+RUN python -c "from transformers import pipeline; \
+    pipeline('text-classification', model='MoritzLaurer/mDeBERTa-v3-base-mnli-xnli', device=-1)" || echo "NLI pre-fetch skipped"
 COPY src/ ./src/
 COPY scripts/ ./scripts/
 COPY data/metadata/store.db ./data/metadata/store.db

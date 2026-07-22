@@ -138,6 +138,7 @@ def require_admin(x_admin_key: Optional[str] = Header(None)):
 
 RATE_LIMIT = int(os.getenv("RATE_LIMIT", "30"))  # requests per minute per session
 _RATE_WINDOW = 60.0
+_RATE_MAX_KEYS = 10_000  # sweep idle buckets past this so distinct session_ids don't leak
 _rate_buckets: dict = defaultdict(deque)  # key -> deque[timestamp]
 
 
@@ -147,6 +148,12 @@ def rate_limit_session(http_request: Request, request: ChatRequest):
     by construction (pure in-memory; a restart resets buckets)."""
     key = request.session_id or (http_request.client.host if http_request.client else "anon")
     now = time.time()
+    # Bound memory: idle sessions never revisited would each leave an empty deque
+    # behind. Once the dict grows past the cap, drop buckets whose newest timestamp
+    # is outside the window (fail-open — worst case resets a stale session's count).
+    if len(_rate_buckets) > _RATE_MAX_KEYS:
+        for k in [k for k, b in _rate_buckets.items() if not b or now - b[-1] > _RATE_WINDOW]:
+            del _rate_buckets[k]
     bucket = _rate_buckets[key]
     while bucket and now - bucket[0] > _RATE_WINDOW:
         bucket.popleft()

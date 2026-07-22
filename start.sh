@@ -11,4 +11,4 @@ streamlit run src/ui/app.py --server.port 8501 --server.address 0.0.0.0 &
 UI_PID=$!
 
 trap 'kill "$API_PID" "$UI_PID" 2>/dev/null || true' EXIT
-wait -n "$API_PID" "$UI_PID"   # bash>=4.3 (python:3.11-slim ships bash 5.x)
+wait -n "$API_PID" "$UI_PID"   # PID-arg form needs bash>=5.1 (python:3.11-slim ships bash 5.x)
