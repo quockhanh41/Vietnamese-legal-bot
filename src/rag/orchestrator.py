@@ -63,6 +63,8 @@ CROSS_REF_HOPS = 1
 CROSS_REF_MAX_EXPANDED = 4
 CROSS_REF_SCROLL_CAP = 1
 
+RERANK_MAX_K = int(os.getenv("RERANK_MAX_K", "15"))  # M5: rerank candidate-pool cap (CPU P95 knob)
+
 @dataclass
 class RAGResponse:
     """Structured response from the RAG pipeline."""
@@ -657,7 +659,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         annotations = self._annotate_phase2(results)
         results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
 
-        top_k = self._dynamic_top_k(results, min_k=5, max_k=15)
+        top_k = self._dynamic_top_k(results, min_k=5, max_k=RERANK_MAX_K)
         results = results[:top_k]
 
         # Re-rank (if available)
