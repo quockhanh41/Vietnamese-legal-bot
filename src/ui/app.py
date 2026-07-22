@@ -32,15 +32,24 @@ st.sidebar.divider()
 
 # System status
 st.sidebar.subheader("System Status")
+API_BASE = os.environ.get("API_URL", "http://localhost:8000")
 try:
     import httpx
-    resp = httpx.get("http://localhost:8000/health", timeout=2)
-    if resp.status_code == 200:
-        st.sidebar.success("🟢 Backend Online")
+    health_ok = httpx.get(f"{API_BASE}/health", timeout=2).status_code == 200
+    ready_ok = False
+    if health_ok:
+        rj = httpx.get(f"{API_BASE}/ready", timeout=2).json()
+        ready_ok = bool(rj.get("ready"))
+    from src.ui.pages.chat import backend_state
+    state = backend_state(ready_ok, health_ok)
+    if state == "ready":
+        st.sidebar.success("🟢 Backend sẵn sàng")
+    elif state == "warming":
+        st.sidebar.warning("🟡 Đang khởi động (cold start ~1–2 phút, đang nạp model)")
     else:
-        st.sidebar.warning("🟡 Backend Unstable")
+        st.sidebar.error("🔴 Backend offline")
 except Exception:
-    st.sidebar.error("🔴 Backend Offline")
+    st.sidebar.error("🔴 Backend offline")
 
 st.sidebar.caption("API: http://localhost:8000")
 st.sidebar.caption("Model: Qwen 3 32B (Groq)")

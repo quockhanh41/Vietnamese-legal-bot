@@ -15,6 +15,19 @@ import requests
 API_BASE = os.environ.get("API_URL", "http://localhost:8000")
 
 
+def backend_state(ready_ok: bool, health_ok: bool) -> str:
+    """Three-state backend status for the UI: ready > warming (cold start,
+    models loading) > offline."""
+    if ready_ok:
+        return "ready"
+    return "warming" if health_ok else "offline"
+
+
+def is_degraded(data: dict) -> bool:
+    """True when the backend returned a graceful quota-exhaustion notice."""
+    return bool(data.get("degraded"))
+
+
 def _highlight_legal_refs(text: str) -> str:
     """Bôi đậm các marker trích khối [n] trong câu trả lời.
 
@@ -163,6 +176,18 @@ def render_chat_page():
 
         # Get bot response
         with st.chat_message("assistant"):
+            # Gate on readiness: if models are still loading, block the query
+            # instead of letting it hang for 30s and return a timeout error.
+            try:
+                import httpx
+                rj = httpx.get(f"{API_BASE}/ready", timeout=2).json()
+            except Exception:
+                rj = {"ready": False}
+            if not rj.get("ready"):
+                st.warning("Hệ thống đang khởi động (cold start ~1–2 phút). "
+                           "Vui lòng chờ đến khi trạng thái chuyển 🟢 rồi hỏi lại.")
+                st.stop()
+
             if use_streaming:
                 response_data = _stream_response(question, use_adaptive)
             else:
@@ -172,6 +197,10 @@ def render_chat_page():
                 # the answer only appears after the next rerun.
                 display_text, _ = _split_related_questions(response_data["answer"])
                 st.markdown(_highlight_legal_refs(display_text))
+
+            # Surface degraded quota-exhaustion notice as a friendly warning
+            if is_degraded(response_data):
+                st.warning(response_data.get("answer"))
 
             # Render citations/confidence/warnings for THIS turn immediately —
             # the history loop above already ran before this message existed

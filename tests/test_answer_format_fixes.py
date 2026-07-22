@@ -220,12 +220,22 @@ def test_non_streaming_renders_answer_immediately(monkeypatch):
     """Non-streaming path must display the answer in the SAME run — before
     this fix it was only visible after the next rerun (via history replay)."""
     from streamlit.testing.v1 import AppTest
+    from unittest.mock import MagicMock
 
     monkeypatch.setattr(
         chat, "_get_response",
         lambda q, a: {"answer": "NỘI DUNG TRẢ LỜI KIỂM CHỨNG", "citations": [],
                       "confidence": "unverified", "confidence_score": 0.0},
     )
+    # M5: monkeypatch httpx so the /ready gate doesn't block this test
+    import httpx
+    _real_get = httpx.get
+    def _fake_get(url, **kwargs):
+        if "/ready" in str(url):
+            m = MagicMock(); m.json.return_value = {"ready": True}; return m
+        return _real_get(url, **kwargs)
+    monkeypatch.setattr(httpx, "get", _fake_get)
+
     at = AppTest.from_function(_page_script)
     at.run()
     # checkbox[0] = Adaptive RAG, checkbox[1] = Streaming (default True)
