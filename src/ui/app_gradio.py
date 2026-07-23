@@ -32,54 +32,65 @@ from src.ui.gradio_helpers import (
 QUOTA_MSG = ("Bạn đã dùng hết lượt dùng thử miễn phí hôm nay trên hạ tầng "
              "ZeroGPU. Vui lòng quay lại vào ngày mai!")
 
-# --- Module-scope light singletons ---
+# --- Module-scope singletons: loaded ONCE, device="cuda" eagerly. ---
+# `import spaces` above monkey-patches torch.cuda so this works with no
+# physical GPU attached at import time -- weights get "packed" to disk and
+# streamed into real VRAM on the first @spaces.GPU call below. This is HF's
+# documented ZeroGPU pattern (references/zerogpu.md): "Load models at module
+# scope... Do NOT lazy-load inside @spaces.GPU -- deferring it puts tens of
+# seconds of checkpoint I/O + dtype cast + GPU move inside every cold
+# request." A prior revision of this file moved loading into a lazy
+# get_pipeline() called from inside handle_turn; that violated the rule
+# above (cold requests paid full model-load time out of the GPU duration
+# budget) and raced on its module-level globals under ZeroGPU's
+# concurrent-by-default handlers ("No mutable global state"). Reverted.
 vector_store = LegalVectorStore(collection_name=DEFAULT_COLLECTION_NAME)
+embedder = build_embedder("mixed", "AITeamVN/Vietnamese_Embedding", device="cuda")
+reranker = FlagReranker("AITeamVN/Vietnamese_Reranker", use_fp16=True, device="cuda")
 llm = LLMGateway()
 metadata_store = MetadataStore()
 citation_lookup = CitationLookup(vector_store)
 
-# Heavy models lazily initialized inside @spaces.GPU context to guarantee
-# clean CUDA initialization under ZeroGPU runtime.
-_embedder = None
-_reranker = None
-_semantic_cache = None
-_pipeline = None
+
+def _embed_query(text: str):
+    out = embedder.encode([text], return_dense=True, return_sparse=False)
+    return out["dense_vecs"][0].tolist()
 
 
-def get_pipeline():
-    global _embedder, _reranker, _semantic_cache, _pipeline
-    if _pipeline is None:
-        _embedder = build_embedder("mixed", "AITeamVN/Vietnamese_Embedding", device="cuda")
-        _reranker = FlagReranker("AITeamVN/Vietnamese_Reranker", use_fp16=True, device="cuda")
+semantic_cache = SemanticCache.from_env(_embed_query)
 
-        def _embed_query(text: str):
-            out = _embedder.encode([text], return_dense=True, return_sparse=False)
-            return out["dense_vecs"][0].tolist()
-
-        _semantic_cache = SemanticCache.from_env(_embed_query)
-        _pipeline = AdaptiveRAGPipeline(
-            vector_store=vector_store,
-            embedder=_embedder,
-            llm_gateway=llm,
-            metadata_store=metadata_store,
-            reranker_model="AITeamVN/Vietnamese_Reranker",
-            reranker=_reranker,
-            citation_lookup=citation_lookup,
-        )
-    return _pipeline, _semantic_cache
+pipeline = AdaptiveRAGPipeline(
+    vector_store=vector_store,
+    embedder=embedder,
+    llm_gateway=llm,
+    metadata_store=metadata_store,
+    reranker_model="AITeamVN/Vietnamese_Reranker",
+    reranker=reranker,
+    citation_lookup=citation_lookup,
+)
 
 
-@spaces.GPU(duration=90)
+# duration is a placeholder pending re-measurement (the account's daily
+# ZeroGPU quota is exhausted as of 2026-07-23 -- see Task 9 in
+# docs/superpowers/plans/2026-07-23-m5-gradio-zerogpu-deploy.md). Do NOT
+# read the previous duration=90 as a real measurement: the live Space
+# rejected a request with "135s requested vs. 98s left", which doesn't
+# match 90 and was never reconciled. Re-measure via gradio_client once
+# quota resets and set duration = round(measured_max * 1.4) for real.
+@spaces.GPU(duration=180)
 def handle_turn(message, history):
     """One @spaces.GPU allocation per turn -- covers condense, the semantic-
     cache lookup (needs an embedding), and on a miss: retrieve/rerank/
-    generate(Groq, network)/NLI verify."""
-    pipeline_obj, cache_obj = get_pipeline()
-
+    generate(Groq, network)/NLI verify. Note: is_quota_exceeded() below can
+    only catch a quota failure raised *during* this function's execution.
+    ZeroGPU's "quota exceeded" pre-flight check (requested vs remaining)
+    happens at the @spaces.GPU call boundary, before this function body
+    starts -- that case surfaces as Gradio's own default error UI, not
+    QUOTA_MSG, and there is no way to intercept it from inside the handler."""
     turns = history_to_turns(history)
     condensed = condense_query(turns, message, llm)
 
-    cached = cache_obj.get(condensed, DEFAULT_COLLECTION_NAME) if cache_obj else None
+    cached = semantic_cache.get(condensed, DEFAULT_COLLECTION_NAME) if semantic_cache else None
     if cached is not None:
         yield cached.answer + format_citations_markdown(cached.citations)
         return
@@ -88,7 +99,7 @@ def handle_turn(message, history):
     citations = []
     refused = False
     try:
-        for token in pipeline_obj.query_stream(condensed):
+        for token in pipeline.query_stream(condensed):
             if token.startswith("__CITATIONS__"):
                 try:
                     citations = json.loads(token[len("__CITATIONS__"):])
@@ -116,12 +127,12 @@ def handle_turn(message, history):
 
     yield full_answer + format_citations_markdown(citations)
 
-    if cache_obj is not None and full_answer and not refused:
+    if semantic_cache is not None and full_answer and not refused:
         response = RAGResponse(
             answer=full_answer, citations=citations, confidence="unverified",
             disclaimer="", latency_ms=0, pipeline_used="gradio", refused=refused,
         )
-        cache_obj.set(condensed, DEFAULT_COLLECTION_NAME, response)
+        semantic_cache.set(condensed, DEFAULT_COLLECTION_NAME, response)
 
 
 demo = gr.ChatInterface(

@@ -163,15 +163,15 @@ Baseline 6 docs = 1.670 chunks (~278 chunks/doc — đây là **worst case** vì
 
 | # | Việc | Chi tiết |
 |---|---|---|
-| 5.1 | **[✅ HOÀN THÀNH 2026-07-23]** **Security Phase 1**: CORS whitelist, rate limit per-IP (sliding window 10 req/min), API key đơn giản cho admin endpoints (`/api/pipeline/enrich`...), không nhận secret từ client | Gap #5 roadmap |
+| 5.1 | **[✅ HOÀN THÀNH]** **Security Phase 1**: CORS whitelist, per-session rate limit (sliding window, key = `session_id`, fallback IP, mặc định 30 req/phút — env `RATE_LIMIT`), API key đơn giản cho admin endpoints (`/api/pipeline/enrich`...), không nhận secret từ client | Gap #5 roadmap |
 | 5.2 | **[✅ HOÀN THÀNH 2026-07-23]** **Deploy HF Space (Gradio + ZeroGPU Pivot)**: Pivot từ Docker Space (yêu cầu paid plan) sang **Gradio Space + `zero-a10g` hardware ($0 free tier)** (`src/ui/app_gradio.py`). FastAPI + Streamlit Docker stack giữ nguyên cho self-hosted path (`README_HF.md`). Spec [`docs/superpowers/specs/2026-07-23-m5-gradio-zerogpu-pivot-design.md`](superpowers/specs/2026-07-23-m5-gradio-zerogpu-pivot-design.md), plan [`docs/superpowers/plans/2026-07-23-m5-gradio-zerogpu-deploy.md`](superpowers/plans/2026-07-23-m5-gradio-zerogpu-deploy.md). | Thay Docker Space paid plan |
-| 5.3 | **[✅ HOÀN THÀNH 2026-07-23]** **Chịu đựng free tier**: `@spaces.GPU(duration=90)` tuned từ đo thực tế (~10-25s warm turn), thông báo cold start trên UI; graceful degradation với `DEGRADED_MSG` và `QUOTA_MSG` tiếng Việt riêng biệt, không crash UI. | mới |
+| 5.3 | **[⚠️ MỘT PHẦN, 2026-07-23]** **Chịu đựng free tier**: `@spaces.GPU(duration=180)` — placeholder, CHƯA đo thật (tài khoản hết quota ZeroGPU ngày 2026-07-23, xem Task 9 plan pivot); thông báo cold start trên UI; graceful degradation với `DEGRADED_MSG` (LLM exhaustion) và `QUOTA_MSG` (ZeroGPU quota, chỉ bắt được lỗi giữa chừng — lỗi "quota exceeded" pre-flight của ZeroGPU không chặn được từ trong handler, sẽ hiện UI lỗi mặc định của Gradio). | mới |
 | 5.4 | **[✅ HOÀN THÀNH 2026-07-23]** **Smoke/liveness CI**: Job `liveness` trong `.github/workflows/smoke.yml` ping Gradio Space root URL public; script `deploy_space.py` tự động push secret + sync repo. | mới |
 
-**✅ M5 HOÀN THÀNH (2026-07-23)** — Live public Space: `https://huggingface.co/spaces/quockhanh41/vietnamese-legal-bot`
-- **Gate 1: URL public sống** ✅ (HTTP 200, `hardware: zero-a10g`).
-- **Gate 2: Turn latency đo thật** ✅ (Warm ~10-25s, cold start ~70s). `@spaces.GPU(duration=90)` tuned.
-- **Gate 3: CI liveness & security** ✅ (Smoke YAML updated, không secret nào leak vào repo/logs).
+**⚠️ M5 MỘT PHẦN HOÀN THÀNH (2026-07-23)** — Live public Space: `https://huggingface.co/spaces/quockhanh41/vietnamese-legal-bot`
+- **Gate 1: URL public sống** ✅ (verify qua `HfApi().get_space_runtime()`: `stage=RUNNING`, `hardware=zero-a10g`).
+- **Gate 2: Turn latency đo thật** ❌ CHƯA — một claim "Warm ~10-25s, cold start ~70s" trước đó ở đây là SAI (không có phép đo thật nào), đã gỡ. Tài khoản hết quota ZeroGPU miễn phí trong ngày lúc verify (lỗi thật: "135s requested vs. 98s left") nên chưa đo lại được; cần đo thật qua `gradio_client` khi quota reset (xem Task 9 plan pivot) trước khi ghi số vào README.
+- **Gate 3: CI liveness & security** ✅ (Smoke YAML updated, không secret nào leak vào repo/logs, `.venv/bin/python -m pytest -q` 522 passed).
 - Artefact: `README_GRADIO.md`, `scripts/deploy_space.py`, live Space URL trên README.
 
 ### M6 — Mặt tiền portfolio

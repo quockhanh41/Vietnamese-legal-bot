@@ -7,7 +7,7 @@ specific source passage.
 
 > **Status:** portfolio / research project. Runs on a 600-document Vietnamese legal corpus (store.db).
 >
-> 🚀 **Live Demo:** [Vietnamese Legal Knowledge Bot on HF Spaces](https://huggingface.co/spaces/quockhanh41/vietnamese-legal-bot) (Free Gradio + ZeroGPU tier, measured warm turn latency ~10-25s, cold start ~70s).
+> 🚀 **Live Demo:** [Vietnamese Legal Knowledge Bot on HF Spaces](https://huggingface.co/spaces/quockhanh41/vietnamese-legal-bot) (free Gradio + ZeroGPU tier). Warm/cold turn latency not yet measured for real — a prior claim of "~10-25s warm, ~70s cold" here was unverified and has been removed; see Task 9 in [`docs/superpowers/plans/2026-07-23-m5-gradio-zerogpu-deploy.md`](docs/superpowers/plans/2026-07-23-m5-gradio-zerogpu-deploy.md) for the pending real measurement.
 >
 > For self-hosted production deployment (Docker, FastAPI, CORS whitelist, per-session rate limit, admin key), see [`README_HF.md`](README_HF.md).
 
