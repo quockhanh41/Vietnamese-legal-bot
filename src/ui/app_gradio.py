@@ -32,50 +32,54 @@ from src.ui.gradio_helpers import (
 QUOTA_MSG = ("Bạn đã dùng hết lượt dùng thử miễn phí hôm nay trên hạ tầng "
              "ZeroGPU. Vui lòng quay lại vào ngày mai!")
 
-# --- Module-scope singletons: loaded ONCE, device="cuda" eagerly. ---
-# `import spaces` above monkey-patches torch.cuda so this works with no
-# physical GPU attached at import time -- weights get "packed" to disk and
-# streamed into real VRAM on the first @spaces.GPU call below. This is HF's
-# documented ZeroGPU pattern, not a bug (verified against references/
-# zerogpu.md -- see spec's "ZeroGPU boundary" section for the full trace).
+# --- Module-scope light singletons ---
 vector_store = LegalVectorStore(collection_name=DEFAULT_COLLECTION_NAME)
-embedder = build_embedder("mixed", "AITeamVN/Vietnamese_Embedding", device="cuda")
-reranker = FlagReranker("AITeamVN/Vietnamese_Reranker", use_fp16=True, device="cuda")
 llm = LLMGateway()
 metadata_store = MetadataStore()
 citation_lookup = CitationLookup(vector_store)
 
-
-def _embed_query(text: str):
-    out = embedder.encode([text], return_dense=True, return_sparse=False)
-    return out["dense_vecs"][0].tolist()
-
-
-semantic_cache = SemanticCache.from_env(_embed_query)
-
-pipeline = AdaptiveRAGPipeline(
-    vector_store=vector_store,
-    embedder=embedder,
-    llm_gateway=llm,
-    metadata_store=metadata_store,
-    reranker_model="AITeamVN/Vietnamese_Reranker",
-    reranker=reranker,
-    citation_lookup=citation_lookup,
-)
+# Heavy models lazily initialized inside @spaces.GPU context to guarantee
+# clean CUDA initialization under ZeroGPU runtime.
+_embedder = None
+_reranker = None
+_semantic_cache = None
+_pipeline = None
 
 
-@spaces.GPU(duration=180)
+def get_pipeline():
+    global _embedder, _reranker, _semantic_cache, _pipeline
+    if _pipeline is None:
+        _embedder = build_embedder("mixed", "AITeamVN/Vietnamese_Embedding", device="cuda")
+        _reranker = FlagReranker("AITeamVN/Vietnamese_Reranker", use_fp16=True, device="cuda")
+
+        def _embed_query(text: str):
+            out = _embedder.encode([text], return_dense=True, return_sparse=False)
+            return out["dense_vecs"][0].tolist()
+
+        _semantic_cache = SemanticCache.from_env(_embed_query)
+        _pipeline = AdaptiveRAGPipeline(
+            vector_store=vector_store,
+            embedder=_embedder,
+            llm_gateway=llm,
+            metadata_store=metadata_store,
+            reranker_model="AITeamVN/Vietnamese_Reranker",
+            reranker=_reranker,
+            citation_lookup=citation_lookup,
+        )
+    return _pipeline, _semantic_cache
+
+
+@spaces.GPU(duration=90)
 def handle_turn(message, history):
     """One @spaces.GPU allocation per turn -- covers condense, the semantic-
     cache lookup (needs an embedding), and on a miss: retrieve/rerank/
-    generate(Groq, network)/NLI verify. Cache lookup is deliberately INSIDE
-    this boundary (see spec) so no model-touching call ever runs outside a
-    GPU allocation. duration=180 is a placeholder -- Task 9 measures real
-    warm latency via gradio_client and tunes this to measured_max * 1.4."""
+    generate(Groq, network)/NLI verify."""
+    pipeline_obj, cache_obj = get_pipeline()
+
     turns = history_to_turns(history)
     condensed = condense_query(turns, message, llm)
 
-    cached = semantic_cache.get(condensed, DEFAULT_COLLECTION_NAME) if semantic_cache else None
+    cached = cache_obj.get(condensed, DEFAULT_COLLECTION_NAME) if cache_obj else None
     if cached is not None:
         yield cached.answer + format_citations_markdown(cached.citations)
         return
@@ -84,7 +88,7 @@ def handle_turn(message, history):
     citations = []
     refused = False
     try:
-        for token in pipeline.query_stream(condensed):
+        for token in pipeline_obj.query_stream(condensed):
             if token.startswith("__CITATIONS__"):
                 try:
                     citations = json.loads(token[len("__CITATIONS__"):])
@@ -112,12 +116,12 @@ def handle_turn(message, history):
 
     yield full_answer + format_citations_markdown(citations)
 
-    if semantic_cache is not None and full_answer and not refused:
+    if cache_obj is not None and full_answer and not refused:
         response = RAGResponse(
             answer=full_answer, citations=citations, confidence="unverified",
             disclaimer="", latency_ms=0, pipeline_used="gradio", refused=refused,
         )
-        semantic_cache.set(condensed, DEFAULT_COLLECTION_NAME, response)
+        cache_obj.set(condensed, DEFAULT_COLLECTION_NAME, response)
 
 
 demo = gr.ChatInterface(
