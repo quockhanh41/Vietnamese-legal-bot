@@ -11,22 +11,30 @@ from dotenv import load_dotenv
 load_dotenv()
 
 import gradio as gr
+import pandas as pd
 from FlagEmbedding import FlagReranker
 
-from src.data.constants import DEFAULT_COLLECTION_NAME
+from src.data.constants import ALL_LEGAL_TYPES, DEFAULT_COLLECTION_NAME
 from src.data.metadata_store import MetadataStore
 from src.data.mixed_embedder import build_embedder
 from src.db.qdrant_client import LegalVectorStore
 from src.llm.gateway import LLMGateway
+from src.pipeline.retriever import EnhancedRetriever
 from src.rag.citation_lookup import CitationLookup
 from src.rag.condense import condense_query
 from src.rag.degraded import DEGRADED_MSG, is_exhaustion
 from src.rag.orchestrator import AdaptiveRAGPipeline, RAGResponse
 from src.rag.semantic_cache import SemanticCache
 from src.ui.gradio_helpers import (
+    document_choices,
     format_citations_markdown,
+    format_effective_laws,
+    format_system_info,
+    graph_type_counts,
     history_to_turns,
     is_quota_exceeded,
+    parse_effective_date,
+    rename_document_columns,
 )
 
 QUOTA_MSG = ("Bạn đã dùng hết lượt dùng thử miễn phí hôm nay trên hạ tầng "
@@ -50,6 +58,8 @@ reranker = FlagReranker("AITeamVN/Vietnamese_Reranker", use_fp16=True, device="c
 llm = LLMGateway()
 metadata_store = MetadataStore()
 citation_lookup = CitationLookup(vector_store)
+retriever = EnhancedRetriever(vector_store=vector_store, metadata_store=metadata_store,
+                               embedder=embedder)
 
 
 def _embed_query(text: str):
@@ -135,7 +145,7 @@ def handle_turn(message, history):
         semantic_cache.set(condensed, DEFAULT_COLLECTION_NAME, response)
 
 
-demo = gr.ChatInterface(
+chat_interface = gr.ChatInterface(
     fn=handle_turn,
     type="messages",
     title="Vietnamese Legal Knowledge Bot",
@@ -143,6 +153,96 @@ demo = gr.ChatInterface(
                  "Chạy trên HF ZeroGPU (free tier) -- lần hỏi đầu có thể chậm "
                  "(cold start nạp model)."),
 )
+
+
+def search_documents(legal_type: str, keyword: str):
+    """Documents tab search -- pure CPU/Qdrant call, no @spaces.GPU needed."""
+    lt = None if legal_type == "Tất cả" else legal_type
+    result = vector_store.list_documents(legal_type=lt, keyword=keyword or None,
+                                          page=1, page_size=50)
+    df = rename_document_columns(pd.DataFrame(result["documents"]))
+    return f"Tìm thấy {result['total']} văn bản", df
+
+
+def system_info_display():
+    info = vector_store.get_collection_info()
+    return format_system_info(LLMGateway.MODEL_CHAIN[0], info["name"], info["points_count"])
+
+
+def refresh_document_choices(keyword: str):
+    result = vector_store.list_documents(keyword=keyword or None, page=1, page_size=50)
+    return gr.update(choices=document_choices(result["documents"]))
+
+
+def effective_laws_display(at_date_str: str):
+    try:
+        at_date = parse_effective_date(at_date_str)
+    except ValueError:
+        return f"Định dạng ngày không hợp lệ: '{at_date_str}' (cần YYYY-MM-DD)"
+    laws = metadata_store.get_effective_laws(at_date)
+    return format_effective_laws(laws)
+
+
+def article_history_display(doc_id, article: str):
+    if not doc_id or not article:
+        return {"error": "Vui lòng chọn văn bản và nhập số điều."}
+    return retriever.get_article_history(int(doc_id), article)
+
+
+def graph_stats_display():
+    graph = metadata_store.get_graph()
+    counts = graph_type_counts(graph.get("nodes", []), graph.get("edges", []))
+    lines = [f"**Tổng số node:** {counts['nodes']} · **Tổng số edge:** {counts['edges']}", "",
+             "**Theo loại node:**"]
+    lines += [f"- {k}: {v}" for k, v in counts["node_types"].items()]
+    lines += ["", "**Theo loại quan hệ (edge):**"]
+    lines += [f"- {k}: {v}" for k, v in counts["edge_types"].items()]
+    return "\n".join(lines)
+
+
+with gr.Blocks(title="Vietnamese Legal Knowledge Bot") as demo:
+    with gr.Tabs():
+        with gr.Tab("💬 Chat"):
+            chat_interface.render()
+
+        with gr.Tab("📁 Documents"):
+            with gr.Row():
+                doc_legal_type = gr.Dropdown(["Tất cả"] + ALL_LEGAL_TYPES, value="Tất cả",
+                                              label="Loại văn bản")
+                doc_keyword = gr.Textbox(label="Từ khoá", placeholder="Nhập từ khoá tìm kiếm...")
+                doc_search_btn = gr.Button("🔍 Tìm kiếm")
+            doc_result_label = gr.Markdown()
+            doc_result_table = gr.Dataframe()
+            doc_search_btn.click(fn=search_documents, inputs=[doc_legal_type, doc_keyword],
+                                  outputs=[doc_result_label, doc_result_table])
+
+        with gr.Tab("📊 Thống kê"):
+            gr.Markdown(system_info_display())
+
+        with gr.Tab("🕸️ Đồ thị & Hiệu lực"):
+            gr.Markdown("### 📅 Luật có hiệu lực tại 1 ngày")
+            with gr.Row():
+                eff_date_box = gr.Textbox(label="Ngày (YYYY-MM-DD)", placeholder="2026-07-23")
+                eff_btn = gr.Button("🔍 Tra cứu hiệu lực")
+            eff_table = gr.Dataframe()
+            eff_btn.click(fn=effective_laws_display, inputs=[eff_date_box], outputs=[eff_table])
+
+            gr.Markdown("### 📜 Lịch sử sửa đổi 1 điều luật")
+            with gr.Row():
+                hist_keyword = gr.Textbox(label="Tìm văn bản theo từ khoá")
+                hist_search_btn = gr.Button("Tìm văn bản")
+            hist_doc_dropdown = gr.Dropdown(label="Chọn văn bản", choices=[])
+            hist_article_box = gr.Textbox(label="Số điều", placeholder="Điều 5")
+            hist_btn = gr.Button("🔍 Tra cứu lịch sử")
+            hist_result = gr.JSON()
+            hist_search_btn.click(fn=refresh_document_choices, inputs=[hist_keyword],
+                                   outputs=[hist_doc_dropdown])
+            hist_btn.click(fn=article_history_display,
+                           inputs=[hist_doc_dropdown, hist_article_box], outputs=[hist_result])
+
+            gr.Markdown("### 📊 Thống kê đồ thị trích dẫn chéo")
+            gr.Markdown(graph_stats_display())
+
 
 if __name__ == "__main__":
     demo.launch()
