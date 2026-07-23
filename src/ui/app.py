@@ -13,6 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "../.."))
 
 import streamlit as st
 
+from src.llm.gateway import LLMGateway
+
 st.set_page_config(
     page_title="Vietnamese Legal Knowledge Bot",
     page_icon="🏛️",
@@ -25,7 +27,7 @@ st.sidebar.title("🏛️ Vietnamese Legal Bot")
 
 page = st.sidebar.radio(
     "Điều hướng",
-    ["💬 Chat", "📁 Documents", "📊 Evaluation"],
+    ["💬 Chat", "📁 Documents", "🕸️ Đồ thị & Hiệu lực", "📊 Evaluation"],
 )
 
 st.sidebar.divider()
@@ -52,8 +54,9 @@ except Exception:
     st.sidebar.error("🔴 Backend offline")
 
 st.sidebar.caption("API: http://localhost:8000")
-st.sidebar.caption("Model: Qwen 3 32B (Groq)")
-st.sidebar.caption("Embedding: BGE-M3 (1024-dim)")
+st.sidebar.caption(f"Model: {LLMGateway.MODEL_CHAIN[0]} (auto-fallback)")
+st.sidebar.caption("Embedding: AITeamVN/Vietnamese_Embedding (dense) + BGE-M3 (sparse)")
+st.sidebar.caption("Reranker: AITeamVN/Vietnamese_Reranker")
 
 # --- Pages ---
 if page == "💬 Chat":
@@ -64,6 +67,10 @@ if page == "💬 Chat":
 elif page == "📁 Documents":
     from src.ui.pages.documents import render_documents_page
     render_documents_page()
+
+elif page == "🕸️ Đồ thị & Hiệu lực":
+    from src.ui.pages.graph import render_graph_page
+    render_graph_page()
 
 elif page == "📊 Evaluation":
     from src.ui.pages.eval_dashboard import render_eval_page
