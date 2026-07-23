@@ -1,0 +1,17 @@
+# HF Space (Gradio + ZeroGPU) runtime deps -- M5 pivot.
+# Do NOT list gradio/spaces/huggingface_hub: HF preinstalls and manages
+# these; pinning them breaks the ZeroGPU runtime. Do NOT list torch: HF
+# preinstalls a ZeroGPU-compatible CUDA build on zero-a10g hardware.
+FlagEmbedding>=1.2.0
+langchain-text-splitters>=0.3.0
+litellm>=1.50.0
+networkx>=3.0
+numpy
+qdrant-client>=1.11.0
+sentence-transformers>=3.0.0
+python-dotenv>=1.0.0
+redis>=5.0.0,<6.0.0
+langfuse>=3.0.0,<4.0.0
+opentelemetry-api>=1.24.0
+opentelemetry-sdk>=1.24.0
+opentelemetry-exporter-otlp>=1.24.0
