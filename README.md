@@ -5,9 +5,11 @@ routing, a multi-signal confidence gate that *refuses rather than hallucinate*, 
 hallucination verification, and grounded `[n]` citations that tie every claim back to a
 specific source passage.
 
-> **Status:** portfolio / research project. Runs on a 6-document Vietnamese criminal-law
-> corpus (1,670 chunks). The architecture is built to scale; see
-> [`docs/`](docs/) for the production roadmap and the corpus-scaling checklist.
+> **Status:** portfolio / research project. Runs on a 600-document Vietnamese legal corpus (store.db).
+>
+> 🚀 **Live Demo:** [Vietnamese Legal Knowledge Bot on HF Spaces](https://huggingface.co/spaces/quockhanh41/vietnamese-legal-bot) (Free Gradio + ZeroGPU tier, measured warm turn latency ~10-25s, cold start ~70s).
+>
+> For self-hosted production deployment (Docker, FastAPI, CORS whitelist, per-session rate limit, admin key), see [`README_HF.md`](README_HF.md).
 
 ---
 
