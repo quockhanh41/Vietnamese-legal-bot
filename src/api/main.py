@@ -91,11 +91,17 @@ async def lifespan(app: FastAPI):
     app.state.citation_lookup = CitationLookup(app.state.vector_store)
     app.state.session_store = SessionStore.from_env()
     app.state.semantic_cache = SemanticCache.from_env(_embed_query)
-    # Warm up the corpus cache and reranker model in the background so the server
-    # can start accepting connections immediately — both otherwise load on the
-    # first request (the reranker model load alone is ~60s on the complex route).
+    # Warm up the corpus cache, embedder, and reranker model in the background so
+    # the server can start accepting connections immediately — all three otherwise
+    # load on the first request (the reranker model load alone is ~60s on the
+    # complex route). The embedder warm-up matters especially: /ready only
+    # reports ready once app.state.embedder is set, and get_embedder() is
+    # otherwise only ever called from a real /api/chat(-stream) request — so
+    # without this task /ready can never become true on its own, and the UI
+    # (which gates sending a question on /ready) would wait forever.
     import asyncio
     asyncio.create_task(run_in_threadpool(app.state.citation_lookup.corpus_summary_compact))
+    asyncio.create_task(run_in_threadpool(get_embedder))
     asyncio.create_task(run_in_threadpool(get_reranker))
     yield
     # Shutdown
