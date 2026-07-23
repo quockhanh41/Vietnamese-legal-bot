@@ -33,6 +33,7 @@ from src.rag.condense import condense_query
 from src.rag.session_store import SessionStore
 from src.rag.semantic_cache import SemanticCache
 from src.rag.chat_turn import run_chat_turn
+from src.rag.degraded import DEGRADED_MSG, is_exhaustion as _is_exhaustion
 
 
 # --- Models ---
@@ -162,13 +163,6 @@ def rate_limit_session(http_request: Request, request: ChatRequest):
     bucket.append(now)
 
 
-DEGRADED_MSG = ("Xin lỗi, hệ thống đang quá tải hạn mức miễn phí. "
-                "Vui lòng thử lại sau ít phút.")
-
-
-def _is_exhaustion(e):
-    """True for the gateway's 'all providers exhausted' signal (gateway.py)."""
-    return isinstance(e, RuntimeError) and str(e).startswith("All models failed")
 
 
 
