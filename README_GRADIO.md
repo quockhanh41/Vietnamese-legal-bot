@@ -9,7 +9,7 @@ app_file: src/ui/app_gradio.py
 python_version: "3.12"
 startup_duration_timeout: 1h
 pinned: false
-short_description: Adaptive RAG tra cứu văn bản pháp luật Việt Nam (600 văn bản)
+short_description: Adaptive RAG tra cứu 600 văn bản pháp luật Việt Nam
 ---
 
 # Vietnamese Legal Knowledge Bot
