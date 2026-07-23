@@ -99,6 +99,10 @@ class LegalVectorStore:
     # metadata only, deliberately excludes chunk_text (that's the whole
     # point: O(docs) memory instead of O(chunks)).
     _DOC_INDEX_FIELDS = ["document_id", "document_title", "document_number", "legal_type", "sector"]
+    # Fields list_documents() projects — same O(docs)-not-O(chunks) idea as
+    # _DOC_INDEX_FIELDS above, scoped to the exact fields its dict builds.
+    _LIST_DOCUMENTS_FIELDS = ["document_id", "document_title", "legal_type", "issuance_date",
+                              "issuing_authority", "document_number", "url"]
 
     def __init__(
         self,
@@ -520,13 +524,25 @@ class LegalVectorStore:
         # Need enough to satisfy the page
         target = page * page_size * 3  # Fetch extra since we dedup
 
+        # Batch size is deliberately NOT derived from `target`: a legal_type
+        # filter can match far fewer distinct documents than chunks (e.g.
+        # "Luật" = 74 docs but 16,706 chunks, ~226 chunks/doc), so the loop
+        # below must scan every matching chunk before `offset` goes None —
+        # capping the batch at min(500, target) meant page_size=50 (target
+        # =150) scrolled 150 points/call, needing ~112 round-trips (~20s,
+        # measured) and blowing the UI's 10s timeout. limit=2000 (same order
+        # as get_document_index()) cuts that to ~9 round-trips. with_payload
+        # is projected to _LIST_DOCUMENTS_FIELDS instead of True for the same
+        # O(docs)-not-O(chunks) reason as get_document_index() (chunk_text is
+        # by far the largest payload field and unused here) — combined,
+        # ~2.5s measured for the same "Luật" filter, down from a 20s+ timeout.
         while len(documents) < target:
             points, offset = self.client.scroll(
                 collection_name=self.collection_name,
                 scroll_filter=query_filter,
-                limit=min(500, target),
+                limit=2000,
                 offset=offset,
-                with_payload=True,
+                with_payload=self._LIST_DOCUMENTS_FIELDS,
             )
             if not points:
                 break
