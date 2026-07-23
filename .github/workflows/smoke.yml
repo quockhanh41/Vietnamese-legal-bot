@@ -19,10 +19,10 @@ jobs:
   liveness:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping public Space
+      - name: Ping public Gradio Space
         run: |
           test -n "${{ secrets.PUBLIC_SPACE_URL }}" || { echo "PUBLIC_SPACE_URL unset"; exit 1; }
-          code=$(curl -s -o /dev/null -w "%{http_code}" -L "${{ secrets.PUBLIC_SPACE_URL }}/_stcore/health")
+          code=$(curl -s -o /dev/null -w "%{http_code}" -L "${{ secrets.PUBLIC_SPACE_URL }}")
           echo "liveness: $code"; test "$code" = "200"
 
   functional-smoke:
