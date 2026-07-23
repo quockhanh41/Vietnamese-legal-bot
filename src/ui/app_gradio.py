@@ -165,8 +165,17 @@ def search_documents(legal_type: str, keyword: str):
 
 
 def system_info_display():
-    info = vector_store.get_collection_info()
-    return format_system_info(LLMGateway.MODEL_CHAIN[0], info["name"], info["points_count"])
+    """Called eagerly at Blocks-construction time (see call site below) --
+    unlike the .click()-wired functions in this file, an exception here isn't
+    caught by Gradio's per-event error handling, it fails the whole module
+    import. get_collection_info() is a real Qdrant network round-trip, so a
+    transient outage here must not take down the entire Space (Chat included)
+    over an optional info panel."""
+    try:
+        info = vector_store.get_collection_info()
+        return format_system_info(LLMGateway.MODEL_CHAIN[0], info["name"], info["points_count"])
+    except Exception as e:
+        return f"Không lấy được thông tin hệ thống: {e}"
 
 
 def refresh_document_choices(keyword: str):
@@ -190,8 +199,14 @@ def article_history_display(doc_id, article: str):
 
 
 def graph_stats_display():
-    graph = metadata_store.get_graph()
-    counts = graph_type_counts(graph.get("nodes", []), graph.get("edges", []))
+    """Same eager-at-import call-site risk as system_info_display() above --
+    guarded the same way for consistency, even though get_graph() itself
+    currently tolerates an empty/missing graph row without raising."""
+    try:
+        graph = metadata_store.get_graph()
+        counts = graph_type_counts(graph.get("nodes", []), graph.get("edges", []))
+    except Exception as e:
+        return f"Không lấy được thống kê đồ thị: {e}"
     lines = [f"**Tổng số node:** {counts['nodes']} · **Tổng số edge:** {counts['edges']}", "",
              "**Theo loại node:**"]
     lines += [f"- {k}: {v}" for k, v in counts["node_types"].items()]
