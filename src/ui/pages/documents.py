@@ -41,7 +41,7 @@ def render_documents_page():
                 resp = requests.get(f"{API_BASE}/api/documents", params=params, timeout=10)
                 if resp.status_code == 200:
                     data = resp.json()
-                    st.success(f"Tìm thấy {data.get('total_documents', 0)} văn bản")
+                    st.success(f"Tìm thấy {data.get('total', 0)} văn bản")
 
                     if data.get("documents"):
                         df = pd.DataFrame(data["documents"])
@@ -54,7 +54,7 @@ def render_documents_page():
                 else:
                     st.error(f"Lỗi API: {resp.status_code}")
             except Exception as e:
-                st.warning(f"Chức năng đang được phát triển. {e}")
+                st.error(f"Không thể kết nối đến backend: {e}")
 
     # --- Stats ---
     st.divider()
