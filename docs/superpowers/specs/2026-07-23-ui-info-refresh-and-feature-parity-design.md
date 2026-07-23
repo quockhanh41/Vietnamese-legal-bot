@@ -39,6 +39,8 @@ Docker path), rà lại 2 UI phát hiện:
 | Documents/Đồ thị trên Gradio gọi thế nào | Gọi thẳng `vector_store`/`metadata_store` in-process (đã có sẵn ở module scope `app_gradio.py`) | Đúng pattern M5 pivot đã chọn (no HTTP hop); các thao tác này thuần CPU/SQLite/Qdrant — không cần `@spaces.GPU`, không tốn quota ZeroGPU. |
 | Trang mới ở Streamlit gọi thế nào | Qua HTTP tới FastAPI (`requests.get(f"{API_BASE}/api/...")`) | Đúng pattern hiện có của `chat.py`/`documents.py`/`eval_dashboard.py` — Streamlit luôn nói chuyện qua API, không import RAG modules trực tiếp. |
 | Trực quan hoá đồ thị | Không vẽ graph (không network-x-vis/d3) — chỉ bảng/text | YAGNI: không ai yêu cầu visualization, endpoint trả JSON phẳng là đủ để hiện bảng. |
+| Format tên model hiển thị | Hiện nguyên `LLMGateway.MODEL_CHAIN[0]` (vd `"groq/llama-3.3-70b-versatile"`), không map sang tên thân thiện | Thêm bảng map provider/model→tên đẹp tái tạo đúng lớp lỗi đang sửa (phải nhớ cập nhật map mỗi lần đổi model) — id gốc + caption rõ ràng đã đủ minh bạch cho project kỹ thuật. Đã cân nhắc theo góp ý review (`nhan-xet.md` mục B) và quyết định giữ nguyên. |
+| Chọn văn bản trong dropdown (Khối B / doc_id) | `format_func`/`(label, value)` tuple — không parse chuỗi hiển thị | Tránh lớp lỗi "tách int từ string label" hoàn toàn thay vì tách rồi validate; API sẵn có của cả Streamlit lẫn Gradio hỗ trợ trực tiếp. |
 
 ## Kiến trúc / luồng dữ liệu
 
@@ -107,11 +109,15 @@ gọi `requests.get`, `st.spinner`/`st.error` khi lỗi). 3 khối, độc lập
 
 **Khối B — Lịch sử sửa đổi 1 điều luật**
 - `st.text_input` từ khoá tên văn bản → `GET /api/documents?keyword=...` để
-  lấy danh sách `document_id`/`title` khớp (tái dùng logic có sẵn ở
-  `documents.py`, không gọi thẳng vector store) → `st.selectbox` chọn 1 văn
-  bản → `st.text_input` số điều (placeholder "Điều 5") → nút tra cứu →
-  `GET /api/article/history?doc_id=...&article=...` → hiện kết quả JSON dạng
-  bảng/markdown (timeline hiệu lực + danh sách luật sửa đổi nếu có).
+  lấy danh sách văn bản khớp (tái dùng logic có sẵn ở `documents.py`, không
+  gọi thẳng vector store) → `st.selectbox(options=documents,
+  format_func=lambda d: d["title"])` — **truyền thẳng list dict làm options,
+  không parse chuỗi hiển thị**; giá trị trả về là dict gốc nên đọc
+  `selected["document_id"]` trực tiếp, không cần tách số ra khỏi label kiểu
+  `"101 - Luật Đất đai 2024"` → `st.text_input` số điều (placeholder "Điều
+  5") → nút tra cứu → `GET /api/article/history?doc_id=...&article=...` →
+  hiện kết quả JSON dạng bảng/markdown (timeline hiệu lực + danh sách luật
+  sửa đổi nếu có).
 - Lỗi `{"error": "Document not found", ...}` từ endpoint → `st.warning`.
 
 **Khối C — Thống kê đồ thị trích dẫn chéo**
@@ -139,8 +145,17 @@ def search_documents(legal_type, keyword):
     lt = None if legal_type == "Tất cả" else legal_type
     result = vector_store.list_documents(legal_type=lt, keyword=keyword or None,
                                           page=1, page_size=50)
-    df = pd.DataFrame(result["documents"])
+    df = pd.DataFrame(result["documents"]).rename(columns={
+        "title": "Tên văn bản", "legal_type": "Loại văn bản",
+        "issuance_date": "Ngày ban hành",
+    })
     return f"Tìm thấy {result['total']} văn bản", df
+
+def document_choices(keyword):
+    """(label, value) tuples cho gr.Dropdown — value = document_id gốc (int),
+    không parse chuỗi hiển thị (cùng lý do st.selectbox format_func ở graph.py)."""
+    result = vector_store.list_documents(keyword=keyword or None, page=1, page_size=50)
+    return [(d["title"], d["document_id"]) for d in result["documents"]]
 
 def system_info():
     info = vector_store.get_collection_info()
@@ -152,14 +167,20 @@ def system_info():
     )
 
 def effective_laws(at_date_str):
-    """at_date_str: chuỗi YYYY-MM-DD từ gr.Textbox (mặc định hôm nay); rỗng → None (metadata_store dùng date.today())."""
-    at_date = date.fromisoformat(at_date_str) if at_date_str else None
+    """at_date_str: chuỗi YYYY-MM-DD từ gr.Textbox tự do (mặc định hôm nay).
+    Không dùng st.date_input tương đương ở Gradio -> input có thể sai định
+    dạng, khác Streamlit (calendar widget luôn hợp lệ) nên cần try/except ở
+    đây mà graph.py phía Streamlit không cần."""
+    try:
+        at_date = date.fromisoformat(at_date_str) if at_date_str else None
+    except ValueError:
+        return f"Định dạng ngày không hợp lệ: '{at_date_str}' (cần YYYY-MM-DD)"
     laws = metadata_store.get_effective_laws(at_date)
     return pd.DataFrame([{"Luật": l["law_name"], "Hiệu lực từ": l["effective_date"]} for l in laws])
 
 def article_history(doc_id, article):
-    retriever = EnhancedRetriever(vector_store=vector_store, metadata_store=metadata_store,
-                                   embedder=embedder)
+    """doc_id: int, lấy từ gr.Dropdown value (xem document_choices) — không
+    phải parse từ label hiển thị."""
     return retriever.get_article_history(int(doc_id), article)  # dict → gr.JSON
 
 def graph_stats():
@@ -175,13 +196,17 @@ with gr.Blocks(title="Vietnamese Legal Knowledge Bot") as demo:
         with gr.Tab("📊 Thống kê"):
             gr.Markdown(system_info())
         with gr.Tab("🕸️ Đồ thị & Hiệu lực"):
-            # 3 khối tương tự graph.py, dùng effective_laws/article_history/graph_stats
+            # 3 khối tương tự graph.py: effective_laws(textbox ngày);
+            # gr.Dropdown(choices=document_choices(keyword)) + article textbox -> article_history;
+            # graph_stats() hiển thị 1 lần khi mở tab (không cần input)
 ```
 
-Import thêm ở đầu file: `pandas as pd`, `from src.data.constants import
-ALL_LEGAL_TYPES`, `from src.pipeline.retriever import EnhancedRetriever`.
-`EnhancedRetriever` khởi tạo 1 lần ở module scope (như `pipeline`/
-`citation_lookup` hiện có) thay vì trong hàm, tránh tạo lại mỗi lần bấm nút.
+Import thêm ở đầu file: `pandas as pd`, `from datetime import date`,
+`from src.data.constants import ALL_LEGAL_TYPES`, `from src.pipeline.retriever
+import EnhancedRetriever`. `retriever = EnhancedRetriever(vector_store=
+vector_store, metadata_store=metadata_store, embedder=embedder)` khởi tạo
+**1 lần ở module scope**, cạnh `pipeline`/`citation_lookup` hiện có (dòng
+47-70) — không tạo lại đối tượng mỗi lần bấm nút.
 
 **Ràng buộc quan trọng (giữ nguyên từ M5 pivot):** không thêm bất kỳ lệnh gọi
 model/GPU nào ngoài `handle_turn` đã có `@spaces.GPU`. Mọi hàm Documents/
@@ -199,6 +224,12 @@ Thống kê/Đồ thị chỉ chạm `vector_store`, `metadata_store`, `retrieve
   vì để Gradio hiện traceback thô cho người dùng cuối.
 - `article_history`: input rỗng hoặc doc_id không tồn tại → hiển thị
   `{"error": ...}` đã có sẵn từ `get_article_history`, không cần logic mới.
+- `effective_laws` (chỉ nhánh Gradio): `gr.Textbox` tự do cho ngày có thể
+  nhận chuỗi sai định dạng (vd "abc") → `date.fromisoformat` raise
+  `ValueError` → bọc try/except, trả thông báo lỗi rõ ràng thay vì crash.
+  **Không áp dụng cho Streamlit** — `st.date_input` là calendar widget,
+  luôn trả về `datetime.date` hợp lệ, không có đường nào để chuỗi sai định
+  dạng lọt tới `.isoformat()`.
 
 ## Testing
 
