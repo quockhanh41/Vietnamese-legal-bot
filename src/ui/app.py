@@ -35,6 +35,7 @@ st.sidebar.divider()
 # System status
 st.sidebar.subheader("System Status")
 API_BASE = os.environ.get("API_URL", "http://localhost:8000")
+state = "offline"
 try:
     import httpx
     health_ok = httpx.get(f"{API_BASE}/health", timeout=2).status_code == 200
@@ -51,6 +52,7 @@ try:
     else:
         st.sidebar.error("🔴 Backend offline")
 except Exception:
+    state = "offline"
     st.sidebar.error("🔴 Backend offline")
 
 st.sidebar.caption("API: http://localhost:8000")
@@ -75,3 +77,9 @@ elif page == "🕸️ Đồ thị & Hiệu lực":
 elif page == "📊 Evaluation":
     from src.ui.pages.eval_dashboard import render_eval_page
     render_eval_page()
+
+# --- Auto Rerun if Backend Not Ready ---
+if state != "ready" and st.runtime.exists():
+    import time
+    time.sleep(3)
+    st.rerun()
