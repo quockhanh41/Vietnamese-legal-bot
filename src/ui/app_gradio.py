@@ -243,8 +243,11 @@ with gr.Blocks(title="Vietnamese Legal Knowledge Bot") as demo:
             eff_btn.click(fn=effective_laws_display, inputs=[eff_date_box], outputs=[eff_table])
 
             gr.Markdown("### 📜 Lịch sử sửa đổi 1 điều luật")
+            gr.Markdown("Ví dụ: gõ **Luật đất đai** để tìm văn bản, chọn *Luật đất đai 2013*, "
+                        "nhập **Điều 5** rồi bấm Tra cứu lịch sử.")
             with gr.Row():
-                hist_keyword = gr.Textbox(label="Tìm văn bản theo từ khoá")
+                hist_keyword = gr.Textbox(label="Tìm văn bản theo từ khoá",
+                                           placeholder="VD: Luật đất đai")
                 hist_search_btn = gr.Button("Tìm văn bản")
             hist_doc_dropdown = gr.Dropdown(label="Chọn văn bản", choices=[])
             hist_article_box = gr.Textbox(label="Số điều", placeholder="Điều 5")

@@ -46,7 +46,10 @@ def _render_effective_laws():
 
 def _render_article_history():
     st.subheader("📜 Lịch sử sửa đổi 1 điều luật")
-    keyword = st.text_input("Tìm văn bản theo từ khoá", key="graph_doc_keyword")
+    st.caption("Ví dụ: gõ **Luật đất đai** để tìm văn bản, chọn *Luật đất đai 2013*, "
+               "nhập **Điều 5** rồi bấm Tra cứu lịch sử.")
+    keyword = st.text_input("Tìm văn bản theo từ khoá", placeholder="VD: Luật đất đai",
+                             key="graph_doc_keyword")
     documents = []
     if keyword:
         try:
