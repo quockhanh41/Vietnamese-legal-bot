@@ -8,6 +8,8 @@ import streamlit as st
 import requests
 import pandas as pd
 
+from src.llm.gateway import LLMGateway
+
 API_BASE = os.environ.get("API_URL", "http://localhost:8000")
 
 
@@ -144,7 +146,7 @@ def render_eval_page():
             cols = st.columns(4)
             cols[0].metric("📄 Indexed Chunks", f"{stats.get('indexed_documents', 0):,}")
             cols[1].metric("🗂️ Collection", stats.get("collection_name", "N/A"))
-            cols[2].metric("🔍 LLM Model", "Qwen 3 32B (Groq)")
+            cols[2].metric("🔍 LLM Model", LLMGateway.MODEL_CHAIN[0])
             cols[3].metric("⚡ API Status", "🟢 Online")
         else:
             st.warning("Backend API not reachable")
@@ -171,12 +173,12 @@ def render_eval_page():
     # --- Pipeline Performance ---
     st.divider()
     st.subheader("📈 Pipeline Performance (estimated)")
-    st.caption("Based on local testing with Qwen 3 32B on Groq.")
+    st.caption(f"Based on local testing with {LLMGateway.MODEL_CHAIN[0]}.")
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Avg Latency", "3.0s", delta="embed+search+llm")
     col2.metric("Search Latency", "~0.1s", delta="Qdrant hybrid RRF")
-    col3.metric("LLM Latency", "~2.8s", delta="Qwen 3 32B streaming")
+    col3.metric("LLM Latency", "~2.8s", delta=f"{LLMGateway.MODEL_CHAIN[0]} streaming")
     col4.metric("Cost/Query", "$0.00", delta="Groq free tier")
 
     # --- Evaluation Setup Guide ---
