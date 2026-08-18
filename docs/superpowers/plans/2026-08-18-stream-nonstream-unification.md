@@ -207,11 +207,17 @@ def capture_post_process(monkeypatch):
 
 
 @pytest.mark.parametrize("route", ["simple", "medium", "complex"])
-def test_both_paths_use_same_dynamic_top_k_bounds(route, force_route, spy_top_k):
+def test_both_paths_use_same_dynamic_top_k_bounds(
+    route, force_route, spy_top_k, capture_post_process,
+):
     """LOCK (green before and after the refactor).
 
     A divergence here is exactly how RERANK_MAX_K ended up honoured on one path
     and hardcoded on the other.
+
+    `capture_post_process` is required even though this test ignores what it
+    records: it replaces the real _post_process, which would otherwise build a
+    HallucinationVerifier and reach for the Tier-2 NLI model over the network.
     """
     force_route(route)
 
@@ -741,10 +747,15 @@ git commit -m "refactor(rag): extract _route generator shared by query and query
 Thêm vào `tests/test_stream_nonstream_parity.py`:
 
 ```python
-def test_rerank_max_k_honoured_on_both_paths(force_route, spy_top_k, monkeypatch):
+def test_rerank_max_k_honoured_on_both_paths(
+    force_route, spy_top_k, capture_post_process, monkeypatch,
+):
     """RERANK_MAX_K exists to cap the reranker pool on HF Space CPU (M2.6 measured
     P95 7.58s @pool 100). It used to be read at exactly one of four call sites —
     and not on the streaming path the UI actually runs (audit 2026-08-18, #3).
+
+    `capture_post_process` keeps the test off the network — see the note on
+    test_both_paths_use_same_dynamic_top_k_bounds in Task 1.
     """
     monkeypatch.setattr(orch, "RERANK_MAX_K", 8)
     force_route("medium")
