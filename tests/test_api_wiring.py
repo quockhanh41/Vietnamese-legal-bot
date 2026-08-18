@@ -51,3 +51,49 @@ def test_chat_request_defaults_to_adaptive():
     import src.api.main as main
 
     assert main.ChatRequest(question="q").use_adaptive is True
+
+
+def test_chat_defaults_route_to_adaptive_pipeline(monkeypatch):
+    """The Pydantic default and the dispatch must agree: a request that omits
+    use_adaptive has to reach the adaptive pipeline, not just carry True.
+    This verifies the default path through src/api/main.py:292 dispatch."""
+    from src.rag.orchestrator import RAGResponse
+
+    def _resp(answer="A"):
+        return RAGResponse(
+            answer=answer, citations=[], confidence="high", disclaimer="",
+            latency_ms=1.0, pipeline_used="adaptive",
+        )
+
+    # Mock both pipelines to track which one is called.
+    adaptive_called = {"called": False}
+    naive_called = {"called": False}
+
+    def mock_adaptive():
+        adaptive_called["called"] = True
+        pipe = MagicMock()
+        pipe.query.return_value = _resp("from_adaptive")
+        return pipe
+
+    def mock_naive():
+        naive_called["called"] = True
+        pipe = MagicMock()
+        pipe.query.return_value = _resp("from_naive")
+        return pipe
+
+    monkeypatch.setattr(main, "get_adaptive_pipeline", mock_adaptive)
+    monkeypatch.setattr(main, "get_naive_pipeline", mock_naive)
+
+    # Set up the state as in other tests.
+    main.app.state.session_store = MagicMock()
+    main.app.state.session_store.get_history.return_value = []
+    main.app.state.semantic_cache = MagicMock()
+    main.app.state.semantic_cache.get.return_value = None
+    main.app.state.llm = MagicMock()
+
+    # Call with use_adaptive OMITTED — should default to True and route to adaptive.
+    out = main.chat(main.ChatRequest(question="q", session_id="s1"))
+
+    assert adaptive_called["called"] is True, "adaptive pipeline was not called"
+    assert naive_called["called"] is False, "naive pipeline was incorrectly called"
+    assert out.answer == "from_adaptive"
