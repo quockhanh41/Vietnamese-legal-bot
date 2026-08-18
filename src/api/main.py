@@ -33,14 +33,18 @@ from src.rag.condense import condense_query
 from src.rag.session_store import SessionStore
 from src.rag.semantic_cache import SemanticCache
 from src.rag.chat_turn import run_chat_turn
-from src.rag.degraded import DEGRADED_MSG, is_exhaustion as _is_exhaustion
+from src.rag.degraded import (DEGRADED_MSG, INTERRUPTED_MSG, StreamInterrupted,
+                              is_exhaustion as _is_exhaustion)
 
 
 # --- Models ---
 class ChatRequest(BaseModel):
     question: str = Field(..., max_length=2000)
     session_id: Optional[str] = None
-    use_adaptive: bool = False
+    # Adaptive is the default: it is the only pipeline with the scope gate,
+    # confidence gate and verifier, and the only one every eval number in
+    # docs/ was measured against. Naive stays reachable for A/B comparison.
+    use_adaptive: bool = True
     expand_context: bool = False  # Phase 2: cross-reference expansion
     expansion_hops: int = 1
 
@@ -383,6 +387,21 @@ async def chat_stream(request: ChatRequest):
 
                     full_answer += token
                     yield {"event": "token", "data": json.dumps({"token": token}, ensure_ascii=False)}
+            except StreamInterrupted:
+                # NOT `degraded: True` — that flag renders in the UI as a
+                # quota-exhaustion notice (see src/ui/pages/chat.py
+                # is_degraded), a different, retryable-later failure. A
+                # dropped stream is retry-now; INTERRUPTED_MSG already reaches
+                # the answer bubble via `full_answer`, so no separate flag is
+                # needed here.
+                yield {"event": "token",
+                       "data": json.dumps({"token": INTERRUPTED_MSG}, ensure_ascii=False)}
+                yield {"event": "done", "data": json.dumps({
+                    "full_answer": full_answer + INTERRUPTED_MSG, "citations": citations,
+                    "confidence": "low", "refused": False,
+                    "latency_ms": (time.time() - start_time) * 1000, "cache_hit": False,
+                }, ensure_ascii=False)}
+                return  # do NOT persist/cache a truncated answer
             except Exception as e:
                 if _is_exhaustion(e):
                     yield {"event": "token",

@@ -11,6 +11,8 @@ from typing import Optional, Generator, Tuple, Union, List
 import re
 import litellm
 
+from src.rag.degraded import StreamInterrupted
+
 # Configure LiteLLM
 litellm.drop_params = True
 litellm.telemetry = False
@@ -272,6 +274,12 @@ class LLMGateway:
 
         Yields:
             Text tokens one at a time
+
+        Raises:
+            RuntimeError: every model in the chain failed ("All models failed…"),
+                recognised by src.rag.degraded.is_exhaustion.
+            StreamInterrupted: failure occurred AFTER tokens already reached
+                the client — not retryable, must not be cached or persisted.
         """
         messages = []
         if system_prompt:
@@ -288,6 +296,7 @@ class LLMGateway:
         models_to_try = self._usable_models(models_to_try)
 
         # Try each model; within a model, rotate API keys on rate-limit
+        last_error = None
         for attempt_model in models_to_try:
             model_kwargs = {}
             if reasoning_effort is not None and self._is_thinking_model(attempt_model):
@@ -313,13 +322,17 @@ class LLMGateway:
                             yield chunk.choices[0].delta.content
                     return
                 except Exception as e:
+                    last_error = e
                     if started:
-                        # Mid-stream failure: tokens already reached the client —
-                        # retrying would duplicate output. Surface and stop.
-                        yield "\n\n[Lỗi] Kết nối bị gián đoạn giữa chừng. Vui lòng thử lại."
-                        return
+                        # Mid-stream failure: tokens already reached the client,
+                        # so retrying would duplicate output. Caller must not
+                        # cache or persist the partial answer.
+                        raise StreamInterrupted(str(e)) from e
                     if self._is_rate_limit(e):
                         continue  # rotate to the next key for the same model
                     break  # non-rate-limit failure — try the next model
 
-        yield "[Lỗi] Không thể kết nối đến LLM. Vui lòng thử lại sau."
+        # Signal exhaustion the SAME way _generate_impl does: src/rag/degraded.py
+        # matches on this message prefix, and both API front-ends already have an
+        # is_exhaustion branch waiting for it.
+        raise RuntimeError(f"All models failed. Last error: {last_error}")

@@ -22,7 +22,8 @@ from src.llm.gateway import LLMGateway
 from src.pipeline.retriever import EnhancedRetriever
 from src.rag.citation_lookup import CitationLookup
 from src.rag.condense import condense_query
-from src.rag.degraded import DEGRADED_MSG, is_exhaustion
+from src.rag.degraded import (DEGRADED_MSG, INTERRUPTED_MSG, StreamInterrupted,
+                              is_exhaustion)
 from src.rag.orchestrator import AdaptiveRAGPipeline, RAGResponse
 from src.rag.semantic_cache import SemanticCache
 from src.ui.gradio_helpers import (
@@ -126,6 +127,9 @@ def handle_turn(message, history):
                 continue
             full_answer += token
             yield full_answer
+    except StreamInterrupted:
+        yield full_answer + INTERRUPTED_MSG
+        return
     except Exception as e:
         if is_exhaustion(e):
             yield DEGRADED_MSG

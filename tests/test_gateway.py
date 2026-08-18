@@ -124,3 +124,58 @@ class TestThinkingModels:
         # to OpenRouter for it would 400 every fallback request.
         assert gateway._is_thinking_model(
             "openrouter/qwen/qwen3-next-80b-a3b-instruct:free") is False
+
+
+class TestStreamExhaustion:
+    """generate_stream used to signal total failure by YIELDING an error string.
+    Because nothing raised, src/api/main.py never ran its is_exhaustion branch:
+    the error text was streamed as if it were an answer, then written to session
+    history and the semantic cache (audit 2026-08-18, #2).
+    """
+
+    def test_raises_when_every_model_fails(self, gateway, monkeypatch):
+        import litellm
+
+        def always_fail(**kwargs):
+            raise RuntimeError("provider down")
+
+        monkeypatch.setattr(litellm, "completion", always_fail)
+
+        with pytest.raises(RuntimeError) as excinfo:
+            list(gateway.generate_stream(prompt="hi"))
+
+        assert str(excinfo.value).startswith("All models failed")
+
+    def test_raised_error_is_recognised_as_exhaustion(self, gateway, monkeypatch):
+        """The message prefix is load-bearing: src/rag/degraded.py matches on it."""
+        import litellm
+
+        from src.rag.degraded import is_exhaustion
+
+        def rate_limited(**kwargs):
+            raise RuntimeError("429 rate limit exceeded")
+
+        monkeypatch.setattr(litellm, "completion", rate_limited)
+
+        try:
+            list(gateway.generate_stream(prompt="hi"))
+        except RuntimeError as e:
+            assert is_exhaustion(e) is True
+        else:
+            pytest.fail("generate_stream did not raise")
+
+    def test_never_yields_an_error_string(self, gateway, monkeypatch):
+        """Regression guard: an error must not be able to masquerade as tokens."""
+        import litellm
+
+        def always_fail(**kwargs):
+            raise RuntimeError("provider down")
+
+        monkeypatch.setattr(litellm, "completion", always_fail)
+
+        collected = []
+        with pytest.raises(RuntimeError):
+            for token in gateway.generate_stream(prompt="hi"):
+                collected.append(token)
+
+        assert collected == []

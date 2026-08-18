@@ -65,9 +65,12 @@ def main():
         captured = {}
         orig_post_process = pipeline._post_process
 
-        def spy_post_process(question, answer, results, context, rerank_scores=None, _orig=orig_post_process):
+        def spy_post_process(question, answer, results, context, citations=None,
+                             rerank_scores=None, generation_model=None,
+                             _orig=orig_post_process):
             conf_result, ver_result, final_answer = _orig(
-                question, answer, results, context, rerank_scores=rerank_scores
+                question, answer, results, context, citations=citations,
+                rerank_scores=rerank_scores, generation_model=generation_model,
             )
             captured["results"] = results
             captured["rerank_scores"] = rerank_scores
