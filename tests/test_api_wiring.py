@@ -40,3 +40,14 @@ def test_default_collection_is_aiteamvn():
     from src.data.constants import DEFAULT_COLLECTION_NAME
 
     assert DEFAULT_COLLECTION_NAME == "luat_law_ctx_v4_aiteamvn"
+
+
+def test_chat_request_defaults_to_adaptive():
+    """The naive pipeline has no scope gate, no confidence gate, no verifier and
+    no reranker — none of the M0–M3 safety work. Defaulting to it meant every
+    published metric described a pipeline users were not running
+    (audit 2026-08-18, #1).
+    """
+    import src.api.main as main
+
+    assert main.ChatRequest(question="q").use_adaptive is True

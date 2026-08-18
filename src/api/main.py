@@ -41,7 +41,10 @@ from src.rag.degraded import (DEGRADED_MSG, INTERRUPTED_MSG, StreamInterrupted,
 class ChatRequest(BaseModel):
     question: str = Field(..., max_length=2000)
     session_id: Optional[str] = None
-    use_adaptive: bool = False
+    # Adaptive is the default: it is the only pipeline with the scope gate,
+    # confidence gate and verifier, and the only one every eval number in
+    # docs/ was measured against. Naive stays reachable for A/B comparison.
+    use_adaptive: bool = True
     expand_context: bool = False  # Phase 2: cross-reference expansion
     expansion_hops: int = 1
 

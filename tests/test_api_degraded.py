@@ -31,7 +31,7 @@ def test_chat_degraded_on_exhaustion(monkeypatch):
         raise RuntimeError("All models failed. Last error: 429 rate limit")
     monkeypatch.setattr(main, "run_chat_turn", boom)
 
-    out = main.chat(main.ChatRequest(question="q", session_id="s1"))
+    out = main.chat(main.ChatRequest(question="q", session_id="s1", use_adaptive=False))
     assert out.degraded is True
     assert out.refused is False
     assert "quá tải" in out.answer
@@ -48,7 +48,7 @@ def test_chat_non_exhaustion_still_500(monkeypatch):
     monkeypatch.setattr(main, "run_chat_turn", boom)
 
     with pytest.raises(HTTPException) as e:
-        main.chat(main.ChatRequest(question="q", session_id="s1"))
+        main.chat(main.ChatRequest(question="q", session_id="s1", use_adaptive=False))
     assert e.value.status_code == 500
 
 
@@ -70,7 +70,7 @@ def test_stream_degraded_on_exhaustion(monkeypatch):
     monkeypatch.setattr(main, "condense_query", lambda h, q, llm: q)
 
     client = TestClient(main.app)
-    r = client.post("/api/chat/stream", json={"question": "q", "session_id": "s1"})
+    r = client.post("/api/chat/stream", json={"question": "q", "session_id": "s1", "use_adaptive": False})
     assert r.status_code == 200
     assert "degraded" in r.text
     assert "quá tải" in r.text
@@ -97,7 +97,7 @@ def test_stream_interrupted_midway_is_not_cached(monkeypatch):
     monkeypatch.setattr(main, "condense_query", lambda h, q, llm: q)
 
     client = TestClient(main.app)
-    r = client.post("/api/chat/stream", json={"question": "q", "session_id": "s1"})
+    r = client.post("/api/chat/stream", json={"question": "q", "session_id": "s1", "use_adaptive": False})
 
     assert r.status_code == 200
     assert "gián đoạn" in r.text

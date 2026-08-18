@@ -113,7 +113,7 @@ def render_chat_page():
     # --- Sidebar Settings ---
     with st.sidebar:
         st.subheader("⚙️ Settings")
-        use_adaptive = st.checkbox("Adaptive RAG (v1.0+)", value=False,
+        use_adaptive = st.checkbox("Adaptive RAG (v1.0+)", value=True,
                                    help="Bật query routing: SIMPLE/MEDIUM/COMPLEX")
         use_streaming = st.checkbox("Streaming", value=True,
                                     help="Hiển thị câu trả lời từng token")

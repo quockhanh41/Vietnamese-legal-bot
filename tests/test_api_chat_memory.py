@@ -23,7 +23,7 @@ def test_chat_endpoint_returns_cache_and_condensed_fields(monkeypatch):
     fake_pipe = MagicMock(); fake_pipe.query.return_value = _resp("hello")
     monkeypatch.setattr(main, "get_naive_pipeline", lambda: fake_pipe)
 
-    out = main.chat(main.ChatRequest(question="q", session_id="s1"))
+    out = main.chat(main.ChatRequest(question="q", session_id="s1", use_adaptive=False))
 
     assert out.answer == "hello"
     assert out.cache_hit is False
@@ -41,7 +41,7 @@ def test_chat_endpoint_cache_hit_skips_pipeline(monkeypatch):
     fake_pipe = MagicMock()
     monkeypatch.setattr(main, "get_naive_pipeline", lambda: fake_pipe)
 
-    out = main.chat(main.ChatRequest(question="q", session_id="s1"))
+    out = main.chat(main.ChatRequest(question="q", session_id="s1", use_adaptive=False))
 
     assert out.cache_hit is True
     assert out.answer == "cached"
