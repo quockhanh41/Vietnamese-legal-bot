@@ -65,6 +65,18 @@ CROSS_REF_SCROLL_CAP = 1
 
 RERANK_MAX_K = int(os.getenv("RERANK_MAX_K", "15"))  # M5: rerank candidate-pool cap (CPU P95 knob)
 
+def _drain(gen):
+    """Run a generator to completion, discarding yields, and return its value.
+
+    Lets the non-streaming path reuse generators that exist to interleave
+    `__STEP__` progress events, at zero cost — the events are simply dropped.
+    """
+    while True:
+        try:
+            next(gen)
+        except StopIteration as stop:
+            return stop.value
+
 @dataclass
 class RAGResponse:
     """Structured response from the RAG pipeline."""
@@ -401,31 +413,48 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         else:
             return max_k
 
+    def _route(self, question: str) -> Generator[str, None, Tuple[str, bool, bool]]:
+        """Pick the route for `question`, yielding `__STEP__` progress events.
+
+        Returns (complexity, in_scope, is_comparison). A question that parses as
+        a citation resolves to real articles by construction, so it takes the
+        lookup route WITHOUT an LLM classifier call and is in-scope by
+        definition (see AdaptiveRAGPipeline.query for the full rationale).
+        """
+        parsed_citation = parse_citation(question)
+        if parsed_citation is not None:
+            citation_lookup = self._get_citation_lookup()
+            doc_ids = citation_lookup.resolve_doc(
+                parsed_citation.doc_hint,
+                parsed_citation.year,
+                doc_number=parsed_citation.doc_number,
+            )
+            aliases = citation_lookup._get_alias_index()
+            resolved_titles = [aliases.get(d, str(d)) for d in doc_ids[:3]]
+            article_label = f"Điều {parsed_citation.primary.number}"
+            if parsed_citation.primary.khoan:
+                article_label += f", Khoản {parsed_citation.primary.khoan}"
+            resolved_str = ", ".join(resolved_titles) if resolved_titles else "(ambiguous — searched all documents)"
+            yield f'__STEP__{json.dumps({"step": "Citation Lookup", "result": f"{article_label} — resolved: {resolved_str}"})}'
+            return "lookup", True, False
+
+        complexity, in_scope, is_comparison = self._classify_and_scope(question)
+        scope_label = "IN" if in_scope else "OUT"
+        yield f'__STEP__{json.dumps({"step": "Classification", "result": f"{complexity.upper()} (scope={scope_label})"})}'
+        return complexity, in_scope, is_comparison
+
     @observe
     def query(self, question: str) -> RAGResponse:
         """Process with adaptive routing."""
         start_time = time.time()
 
-        # Step 0: Citation-lookup route — parsed BEFORE the (LLM) complexity
-        # classifier, so citation-style queries ("Điều 173 BLHS 2015 quy
-        # định về tội gì?") skip the classifier call entirely and go
-        # straight to a direct metadata lookup instead of vector search
-        # (vector search measured recall@5=0.125 on this query shape — see
-        # docs/Danh_Gia_va_Roadmap_Production_2026-07-06.md).
-        parsed_citation = parse_citation(question)
-        if parsed_citation is not None:
+        complexity, in_scope, is_comparison = _drain(self._route(question))
+
+        if complexity == "lookup":
             return self._lookup_pipeline(question, start_time)
-
-        # Step 1: Classify query complexity + scope gate (merged into a
-        # single LLM call — see COMPLEXITY_CLASSIFIER_PROMPT). A question
-        # that resolves to real articles via the citation route above is
-        # in-scope by construction and never reaches this gate.
-        complexity, in_scope, is_comparison = self._classify_and_scope(question)
-
         if not in_scope:
             return self._out_of_scope_response(question, start_time)
 
-        # Step 2-6: Route to appropriate pipeline
         if complexity == "simple":
             return self._simple_pipeline(question, start_time, is_comparison)
         elif complexity == "medium":
@@ -959,54 +988,28 @@ Các câu liên quan (giữ nguyên văn):"""
         rerank_scores = None
         is_comparison = False
 
-        # Step 0: Citation-lookup route — parsed BEFORE the (LLM) complexity
-        # classifier; citation-style queries ("Điều 173 BLHS 2015 quy định
-        # về tội gì?") skip the classifier call entirely (see
-        # AdaptiveRAGPipeline.query for the full rationale).
-        parsed_citation = parse_citation(question)
-        if parsed_citation is not None:
-            complexity = "lookup"
-            citation_lookup = self._get_citation_lookup()
-            doc_ids = citation_lookup.resolve_doc(
-                parsed_citation.doc_hint,
-                parsed_citation.year,
-                doc_number=parsed_citation.doc_number,
-            )
-            aliases = citation_lookup._get_alias_index()
-            resolved_titles = [aliases.get(d, str(d)) for d in doc_ids[:3]]
-            article_label = f"Điều {parsed_citation.primary.number}"
-            if parsed_citation.primary.khoan:
-                article_label += f", Khoản {parsed_citation.primary.khoan}"
-            resolved_str = ", ".join(resolved_titles) if resolved_titles else "(ambiguous — searched all documents)"
-            yield f'__STEP__{json.dumps({"step": "Citation Lookup", "result": f"{article_label} — resolved: {resolved_str}"})}'
-        else:
-            # Step 1: Classify query complexity + scope gate (merged into a
-            # single LLM call — see AdaptiveRAGPipeline._classify_and_scope).
-            complexity, in_scope, is_comparison = self._classify_and_scope(question)
-            scope_label = "IN" if in_scope else "OUT"
-            yield f'__STEP__{json.dumps({"step": "Classification", "result": f"{complexity.upper()} (scope={scope_label})"})}'
+        complexity, in_scope, is_comparison = yield from self._route(question)
 
-            if not in_scope:
-                corpus_summary = self._get_citation_lookup().corpus_summary_compact()
-                answer = OUT_OF_SCOPE_ANSWER_TEMPLATE.format(corpus_summary=corpus_summary)
-                yield f'__STEP__{json.dumps({"step": "Routing", "result": "Out of Scope — refused before retrieval/generation"})}'
-                # Yield the refusal text as normal tokens so the UI displays
-                # it exactly like any other answer (no retrieval/_post_process
-                # ran, so there is nothing else to stream).
-                yield answer
-                verification_payload = {
-                    "confidence_score": 0.0,
-                    "confidence": "low",
-                    "refused": True,
-                    "warnings": [],
-                    "reason": "out_of_scope",
-                }
-                yield f'__VERIFICATION__{json.dumps(verification_payload, ensure_ascii=False)}'
-                return
+        if complexity != "lookup" and not in_scope:
+            corpus_summary = self._get_citation_lookup().corpus_summary_compact()
+            answer = OUT_OF_SCOPE_ANSWER_TEMPLATE.format(corpus_summary=corpus_summary)
+            yield f'__STEP__{json.dumps({"step": "Routing", "result": "Out of Scope — refused before retrieval/generation"})}'
+            # Yield the refusal text as normal tokens so the UI displays it
+            # exactly like any other answer (no retrieval/_post_process ran).
+            yield answer
+            verification_payload = {
+                "confidence_score": 0.0,
+                "confidence": "low",
+                "refused": True,
+                "warnings": [],
+                "reason": "out_of_scope",
+            }
+            yield f'__VERIFICATION__{json.dumps(verification_payload, ensure_ascii=False)}'
+            return
 
         if complexity == "lookup":
             results, route, _ = retrieve_routed(
-                question, self.vector_store, self.embedder, citation_lookup, fill_top_k=10,
+                question, self.vector_store, self.embedder, self._get_citation_lookup(), fill_top_k=10,
             )
             annotations = self._annotate_phase2(results)  # Plan §3.6
             results = self._filter_in_effect(results, annotations)
