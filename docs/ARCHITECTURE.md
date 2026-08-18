@@ -219,14 +219,26 @@ giờ chặn nhầm câu hỏi thật.
 
 ### 3.3. Ba route truy xuất + 3 bước hậu-retrieval chung
 
-| Route | Các bước (đều trong `orchestrator.py`) |
+Ba route dưới đây là các nhánh trong **một** generator dùng chung — `_retrieve()` —
+chứ không phải ba phương thức `_simple_pipeline` / `_medium_pipeline` /
+`_complex_pipeline` tách biệt như trước bản refactor `stream-nonstream-unification`.
+`query()` (đồng bộ) gọi `_route()` rồi `_retrieve()` bên trong `_run_route()`, dùng
+`_drain()` để chạy hết generator và bỏ qua các `__STEP__` progress event; `query_stream()`
+tiêu thụ đúng generator đó bằng `yield from` để phát các event ấy cho UI. Một bản logic
+retrieval duy nhất, hai cách tiêu thụ — tránh hai đường trôi dạt khỏi nhau như trước.
+
+| Route | Các bước (nhánh tương ứng trong `_retrieve()`, orchestrator.py) |
 |---|---|
-| `_simple_pipeline` | dense search top-20 → `_dynamic_top_k()` cắt còn 3–15 |
-| `_medium_pipeline` | hybrid search (dense + sparse) top-20 → dynamic top-k 5–15 → `_rerank_results()` (BGE-reranker-v2-m3 cross-encoder) |
-| `_complex_pipeline` | rewrite query → multi-query (3 biến thể) → HyDE (văn bản giả định) → hybrid search cho cả 4 query → khử trùng lặp theo `point_id` → dynamic top-k 5–20 → rerank → `_compress_context()` (LLM lược context) |
+| `simple` | dense search top-20 → `_dynamic_top_k()` cắt còn 3–15 |
+| `medium` | hybrid search (dense + sparse) top-20 → dynamic top-k 5–15 → `_rerank_results()` (BGE-reranker-v2-m3 cross-encoder) |
+| `complex` | rewrite query → multi-query (3 biến thể) → HyDE (văn bản giả định) → hybrid search cho cả 4 query → khử trùng lặp theo `point_id` → dynamic top-k 5–20 → rerank |
 
 `_dynamic_top_k()` co giãn số kết quả theo phân bố điểm: điểm cao tập trung → lấy ít,
 điểm thấp/phẳng → lấy nhiều.
+
+Riêng route `complex`: sau khi `_retrieve()` trả về, `_prepare_generation()` (dùng
+chung cho cả `query()` và `query_stream()`) chạy `_compress_context()` (LLM lược
+context) trước khi build context/citations.
 
 Sau retrieval, **mọi route** (kể cả lookup và naive) chạy 3 bước chung:
 

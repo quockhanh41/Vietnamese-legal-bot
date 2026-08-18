@@ -388,11 +388,17 @@ async def chat_stream(request: ChatRequest):
                     full_answer += token
                     yield {"event": "token", "data": json.dumps({"token": token}, ensure_ascii=False)}
             except StreamInterrupted:
+                # NOT `degraded: True` — that flag renders in the UI as a
+                # quota-exhaustion notice (see src/ui/pages/chat.py
+                # is_degraded), a different, retryable-later failure. A
+                # dropped stream is retry-now; INTERRUPTED_MSG already reaches
+                # the answer bubble via `full_answer`, so no separate flag is
+                # needed here.
                 yield {"event": "token",
                        "data": json.dumps({"token": INTERRUPTED_MSG}, ensure_ascii=False)}
                 yield {"event": "done", "data": json.dumps({
                     "full_answer": full_answer + INTERRUPTED_MSG, "citations": citations,
-                    "confidence": "low", "refused": False, "degraded": True,
+                    "confidence": "low", "refused": False,
                     "latency_ms": (time.time() - start_time) * 1000, "cache_hit": False,
                 }, ensure_ascii=False)}
                 return  # do NOT persist/cache a truncated answer

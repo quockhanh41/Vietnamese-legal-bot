@@ -75,6 +75,7 @@ def test_stream_degraded_on_exhaustion(monkeypatch):
     assert "degraded" in r.text
     assert "quá tải" in r.text
     cache.set.assert_not_called()
+    store.append_turn.assert_not_called()
 
 
 def test_stream_interrupted_midway_is_not_cached(monkeypatch):

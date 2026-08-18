@@ -20,7 +20,7 @@ import pytest
 
 import src.rag.orchestrator as orch
 from src.db.qdrant_client import SearchResult
-from src.rag.orchestrator import AdaptiveRAGPipeline
+from src.rag.orchestrator import AdaptiveRAGPipeline, RouteResult
 
 
 class _Vec:
@@ -217,22 +217,56 @@ def test_rerank_max_k_honoured_on_both_paths(
     assert stream_max_k == [8]
 
 
-def test_complex_retrieve_returns_pre_expansion_seed(force_route, monkeypatch):
-    """scripts/eval.py run_multihop expands this seed set itself to measure
-    recall before vs after. If complex_retrieve returned post-expansion results,
-    that second expansion would be a no-op and the M3.5 metric would silently
-    report that cross-ref expansion does nothing.
+def test_complex_retrieve_does_not_expand(monkeypatch):
+    """complex_retrieve's caller (scripts/eval.py run_multihop) expands the
+    seed set itself to measure recall before vs after (M3.5). _retrieve must
+    therefore run with expand=False on this path, so _expand_cross_references
+    — a full get_graph() deserialize plus a Qdrant scroll per seed — is never
+    invoked here only to be thrown away.
     """
     pipeline = _make_adaptive()
-    sentinel = _sr(99)
+    calls = []
     monkeypatch.setattr(
         AdaptiveRAGPipeline, "_expand_cross_references",
-        lambda self, results, is_comparison=False: [sentinel],
+        lambda self, results, is_comparison=False: calls.append(results) or results,
     )
 
-    seed, _scores = pipeline.complex_retrieve("cau hoi")
+    pipeline.complex_retrieve("cau hoi")
 
-    assert sentinel.point_id not in [r.point_id for r in seed]
+    assert calls == []
+
+
+def test_complex_retrieve_returns_seed_not_expanded_results(monkeypatch):
+    """complex_retrieve must return RouteResult.seed_results (post-rerank,
+    PRE-expansion), never RouteResult.results. If it returned `.results`
+    instead, scripts/eval.py's second, caller-side expansion would be a
+    no-op (every neighbour already present), silently collapsing
+    recall_before == recall_after and reporting that M3.5 expansion does
+    nothing.
+
+    Forces _retrieve to return a RouteResult where `.results` and
+    `.seed_results` genuinely differ, so a complex_retrieve that returned the
+    wrong one is caught here regardless of what the real retrieval branch
+    would produce.
+    """
+    pipeline = _make_adaptive()
+    seed = [_sr(1)]
+    expanded = [_sr(1), _sr(99)]
+    captured = {}
+
+    def fake_retrieve(self, question, complexity, is_comparison=False, expand=True):
+        captured["expand"] = expand
+        return RouteResult(results=expanded, annotations={}, rerank_scores=[0.9],
+                           seed_results=seed)
+        yield  # pragma: no cover — never reached; keeps this a generator function
+
+    monkeypatch.setattr(AdaptiveRAGPipeline, "_retrieve", fake_retrieve)
+
+    got_seed, got_scores = pipeline.complex_retrieve("cau hoi")
+
+    assert captured["expand"] is False
+    assert [r.point_id for r in got_seed] == [r.point_id for r in seed]
+    assert got_scores == [0.9]
 
 
 @pytest.mark.parametrize("route", ["simple", "medium", "complex"])

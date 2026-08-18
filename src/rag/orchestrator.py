@@ -554,6 +554,13 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
                     unique_results.append(r)
             annotations = self._annotate_phase2(unique_results)  # Plan §3.6
             unique_results = self._filter_in_effect(unique_results, annotations, keep_superseded=is_comparison)
+            # Deliberately NOT RERANK_MAX_K: this is the one exemption from
+            # the "knob honoured everywhere" refactor. Capping the complex
+            # pool at the default (15) would shift retrieval at default
+            # config and move the eval gates (refusal_recall >= 0.7619,
+            # false_refusal <= 0.0972) that this behaviour-preserving
+            # refactor promised not to move. Changing it needs its own
+            # measurement task, not a silent edit here.
             results = unique_results[:self._dynamic_top_k(unique_results, min_k=5, max_k=20)]
             results, rerank_scores = self._rerank_results(question, results)
 
@@ -708,7 +715,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
     @observe
     def _post_process(self, question: str, answer: str, results: List[SearchResult],
-                      context: str, citations: Optional[List[Dict]] = None,
+                      context: str, *, citations: Optional[List[Dict]] = None,
                       rerank_scores: Optional[List[float]] = None,
                       generation_model: Optional[str] = None) -> tuple:
         """
