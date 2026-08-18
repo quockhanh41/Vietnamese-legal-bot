@@ -10,7 +10,7 @@ import logging
 import os
 import re
 import sys
-import statistics, time
+import time
 from typing import List, Dict, Optional, Generator, Tuple
 
 from dataclasses import dataclass, field, replace
@@ -89,6 +89,25 @@ class RAGResponse:
     related_questions: List[str] = field(default_factory=list)
     confidence_score: float = 0.0   # NEW: 0.0-1.0
     refused: bool = False            # NEW: did confidence gate refuse?
+
+
+@dataclass
+class RouteResult:
+    """Everything a route retrieved, before context building."""
+    results: List[SearchResult]
+    annotations: Dict[str, Dict]
+    rerank_scores: Optional[List[float]] = None
+    seed_results: Optional[List[SearchResult]] = None
+    """Post-rerank, PRE-cross-ref-expansion results.
+
+    Only the complex route can differ from `results`; every other route sets
+    this to the same list. It exists because scripts/eval.py's run_multihop
+    measures recall BEFORE vs AFTER expansion — it takes the seed set from
+    complex_retrieve() and expands it itself. If complex_retrieve() returned
+    the already-expanded set, _expand_cross_references would find every
+    neighbour already present and return [], collapsing recall_before ==
+    recall_after and silently reporting that M3.5 expansion does nothing.
+    """
 
 
 class NaiveRAGPipeline:
@@ -324,7 +343,6 @@ class NaiveRAGPipeline:
 
     def _parse_response(self, raw: str, citations: List[Dict]) -> RAGResponse:
         """Parse markdown response into RAGResponse."""
-        import re
         clean_raw = re.sub(r'<think>[\s\S]*?</think>', '', raw, flags=re.IGNORECASE).strip()
         
         return RAGResponse(
@@ -443,6 +461,131 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         yield f'__STEP__{json.dumps({"step": "Classification", "result": f"{complexity.upper()} (scope={scope_label})"})}'
         return complexity, in_scope, is_comparison
 
+    def _retrieve(
+        self, question: str, complexity: str, is_comparison: bool = False,
+    ) -> Generator[str, None, RouteResult]:
+        """Run one route's retrieval, yielding `__STEP__` progress events.
+
+        The single source of truth for retrieval on BOTH paths: query() drains
+        this, query_stream() delegates with `yield from`. Keeping one copy is
+        what stops the two paths from drifting apart (audit 2026-08-18, #6).
+        """
+        rerank_scores = None
+
+        if complexity == "lookup":
+            results, route, _ = retrieve_routed(
+                question, self.vector_store, self.embedder,
+                self._get_citation_lookup(), fill_top_k=10,
+            )
+            annotations = self._annotate_phase2(results)  # Plan §3.6
+            results = self._filter_in_effect(results, annotations)
+            yield f'__STEP__{json.dumps({"step": "Routing", "result": f"Citation Lookup ({len(results)} chunks, route={route})"})}'
+
+        elif complexity == "simple":
+            yield f'__STEP__{json.dumps({"step": "Routing", "result": "Simple Pipeline (Dense Search)"})}'
+            query_vector = self.embedder.encode_queries([question])[0]
+            results = self.vector_store.search_dense(
+                query_vector.tolist(), top_k=20, exclude_superseded=not is_comparison,
+            )
+            # Phase 2 (Plan §3.6): default temporal filter, computed on the broad
+            # pool before dynamic-top-k picks the final candidate count.
+            annotations = self._annotate_phase2(results)
+            results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
+            results = results[:self._dynamic_top_k(results, min_k=3, max_k=15)]
+
+        elif complexity == "medium":
+            yield f'__STEP__{json.dumps({"step": "Routing", "result": "Medium Pipeline (Hybrid Search)"})}'
+            output = self.embedder.encode([question], return_dense=True, return_sparse=True)
+            dense_vec = output["dense_vecs"][0]
+            sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
+            results = self.vector_store.search_hybrid(
+                dense_vec.tolist(), sparse_vec, top_k=20,
+                exclude_superseded=not is_comparison,
+            )
+            annotations = self._annotate_phase2(results)  # Plan §3.6
+            results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
+            results = results[:self._dynamic_top_k(results, min_k=5, max_k=RERANK_MAX_K)]
+            results, rerank_scores = self._rerank_results(question, results)
+
+        else:  # complex
+            yield f'__STEP__{json.dumps({"step": "Routing", "result": "Complex Pipeline (Rewrite + HyDE + Multi-query)"})}'
+            rewritten = self.llm.generate(
+                QUERY_REWRITE_PROMPT.format(question=question), temperature=0.1,
+                model=MODEL_QUERY_TRANSFORM, reasoning_effort="none",
+            ).strip()
+            yield f'__STEP__{json.dumps({"step": "Query Rewrite", "result": rewritten})}'
+
+            expanded_raw = self.llm.generate(
+                MULTI_QUERY_PROMPT.format(question=rewritten), temperature=0.3,
+                model=MODEL_QUERY_TRANSFORM, reasoning_effort="none",
+            )
+            queries = [q.strip() for q in expanded_raw.split("\n") if q.strip() and q[0].isdigit()]
+            queries = [q.split(". ", 1)[-1] if ". " in q else q for q in queries]
+            yield f'__STEP__{json.dumps({"step": "Multi-query", "result": ", ".join(queries)})}'
+
+            hyde_text = self.llm.generate(
+                HYDE_PROMPT.format(question=question), temperature=0.2,
+                model=MODEL_QUERY_TRANSFORM, reasoning_effort="none",
+            ).strip()
+            yield f'__STEP__{json.dumps({"step": "HyDE (Hypothetical Document)", "result": hyde_text[:100] + "..." if len(hyde_text) > 100 else hyde_text})}'
+
+            all_results = []
+            for q in [rewritten] + queries[:2] + [hyde_text]:
+                output = self.embedder.encode([q], return_dense=True, return_sparse=True)
+                dense_vec = output["dense_vecs"][0]
+                sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
+                all_results.extend(self.vector_store.search_hybrid(
+                    dense_vec.tolist(), sparse_vec, top_k=10,
+                    exclude_superseded=not is_comparison,
+                ))
+
+            seen = set()
+            unique_results = []
+            for r in sorted(all_results, key=lambda x: x.score, reverse=True):
+                if r.point_id not in seen:
+                    seen.add(r.point_id)
+                    unique_results.append(r)
+            annotations = self._annotate_phase2(unique_results)  # Plan §3.6
+            unique_results = self._filter_in_effect(unique_results, annotations, keep_superseded=is_comparison)
+            results = unique_results[:self._dynamic_top_k(unique_results, min_k=5, max_k=20)]
+            results, rerank_scores = self._rerank_results(question, results)
+
+            # M3.5: append cross-referenced article text (after rerank, capped).
+            # `seed` is kept separate — scripts/eval.py's run_multihop needs the
+            # pre-expansion set to measure recall before vs after (see RouteResult).
+            seed = results
+            expanded = self._expand_cross_references(results, is_comparison=is_comparison)
+            if expanded:
+                results = results + expanded
+            # Re-annotate for the final (post-expansion) set.
+            annotations = self._annotate_phase2(results)
+            return RouteResult(results=results, annotations=annotations,
+                               rerank_scores=rerank_scores, seed_results=seed)
+
+        return RouteResult(results=results, annotations=annotations,
+                           rerank_scores=rerank_scores, seed_results=results)
+
+    def _prepare_generation(
+        self, question: str, route_result: RouteResult, compress: bool,
+    ) -> Tuple[List[SearchResult], str, List[Dict], str]:
+        """Turn retrieved results into (results, prompt_context, citations,
+        verify_context).
+
+        `verify_context` is deliberately the UNCOMPRESSED context, even on the
+        complex route where the model is prompted with the compressed one. The
+        compressed text is lossy LLM output: verifying against it can flag a
+        true claim as unsupported when compression is what dropped the
+        supporting sentence. This preserves the non-streaming path's behaviour,
+        which is the behaviour every eval number was measured against (spec §4).
+        """
+        results = self._expand_to_parent(route_result.results)  # Plan §3.4
+        context = self._build_context(results, route_result.annotations)
+        citations = self._build_citations(results, route_result.annotations)
+        verify_context = context
+        if compress:
+            context = self._compress_context(question, context)
+        return results, context, citations, verify_context
+
     @observe
     def query(self, question: str) -> RAGResponse:
         """Process with adaptive routing."""
@@ -454,13 +597,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             return self._lookup_pipeline(question, start_time)
         if not in_scope:
             return self._out_of_scope_response(question, start_time)
-
-        if complexity == "simple":
-            return self._simple_pipeline(question, start_time, is_comparison)
-        elif complexity == "medium":
-            return self._medium_pipeline(question, start_time, is_comparison)
-        else:
-            return self._complex_pipeline(question, start_time, is_comparison)
+        return self._run_route(question, complexity, start_time, is_comparison)
 
     def _out_of_scope_response(self, question: str, start_time: float) -> RAGResponse:
         """Refuse immediately, WITHOUT retrieval/generation — the SCOPE gate
@@ -479,47 +616,43 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             refused=True,
         )
 
+    def _run_route(self, question: str, complexity: str, start_time: float,
+                   is_comparison: bool = False) -> RAGResponse:
+        """Retrieve → generate → post-process for any non-streaming route."""
+        route_result = _drain(self._retrieve(question, complexity, is_comparison))
+        results, context, citations, verify_context = self._prepare_generation(
+            question, route_result, compress=(complexity == "complex"),
+        )
+
+        gen_models = MODEL_COMPLEX if complexity in ("medium", "complex") else MODEL_SIMPLE
+        raw, generation_model = self.llm.generate_with_model(
+            prompt=GENERATION_PROMPT.format(context=context, question=question),
+            system_prompt=SYSTEM_PROMPT,
+            temperature=0.1,
+            json_mode=False,
+            model=gen_models,
+        )
+
+        conf_result, ver_result, final_answer = self._post_process(
+            question, raw, results, verify_context, citations=citations,
+            rerank_scores=route_result.rerank_scores, generation_model=generation_model,
+        )
+
+        parsed = self._parse_response(final_answer, citations)
+        parsed.latency_ms = (time.time() - start_time) * 1000
+        parsed.pipeline_used = complexity
+        return self._enrich_response(parsed, conf_result, ver_result)
+
     @observe
     def _lookup_pipeline(self, question: str, start_time: float) -> RAGResponse:
-        """LOOKUP: direct metadata lookup for 'Điều N' citations (+ dense fill) → generate.
+        """LOOKUP: direct metadata lookup for 'Điều N' citations (+ dense fill).
 
         Deliberately does NOT fall back to vector search when the lookup finds
         nothing (e.g. "Điều 999" doesn't exist) — context stays empty/small so
         the existing refusal path (confidence gate + system prompt instruction)
         triggers naturally instead of citing a plausible-looking wrong article.
         """
-        citation_lookup = self._get_citation_lookup()
-        results, _route, _parsed = retrieve_routed(
-            question, self.vector_store, self.embedder, citation_lookup, fill_top_k=10,
-        )
-
-        annotations = self._annotate_phase2(results)
-        results = self._filter_in_effect(results, annotations)
-        results = self._expand_to_parent(results)
-
-        context = self._build_context(results, annotations)
-        prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw, generation_model = self.llm.generate_with_model(
-            prompt=prompt,
-            system_prompt=SYSTEM_PROMPT,
-            temperature=0.1,
-            json_mode=False,
-            model=MODEL_SIMPLE,
-        )
-
-        citations = self._build_citations(results, annotations)
-        context = self._build_context(results, annotations)
-
-        # Post-process: verify + confidence (same as every other route)
-        conf_result, ver_result, final_answer = self._post_process(
-            question, raw, results, context, generation_model=generation_model,
-        )
-
-        parsed = self._parse_response(final_answer, citations)
-        parsed.latency_ms = (time.time() - start_time) * 1000
-        parsed.pipeline_used = "lookup"
-        parsed = self._enrich_response(parsed, conf_result, ver_result)
-        return parsed
+        return self._run_route(question, "lookup", start_time)
 
     @observe
     def _classify_and_scope(self, question: str) -> Tuple[str, bool, bool]:
@@ -567,12 +700,16 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
     @observe
     def _post_process(self, question: str, answer: str, results: List[SearchResult],
-                      context: str, rerank_scores: Optional[List[float]] = None,
+                      context: str, citations: Optional[List[Dict]] = None,
+                      rerank_scores: Optional[List[float]] = None,
                       generation_model: Optional[str] = None) -> tuple:
         """
         Post-generation: verifier (Tier 1 + 2) + confidence scoring + refusal gate.
 
         Args:
+            citations: The citation list already built for `results` by
+                `_prepare_generation` (carries the Phase 2 amendment flags).
+                Rebuilt un-annotated only when a caller passes None.
             rerank_scores: Cross-encoder scores from `_rerank_results`, if reranking
                 ran for this query (None otherwise — distinct from "ran but empty").
             generation_model: The exact model that generated `answer` (from
@@ -590,9 +727,9 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             self._verifier = HallucinationVerifier()
 
         # Tier 1 + 2: Verifier
-        citations = self._build_citations(results)
-        context_str = context
-        ver_result = self._verifier.verify(answer, citations, context_str)
+        if citations is None:
+            citations = self._build_citations(results)
+        ver_result = self._verifier.verify(answer, citations, context)
 
         # Semantic verification (NLI) is "skipped" when no claims were labeled —
         # pass None so confidence scoring can drop this signal instead of treating
@@ -609,7 +746,7 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         result = self._confidence_scorer.score(
             question=question,
             answer=answer,
-            context=context_str,
+            context=context,
             search_results=results,
             rerank_scores=rerank_scores,
             entailment_ratio=entailment_ratio,
@@ -634,170 +771,20 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             parsed.disclaimer += "\n\n" + "\n".join(ver_result.warnings[:3])
         return parsed
 
-    def _simple_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
-        """SIMPLE: dense search → generate (2 LLM calls including classify)."""
-        query_vector = self.embedder.encode_queries([question])[0]
-        # Use a broader initial pool, then dynamically select
-        results = self.vector_store.search_dense(query_vector.tolist(), top_k=20,
-                                                  exclude_superseded=not is_comparison)
-
-        # Phase 2 (Plan §3.6): default temporal filter, computed on the broad
-        # pool before dynamic-top-k picks the final candidate count.
-        annotations = self._annotate_phase2(results)
-        results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
-
-        top_k = self._dynamic_top_k(results, min_k=3, max_k=15)
-        results = results[:top_k]
-        results = self._expand_to_parent(results)  # Plan §3.4
-        context = self._build_context(results, annotations)
-
-        prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw, generation_model = self.llm.generate_with_model(
-            prompt=prompt,
-            system_prompt=SYSTEM_PROMPT,
-            temperature=0.1,
-            json_mode=False,
-            model=MODEL_SIMPLE,
-        )
-
-        citations = self._build_citations(results, annotations)
-        context = self._build_context(results, annotations)
-
-        # Post-process: verify + confidence
-        conf_result, ver_result, final_answer = self._post_process(
-            question, raw, results, context, generation_model=generation_model,
-        )
-
-        parsed = self._parse_response(final_answer, citations)
-        parsed.latency_ms = (time.time() - start_time) * 1000
-        parsed.pipeline_used = "simple"
-        parsed = self._enrich_response(parsed, conf_result, ver_result)
-        return parsed
-
-    def _medium_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
-        """MEDIUM: hybrid search → dynamic top-k → rerank → generate."""
-        output = self.embedder.encode([question], return_dense=True, return_sparse=True)
-        dense_vec = output["dense_vecs"][0]
-        sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-
-        # Broader initial pool
-        results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20,
-                                                  exclude_superseded=not is_comparison)
-
-        # Phase 2 (Plan §3.6): default temporal filter, before dynamic-top-k/rerank.
-        annotations = self._annotate_phase2(results)
-        results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
-
-        top_k = self._dynamic_top_k(results, min_k=5, max_k=RERANK_MAX_K)
-        results = results[:top_k]
-
-        # Re-rank (if available)
-        results, rerank_scores = self._rerank_results(question, results)
-
-        results = results[:15]
-        results = self._expand_to_parent(results)  # Plan §3.4
-        context = self._build_context(results, annotations)
-        prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw, generation_model = self.llm.generate_with_model(
-            prompt=prompt,
-            system_prompt=SYSTEM_PROMPT,
-            temperature=0.1,
-            json_mode=False,
-            model=MODEL_COMPLEX,
-        )
-
-        citations = self._build_citations(results, annotations)
-        context = self._build_context(results, annotations)
-
-        # Post-process: verify + confidence
-        conf_result, ver_result, final_answer = self._post_process(
-            question, raw, results, context, rerank_scores=rerank_scores,
-            generation_model=generation_model,
-        )
-
-        parsed = self._parse_response(final_answer, citations)
-        parsed.latency_ms = (time.time() - start_time) * 1000
-        parsed.pipeline_used = "medium"
-        parsed = self._enrich_response(parsed, conf_result, ver_result)
-        return parsed
-
     def complex_retrieve(
         self, question: str, is_comparison: bool = False,
     ) -> Tuple[List[SearchResult], Optional[List[float]]]:
-        """Complex-route retrieval (rewrite → multi-query → HyDE → hybrid →
-        dedup → temporal filter → dynamic-top-k → rerank). Returns
-        (results, rerank_scores) POST-rerank, PRE-cross-ref-expansion. Shared
-        by _complex_pipeline and the M3.5 eval harness so both measure the
-        same seed set. NOTE: query_stream keeps its own inline copy because it
-        interleaves __STEP__ progress events between these stages."""
-        rewritten = self.llm.generate(QUERY_REWRITE_PROMPT.format(question=question), temperature=0.1, model=MODEL_QUERY_TRANSFORM, reasoning_effort="none").strip()
-        expanded_raw = self.llm.generate(MULTI_QUERY_PROMPT.format(question=rewritten), temperature=0.3, model=MODEL_QUERY_TRANSFORM, reasoning_effort="none")
-        queries = [q.strip() for q in expanded_raw.split("\n") if q.strip() and q[0].isdigit()]
-        queries = [q.split(". ", 1)[-1] if ". " in q else q for q in queries]
-        hyde_text = self.llm.generate(HYDE_PROMPT.format(question=question), temperature=0.2, model=MODEL_QUERY_TRANSFORM, reasoning_effort="none").strip()
+        """Complex-route retrieval. Returns (results, rerank_scores) POST-rerank,
+        PRE-cross-ref-expansion — the same contract as before this refactor.
 
-        all_queries = [rewritten] + queries[:2] + [hyde_text]
-        all_results = []
-        for q in all_queries:
-            output = self.embedder.encode([q], return_dense=True, return_sparse=True)
-            dense_vec = output["dense_vecs"][0]
-            sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-            results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10,
-                                                      exclude_superseded=not is_comparison)
-            all_results.extend(results)
-
-        seen = set()
-        unique_results = []
-        for r in sorted(all_results, key=lambda x: x.score, reverse=True):
-            if r.point_id not in seen:
-                seen.add(r.point_id)
-                unique_results.append(r)
-        annotations = self._annotate_phase2(unique_results)
-        unique_results = self._filter_in_effect(unique_results, annotations, keep_superseded=is_comparison)
-        top_k = self._dynamic_top_k(unique_results, min_k=5, max_k=20)
-        results = unique_results[:top_k]
-        return self._rerank_results(question, results)
-
-    def _complex_pipeline(self, question: str, start_time: float, is_comparison: bool = False) -> RAGResponse:
-        """COMPLEX: full pipeline (rewrite → multi-query → HyDE → hybrid → rerank → expand → compress → generate)."""
-        results, rerank_scores = self.complex_retrieve(question, is_comparison)
-
-        # M3.5: append cross-referenced article text (after rerank, capped).
-        expanded = self._expand_cross_references(results, is_comparison=is_comparison)
-        if expanded:
-            results = results + expanded
-
-        # Phase 2 annotations for the final (post-expansion) result set.
-        annotations = self._annotate_phase2(results)
-
-        # 7. Context Compression — extract only relevant sentences
-        results = self._expand_to_parent(results)  # Plan §3.4
-        context = self._build_context(results, annotations)
-        context = self._compress_context(question, context)
-
-        # 8. Generate
-        prompt = GENERATION_PROMPT.format(context=context, question=question)
-        raw, generation_model = self.llm.generate_with_model(
-            prompt=prompt,
-            system_prompt=SYSTEM_PROMPT,
-            temperature=0.1,
-            json_mode=False,
-            model=MODEL_COMPLEX,
-        )
-
-        citations = self._build_citations(results, annotations)
-        context = self._build_context(results, annotations)
-
-        conf_result, ver_result, final_answer = self._post_process(
-            question, raw, results, context, rerank_scores=rerank_scores,
-            generation_model=generation_model,
-        )
-
-        parsed = self._parse_response(final_answer, citations)
-        parsed.latency_ms = (time.time() - start_time) * 1000
-        parsed.pipeline_used = "complex"
-        parsed = self._enrich_response(parsed, conf_result, ver_result)
-        return parsed
+        Kept public for the M3.5 eval harness: scripts/eval.py's run_multihop
+        takes this seed set and calls _expand_cross_references on it ITSELF to
+        measure recall before vs after. Returning the expanded set here would
+        make that second expansion a no-op (every neighbour already present),
+        silently collapsing recall_before == recall_after.
+        """
+        route_result = _drain(self._retrieve(question, "complex", is_comparison))
+        return route_result.seed_results, route_result.rerank_scores
 
     # ── Re-ranking ───────────────────────────────────────────
 
@@ -985,9 +972,6 @@ Các câu liên quan (giữ nguyên văn):"""
         """Process a question with streaming response and intermediate steps."""
         start_time = time.time()
 
-        rerank_scores = None
-        is_comparison = False
-
         complexity, in_scope, is_comparison = yield from self._route(question)
 
         if complexity != "lookup" and not in_scope:
@@ -1007,110 +991,10 @@ Các câu liên quan (giữ nguyên văn):"""
             yield f'__VERIFICATION__{json.dumps(verification_payload, ensure_ascii=False)}'
             return
 
-        if complexity == "lookup":
-            results, route, _ = retrieve_routed(
-                question, self.vector_store, self.embedder, self._get_citation_lookup(), fill_top_k=10,
-            )
-            annotations = self._annotate_phase2(results)  # Plan §3.6
-            results = self._filter_in_effect(results, annotations)
-            yield f'__STEP__{json.dumps({"step": "Routing", "result": f"Citation Lookup ({len(results)} chunks, route={route})"})}'
-
-        elif complexity == "simple":
-            yield f'__STEP__{json.dumps({"step": "Routing", "result": "Simple Pipeline (Dense Search)"})}'
-            query_vector = self.embedder.encode_queries([question])[0]
-            results = self.vector_store.search_dense(query_vector.tolist(), top_k=20,
-                                                      exclude_superseded=not is_comparison)
-            annotations = self._annotate_phase2(results)  # Plan §3.6
-            results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
-            # Dynamic top-k
-            top_k = self._dynamic_top_k(results, min_k=3, max_k=15)
-            results = results[:top_k]
-
-        elif complexity == "medium":
-            yield f'__STEP__{json.dumps({"step": "Routing", "result": "Medium Pipeline (Hybrid Search)"})}'
-            output = self.embedder.encode([question], return_dense=True, return_sparse=True)
-            dense_vec = output["dense_vecs"][0]
-            sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-            results = self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=20,
-                                                      exclude_superseded=not is_comparison)
-            annotations = self._annotate_phase2(results)  # Plan §3.6
-            results = self._filter_in_effect(results, annotations, keep_superseded=is_comparison)
-            # Dynamic top-k + rerank
-            top_k = self._dynamic_top_k(results, min_k=5, max_k=15)
-            results = results[:top_k]
-            results, rerank_scores = self._rerank_results(question, results)
-
-        else: # complex
-            yield f'__STEP__{json.dumps({"step": "Routing", "result": "Complex Pipeline (Rewrite + HyDE + Multi-query)"})}'
-            
-            # 1. Query rewrite
-            rewritten = self.llm.generate(
-                QUERY_REWRITE_PROMPT.format(question=question),
-                temperature=0.1,
-                model=MODEL_QUERY_TRANSFORM,
-                reasoning_effort="none",
-            ).strip()
-            yield f'__STEP__{json.dumps({"step": "Query Rewrite", "result": rewritten})}'
-
-            # 2. Multi-query expansion
-            expanded_raw = self.llm.generate(
-                MULTI_QUERY_PROMPT.format(question=rewritten),
-                temperature=0.3,
-                model=MODEL_QUERY_TRANSFORM,
-                reasoning_effort="none",
-            )
-            queries = [q.strip() for q in expanded_raw.split("\n") if q.strip() and q[0].isdigit()]
-            queries = [q.split(". ", 1)[-1] if ". " in q else q for q in queries]
-            yield f'__STEP__{json.dumps({"step": "Multi-query", "result": ", ".join(queries)})}'
-
-            # 3. HyDE
-            hyde_text = self.llm.generate(
-                HYDE_PROMPT.format(question=question),
-                temperature=0.2,
-                model=MODEL_QUERY_TRANSFORM,
-                reasoning_effort="none",
-            ).strip()
-            yield f'__STEP__{json.dumps({"step": "HyDE (Hypothetical Document)", "result": hyde_text[:100] + "..." if len(hyde_text) > 100 else hyde_text})}'
-
-            # 4. Search
-            all_queries = [rewritten] + queries[:2] + [hyde_text]
-            all_results = []
-            for q in all_queries:
-                output = self.embedder.encode([q], return_dense=True, return_sparse=True)
-                dense_vec = output["dense_vecs"][0]
-                sparse_vec = output["lexical_weights"][0] if output["lexical_weights"] else {}
-                all_results.extend(self.vector_store.search_hybrid(dense_vec.tolist(), sparse_vec, top_k=10,
-                                                                    exclude_superseded=not is_comparison))
-
-            # Deduplicate + dynamic top-k
-            seen = set()
-            unique_results = []
-            for r in sorted(all_results, key=lambda x: x.score, reverse=True):
-                if r.point_id not in seen:
-                    seen.add(r.point_id)
-                    unique_results.append(r)
-            annotations = self._annotate_phase2(unique_results)  # Plan §3.6
-            unique_results = self._filter_in_effect(unique_results, annotations, keep_superseded=is_comparison)
-            top_k = self._dynamic_top_k(unique_results, min_k=5, max_k=20)
-            results = unique_results[:top_k]
-
-            # Re-rank (if available)
-            results, rerank_scores = self._rerank_results(question, results)
-
-            # M3.5: append cross-referenced article text (after rerank, capped).
-            expanded = self._expand_cross_references(results, is_comparison=is_comparison)
-            if expanded:
-                results = results + expanded
-                annotations = self._annotate_phase2(results)
-
-        # Build context & citations
-        results = self._expand_to_parent(results)  # Plan §3.4
-        context = self._build_context(results, annotations)
-        citations = self._build_citations(results, annotations)
-
-        # Compress context for COMPLEX
-        if complexity == "complex":
-            context = self._compress_context(question, context)
+        route_result = yield from self._retrieve(question, complexity, is_comparison)
+        results, context, citations, verify_context = self._prepare_generation(
+            question, route_result, compress=(complexity == "complex"),
+        )
 
         yield f'__STEP__{json.dumps({"step": "Search Results", "result": f"Found {len(results)} chunks for context."})}'
         yield f'__STEP__{json.dumps({"step": "Context (Found Chunks)", "result": context})}'
@@ -1142,7 +1026,8 @@ Các câu liên quan (giữ nguyên văn):"""
         # wrecks the entailment/overlap signals.
         clean_answer = re.sub(r'<think>[\s\S]*?(?:</think>|$)', '', full_answer, flags=re.IGNORECASE).strip()
         conf_result, ver_result, final_answer = self._post_process(
-            question, clean_answer, results, context, rerank_scores=rerank_scores,
+            question, clean_answer, results, verify_context, citations=citations,
+            rerank_scores=route_result.rerank_scores,
             generation_model=used_model.get("model"),
         )
         verification_payload = {

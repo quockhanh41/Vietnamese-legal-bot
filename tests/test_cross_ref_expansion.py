@@ -172,7 +172,10 @@ def test_complex_pipeline_appends_expansion_to_citations():
     p._metadata_store = md
     seeds = [_sr("p10", 1, "Điều 10", "Điều 10 nội dung")]
     extra = [_sr("p50", 1, "Điều 50", "Điều 50 nội dung")]
-    p.complex_retrieve = MagicMock(return_value=(seeds, None))
+    # Drive the real complex retrieval (one seed, so _rerank_results short-circuits
+    # without loading a cross-encoder) and stub only the expansion under test.
+    p.embedder.encode.return_value = {"dense_vecs": [MagicMock()], "lexical_weights": [{}]}
+    p.vector_store.search_hybrid.return_value = list(seeds)
     p._expand_cross_references = MagicMock(return_value=extra)
     p.llm.generate = MagicMock(return_value="Trả lời [1][2]")
     p.llm.generate_with_model = MagicMock(return_value=("Trả lời [1][2]", "mock/model"))
@@ -180,7 +183,7 @@ def test_complex_pipeline_appends_expansion_to_citations():
     ver = MagicMock(); ver.passed = True; ver.warnings = []
     p._post_process = MagicMock(return_value=(conf, ver, "Trả lời [1][2]"))
 
-    resp = p._complex_pipeline("câu hỏi", start_time=0.0, is_comparison=False)
+    resp = p._run_route("câu hỏi", "complex", start_time=0.0, is_comparison=False)
     cited_articles = [c["article"] for c in resp.citations]
     assert "Điều 50" in cited_articles  # expanded block present
     p._expand_cross_references.assert_called_once()

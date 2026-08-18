@@ -126,42 +126,36 @@ def test_out_of_scope_answer_mentions_corpus_titles():
 def test_in_scope_routes_to_simple_pipeline():
     pipeline = _make_pipeline("SCOPE: IN\nCLASS: SIMPLE")
     sentinel = object()
-    pipeline._simple_pipeline = MagicMock(return_value=sentinel)
-    pipeline._medium_pipeline = MagicMock(side_effect=AssertionError("must not route to medium"))
-    pipeline._complex_pipeline = MagicMock(side_effect=AssertionError("must not route to complex"))
+    pipeline._run_route = MagicMock(return_value=sentinel)
 
     result = pipeline.query("Tội trộm cắp tài sản bị xử phạt thế nào?")
 
     assert result is sentinel
-    pipeline._simple_pipeline.assert_called_once()
+    assert pipeline._run_route.call_args.args[1] == "simple"
 
 
 def test_in_scope_routes_to_medium_pipeline():
     pipeline = _make_pipeline("SCOPE: IN\nCLASS: MEDIUM")
     sentinel = object()
-    pipeline._medium_pipeline = MagicMock(return_value=sentinel)
-    pipeline._simple_pipeline = MagicMock(side_effect=AssertionError("must not route to simple"))
-    pipeline._complex_pipeline = MagicMock(side_effect=AssertionError("must not route to complex"))
+    pipeline._run_route = MagicMock(return_value=sentinel)
 
     result = pipeline.query("So sánh tội trộm cắp và tội cướp tài sản khác nhau như thế nào?")
 
     assert result is sentinel
-    pipeline._medium_pipeline.assert_called_once()
+    assert pipeline._run_route.call_args.args[1] == "medium"
 
 
 def test_in_scope_routes_to_complex_pipeline():
     pipeline = _make_pipeline("SCOPE: IN\nCLASS: COMPLEX")
     sentinel = object()
-    pipeline._complex_pipeline = MagicMock(return_value=sentinel)
-    pipeline._simple_pipeline = MagicMock(side_effect=AssertionError("must not route to simple"))
-    pipeline._medium_pipeline = MagicMock(side_effect=AssertionError("must not route to medium"))
+    pipeline._run_route = MagicMock(return_value=sentinel)
 
     result = pipeline.query(
         "Nếu phạm nhiều tội trong cùng một vụ án thì hình phạt chung được tính thế nào?"
     )
 
     assert result is sentinel
-    pipeline._complex_pipeline.assert_called_once()
+    assert pipeline._run_route.call_args.args[1] == "complex"
 
 
 # ── corpus_summary ─────────────────────────────────────────────────────────

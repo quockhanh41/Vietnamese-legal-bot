@@ -32,7 +32,7 @@ def _adaptive_with_mocks() -> AdaptiveRAGPipeline:
     )
 
 
-def _drive(route_method: str, is_comparison: bool):
+def _drive(route: str, is_comparison: bool):
     """Run one non-stream route with heavy collaborators stubbed; capture the
     supersession flags passed to search + _filter_in_effect."""
     p = _adaptive_with_mocks()
@@ -56,21 +56,21 @@ def _drive(route_method: str, is_comparison: bool):
     p._post_process = lambda *a, **k: (MagicMock(), SimpleNamespace(warnings=[]), "answer")
     p._enrich_response = lambda parsed, c, v: parsed
 
-    getattr(p, route_method)(
-        "Luật X 2013 và Luật X 2024 khác nhau thế nào?", time.time(),
+    p._run_route(
+        "Luật X 2013 và Luật X 2024 khác nhau thế nào?", route, time.time(),
         is_comparison=is_comparison,
     )
     return cap, capf
 
 
-@pytest.mark.parametrize("route", ["_simple_pipeline", "_medium_pipeline", "_complex_pipeline"])
+@pytest.mark.parametrize("route", ["simple", "medium", "complex"])
 def test_comparison_relaxes_both_supersession_layers(route):
     cap, capf = _drive(route, is_comparison=True)
     assert cap["exclude_superseded"] is False
     assert capf["keep_superseded"] is True
 
 
-@pytest.mark.parametrize("route", ["_simple_pipeline", "_medium_pipeline", "_complex_pipeline"])
+@pytest.mark.parametrize("route", ["simple", "medium", "complex"])
 def test_non_comparison_keeps_supersession_on(route):
     cap, capf = _drive(route, is_comparison=False)
     assert cap["exclude_superseded"] is True

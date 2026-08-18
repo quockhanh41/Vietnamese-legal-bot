@@ -193,6 +193,48 @@ def test_both_paths_use_same_dynamic_top_k_bounds(
     assert non_stream == stream
 
 
+def test_rerank_max_k_honoured_on_both_paths(
+    force_route, spy_top_k, capture_post_process, monkeypatch,
+):
+    """RERANK_MAX_K exists to cap the reranker pool on HF Space CPU (M2.6 measured
+    P95 7.58s @pool 100). It used to be read at exactly one of four call sites —
+    and not on the streaming path the UI actually runs (audit 2026-08-18, #3).
+
+    `capture_post_process` keeps the test off the network — see the note on
+    test_both_paths_use_same_dynamic_top_k_bounds in Task 1.
+    """
+    monkeypatch.setattr(orch, "RERANK_MAX_K", 8)
+    force_route("medium")
+
+    _make_adaptive().query("cau hoi")
+    non_stream_max_k = [c["max_k"] for c in spy_top_k]
+    spy_top_k.clear()
+
+    list(_make_adaptive().query_stream("cau hoi"))
+    stream_max_k = [c["max_k"] for c in spy_top_k]
+
+    assert non_stream_max_k == [8]
+    assert stream_max_k == [8]
+
+
+def test_complex_retrieve_returns_pre_expansion_seed(force_route, monkeypatch):
+    """scripts/eval.py run_multihop expands this seed set itself to measure
+    recall before vs after. If complex_retrieve returned post-expansion results,
+    that second expansion would be a no-op and the M3.5 metric would silently
+    report that cross-ref expansion does nothing.
+    """
+    pipeline = _make_adaptive()
+    sentinel = _sr(99)
+    monkeypatch.setattr(
+        AdaptiveRAGPipeline, "_expand_cross_references",
+        lambda self, results, is_comparison=False: [sentinel],
+    )
+
+    seed, _scores = pipeline.complex_retrieve("cau hoi")
+
+    assert sentinel.point_id not in [r.point_id for r in seed]
+
+
 @pytest.mark.parametrize("route", ["simple", "medium", "complex"])
 def test_both_paths_retrieve_same_points(route, force_route, capture_post_process):
     """LOCK (green before and after the refactor).
