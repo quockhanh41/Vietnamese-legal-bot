@@ -787,6 +787,17 @@ class RouteResult:
     results: List[SearchResult]
     annotations: Dict[str, Dict]
     rerank_scores: Optional[List[float]] = None
+    seed_results: Optional[List[SearchResult]] = None
+    """Post-rerank, PRE-cross-ref-expansion results.
+
+    Only the complex route can differ from `results`; every other route sets
+    this to the same list. It exists because scripts/eval.py's run_multihop
+    measures recall BEFORE vs AFTER expansion — it takes the seed set from
+    complex_retrieve() and expands it itself. If complex_retrieve() returned
+    the already-expanded set, _expand_cross_references would find every
+    neighbour already present and return [], collapsing recall_before ==
+    recall_after and silently reporting that M3.5 expansion does nothing.
+    """
 ```
 
 Thêm method vào `AdaptiveRAGPipeline`, sau `_route`:
@@ -880,13 +891,19 @@ Thêm method vào `AdaptiveRAGPipeline`, sau `_route`:
             results, rerank_scores = self._rerank_results(question, results)
 
             # M3.5: append cross-referenced article text (after rerank, capped).
+            # `seed` is kept separate — scripts/eval.py's run_multihop needs the
+            # pre-expansion set to measure recall before vs after (see RouteResult).
+            seed = results
             expanded = self._expand_cross_references(results, is_comparison=is_comparison)
             if expanded:
                 results = results + expanded
             # Re-annotate for the final (post-expansion) set.
             annotations = self._annotate_phase2(results)
+            return RouteResult(results=results, annotations=annotations,
+                               rerank_scores=rerank_scores, seed_results=seed)
 
-        return RouteResult(results=results, annotations=annotations, rerank_scores=rerank_scores)
+        return RouteResult(results=results, annotations=annotations,
+                           rerank_scores=rerank_scores, seed_results=results)
 ```
 
 - [ ] **Step 4: Thêm `_prepare_generation`**
@@ -994,25 +1011,61 @@ Cập nhật `query()` (Task 4 Step 2) — bỏ ba nhánh riêng:
         return self._run_route(question, complexity, start_time, is_comparison)
 ```
 
-- [ ] **Step 7: `complex_retrieve` thành wrapper mỏng**
+- [ ] **Step 7: `complex_retrieve` thành wrapper mỏng — GIỮ NGUYÊN hợp đồng cũ**
 
-Giữ public (eval harness M3.5 gọi), bỏ bản sao logic:
+Giữ public (eval harness M3.5 gọi), bỏ bản sao logic, và **trả đúng tập pre-expansion như trước**:
 
 ```python
     def complex_retrieve(
         self, question: str, is_comparison: bool = False,
     ) -> Tuple[List[SearchResult], Optional[List[float]]]:
-        """Complex-route retrieval. Returns (results, rerank_scores) POST-rerank.
+        """Complex-route retrieval. Returns (results, rerank_scores) POST-rerank,
+        PRE-cross-ref-expansion — the same contract as before this refactor.
 
-        Kept public for the M3.5 eval harness (scripts/eval.py --multihop). NOTE:
-        the returned results now include cross-ref expansion, matching what the
-        complex route actually feeds the model.
+        Kept public for the M3.5 eval harness: scripts/eval.py's run_multihop
+        takes this seed set and calls _expand_cross_references on it ITSELF to
+        measure recall before vs after. Returning the expanded set here would
+        make that second expansion a no-op (every neighbour already present),
+        silently collapsing recall_before == recall_after.
         """
         route_result = _drain(self._retrieve(question, "complex", is_comparison))
-        return route_result.results, route_result.rerank_scores
+        return route_result.seed_results, route_result.rerank_scores
 ```
 
-⚠️ Đây là **thay đổi hành vi** của `complex_retrieve`: trước đây nó trả kết quả *trước* cross-ref expansion. Kiểm `scripts/eval.py --multihop` sau khi sửa; nếu harness cần bản pre-expansion thì thêm tham số `include_expansion: bool = True` thay vì đổi ngầm.
+🔴 **Đây là điểm dễ hỏng nhất của cả plan.** `scripts/eval.py:261-263`:
+
+```python
+seed_results, _scores = pipeline.complex_retrieve(q["question"])
+expanded = pipeline._expand_cross_references(seed_results)
+```
+
+Nếu `complex_retrieve` trả tập đã expand, `_expand_cross_references` sẽ trả `[]` (mọi neighbour đã nằm trong `existing`), `recall_before == recall_after`, và số đo M3.5 sập thành "expansion vô dụng" — **mà toàn bộ suite vẫn xanh**, vì không test nào phủ `run_multihop`. Verify bằng bước 7b dưới đây, đừng tin suite.
+
+- [ ] **Step 7b: Kiểm `complex_retrieve` không nuốt tập seed**
+
+Thêm test vào `tests/test_stream_nonstream_parity.py`:
+
+```python
+def test_complex_retrieve_returns_pre_expansion_seed(force_route, monkeypatch):
+    """scripts/eval.py run_multihop expands this seed set itself to measure
+    recall before vs after. If complex_retrieve returned post-expansion results,
+    that second expansion would be a no-op and the M3.5 metric would silently
+    report that cross-ref expansion does nothing.
+    """
+    pipeline = _make_adaptive()
+    sentinel = _sr(99)
+    monkeypatch.setattr(
+        AdaptiveRAGPipeline, "_expand_cross_references",
+        lambda self, results, is_comparison=False: [sentinel],
+    )
+
+    seed, _scores = pipeline.complex_retrieve("cau hoi")
+
+    assert sentinel.point_id not in [r.point_id for r in seed]
+```
+
+Run: `.venv/bin/python -m pytest tests/test_stream_nonstream_parity.py::test_complex_retrieve_returns_pre_expansion_seed -q`
+Expected: PASS sau khi implement (và PASS cả trên code cũ — đây là lock, giống test 1 và 5).
 
 - [ ] **Step 8: `query_stream` dùng `_retrieve`**
 
