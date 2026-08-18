@@ -75,3 +75,40 @@ def test_stream_degraded_on_exhaustion(monkeypatch):
     assert "degraded" in r.text
     assert "quá tải" in r.text
     cache.set.assert_not_called()
+
+
+def test_stream_interrupted_midway_is_not_cached(monkeypatch):
+    """Tokens already reached the client, so the turn cannot be retried — but a
+    truncated answer must never be persisted or served to anyone else."""
+    from src.rag.degraded import StreamInterrupted
+
+    store = MagicMock(); store.get_history.return_value = []
+    cache = MagicMock(); cache.get.return_value = None
+    main.app.state.session_store = store
+    main.app.state.semantic_cache = cache
+    main.app.state.llm = MagicMock()
+
+    def gen(_condensed):
+        yield "phan dau cua cau tra loi"
+        raise StreamInterrupted("connection dropped")
+
+    fake = MagicMock(); fake.query_stream = gen
+    monkeypatch.setattr(main, "get_naive_pipeline", lambda: fake)
+    monkeypatch.setattr(main, "condense_query", lambda h, q, llm: q)
+
+    client = TestClient(main.app)
+    r = client.post("/api/chat/stream", json={"question": "q", "session_id": "s1"})
+
+    assert r.status_code == 200
+    assert "gián đoạn" in r.text
+    cache.set.assert_not_called()
+    store.append_turn.assert_not_called()
+
+
+def test_is_exhaustion_false_for_stream_interrupted():
+    """StreamInterrupted subclasses RuntimeError but must NOT be mistaken for
+    exhaustion — the two failure modes are handled differently downstream
+    (retry-safe degradation vs. never-retry, never-cache truncation)."""
+    from src.rag.degraded import StreamInterrupted, is_exhaustion
+
+    assert is_exhaustion(StreamInterrupted("x")) is False

@@ -33,7 +33,8 @@ from src.rag.condense import condense_query
 from src.rag.session_store import SessionStore
 from src.rag.semantic_cache import SemanticCache
 from src.rag.chat_turn import run_chat_turn
-from src.rag.degraded import DEGRADED_MSG, is_exhaustion as _is_exhaustion
+from src.rag.degraded import (DEGRADED_MSG, INTERRUPTED_MSG, StreamInterrupted,
+                              is_exhaustion as _is_exhaustion)
 
 
 # --- Models ---
@@ -383,6 +384,15 @@ async def chat_stream(request: ChatRequest):
 
                     full_answer += token
                     yield {"event": "token", "data": json.dumps({"token": token}, ensure_ascii=False)}
+            except StreamInterrupted:
+                yield {"event": "token",
+                       "data": json.dumps({"token": INTERRUPTED_MSG}, ensure_ascii=False)}
+                yield {"event": "done", "data": json.dumps({
+                    "full_answer": full_answer + INTERRUPTED_MSG, "citations": citations,
+                    "confidence": "low", "refused": False, "degraded": True,
+                    "latency_ms": (time.time() - start_time) * 1000, "cache_hit": False,
+                }, ensure_ascii=False)}
+                return  # do NOT persist/cache a truncated answer
             except Exception as e:
                 if _is_exhaustion(e):
                     yield {"event": "token",

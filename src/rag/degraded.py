@@ -12,3 +12,17 @@ def is_exhaustion(e: Exception) -> bool:
     (src/llm/gateway.py raises RuntimeError("All models failed...") when
     every provider in the fallback chain is rate-limited/out of budget)."""
     return isinstance(e, RuntimeError) and str(e).startswith("All models failed")
+
+
+INTERRUPTED_MSG = ("\n\n[Lỗi] Kết nối bị gián đoạn giữa chừng. "
+                   "Vui lòng thử lại.")
+
+
+class StreamInterrupted(RuntimeError):
+    """Streaming failed AFTER tokens already reached the client.
+
+    Distinct from exhaustion: the turn cannot be retried (retrying would
+    duplicate output) and the partial answer must never be cached or written to
+    session history. Subclasses RuntimeError but does NOT use the "All models
+    failed" prefix, so is_exhaustion() correctly returns False for it.
+    """

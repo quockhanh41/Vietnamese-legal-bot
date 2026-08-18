@@ -11,6 +11,8 @@ from typing import Optional, Generator, Tuple, Union, List
 import re
 import litellm
 
+from src.rag.degraded import StreamInterrupted
+
 # Configure LiteLLM
 litellm.drop_params = True
 litellm.telemetry = False
@@ -276,6 +278,8 @@ class LLMGateway:
         Raises:
             RuntimeError: every model in the chain failed ("All models failed…"),
                 recognised by src.rag.degraded.is_exhaustion.
+            StreamInterrupted: failure occurred AFTER tokens already reached
+                the client — not retryable, must not be cached or persisted.
         """
         messages = []
         if system_prompt:
@@ -321,9 +325,9 @@ class LLMGateway:
                     last_error = e
                     if started:
                         # Mid-stream failure: tokens already reached the client,
-                        # so retrying would duplicate output. Task 3 gives this
-                        # its own exception type.
-                        raise
+                        # so retrying would duplicate output. Caller must not
+                        # cache or persist the partial answer.
+                        raise StreamInterrupted(str(e)) from e
                     if self._is_rate_limit(e):
                         continue  # rotate to the next key for the same model
                     break  # non-rate-limit failure — try the next model
