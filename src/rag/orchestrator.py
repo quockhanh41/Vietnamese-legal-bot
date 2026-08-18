@@ -463,12 +463,19 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
 
     def _retrieve(
         self, question: str, complexity: str, is_comparison: bool = False,
+        expand: bool = True,
     ) -> Generator[str, None, RouteResult]:
         """Run one route's retrieval, yielding `__STEP__` progress events.
 
         The single source of truth for retrieval on BOTH paths: query() drains
         this, query_stream() delegates with `yield from`. Keeping one copy is
         what stops the two paths from drifting apart (audit 2026-08-18, #6).
+
+        `expand=False` stops the complex route before M3.5 cross-reference
+        expansion, for callers that only want the seed set. Expansion costs a
+        full get_graph() deserialize (~15.6k edges, uncached) plus a Qdrant
+        scroll per seed, so complex_retrieve() — whose caller expands the seeds
+        itself — must not pay for a result it discards.
         """
         rerank_scores = None
 
@@ -554,11 +561,12 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
             # `seed` is kept separate — scripts/eval.py's run_multihop needs the
             # pre-expansion set to measure recall before vs after (see RouteResult).
             seed = results
-            expanded = self._expand_cross_references(results, is_comparison=is_comparison)
-            if expanded:
-                results = results + expanded
-            # Re-annotate for the final (post-expansion) set.
-            annotations = self._annotate_phase2(results)
+            if expand:
+                expanded = self._expand_cross_references(results, is_comparison=is_comparison)
+                if expanded:
+                    results = results + expanded
+                # Re-annotate for the final (post-expansion) set.
+                annotations = self._annotate_phase2(results)
             return RouteResult(results=results, annotations=annotations,
                                rerank_scores=rerank_scores, seed_results=seed)
 
@@ -782,9 +790,16 @@ class AdaptiveRAGPipeline(NaiveRAGPipeline):
         measure recall before vs after. Returning the expanded set here would
         make that second expansion a no-op (every neighbour already present),
         silently collapsing recall_before == recall_after.
+
+        Runs with expand=False so the expansion the caller is about to do
+        itself isn't also done (and thrown away) here.
         """
-        route_result = _drain(self._retrieve(question, "complex", is_comparison))
-        return route_result.seed_results, route_result.rerank_scores
+        route_result = _drain(
+            self._retrieve(question, "complex", is_comparison, expand=False)
+        )
+        # `seed_results` is Optional only because the dataclass field has a None
+        # default; _retrieve always populates it.
+        return route_result.seed_results or [], route_result.rerank_scores
 
     # ── Re-ranking ───────────────────────────────────────────
 
